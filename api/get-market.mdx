@@ -1,0 +1,86 @@
+---
+title: "Get Market"
+description: "Get details for a specific market"
+---
+
+`GET /api/v1/markets/:market_id`
+
+Returns details for a single prediction market.
+
+## Parameters
+
+<ParamField path="market_id" type="string" required>
+  The unique identifier of the market.
+</ParamField>
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="Market">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique market identifier.
+    </ResponseField>
+    <ResponseField name="question" type="string">
+      The prediction question.
+    </ResponseField>
+    <ResponseField name="outcomes" type="string[]">
+      Possible outcomes (e.g., `["Yes", "No"]`).
+    </ResponseField>
+    <ResponseField name="close_time" type="string | null">
+      ISO 8601 timestamp when the market closes.
+    </ResponseField>
+    <ResponseField name="volume" type="number">
+      Total trading volume in USD.
+    </ResponseField>
+    <ResponseField name="liquidity" type="number">
+      Available liquidity in USD.
+    </ResponseField>
+    <ResponseField name="prices" type="object">
+      Current prices per outcome.
+    </ResponseField>
+    <ResponseField name="tick_size" type="number">
+      Minimum price increment.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Detailed market description.
+    </ResponseField>
+    <ResponseField name="metadata" type="object">
+      Exchange-specific additional data (e.g., `clobTokenIds` for Polymarket).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/markets/0x1234abcd?exchange=polymarket"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "id": "0x1234abcd",
+    "question": "Will Bitcoin reach $100k in 2025?",
+    "outcomes": ["Yes", "No"],
+    "close_time": "2025-12-31T23:59:59Z",
+    "volume": 1500000.0,
+    "liquidity": 250000.0,
+    "prices": { "Yes": 0.65, "No": 0.35 },
+    "tick_size": 0.01,
+    "description": "This market resolves to Yes if Bitcoin's price reaches or exceeds $100,000 USD.",
+    "metadata": { "clobTokenIds": ["12345", "67890"] }
+  }
+}
+```
+</ResponseExample>

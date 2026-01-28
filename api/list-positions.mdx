@@ -1,0 +1,82 @@
+---
+title: "List Positions"
+description: "Get your current positions"
+---
+
+`GET /api/v1/positions`
+
+Returns open positions for the authenticated user on the specified exchange.
+
+When `market_id` is omitted, returns all positions across all markets. For Polymarket, this uses the public Data API and includes average entry prices. When `market_id` is provided, queries token balances for that specific market via the authenticated CLOB API.
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Filter positions by a specific market ID. When omitted, returns all positions.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="Position[]">
+  <Expandable title="properties">
+    <ResponseField name="market_id" type="string">
+      Market the position is on.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome held (e.g., `"Yes"` or `"No"`).
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      Number of shares held.
+    </ResponseField>
+    <ResponseField name="average_price" type="number">
+      Average price paid per share. Returns `0.0` when filtering by `market_id` on Polymarket.
+    </ResponseField>
+    <ResponseField name="current_price" type="number">
+      Current market price of the outcome.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+# All positions
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/positions?exchange=polymarket"
+
+# Filtered by market
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/positions?exchange=polymarket&market_id=0x1234abcd"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "market_id": "0x1234abcd",
+      "outcome": "Yes",
+      "size": 150.0,
+      "average_price": 0.55,
+      "current_price": 0.65
+    },
+    {
+      "market_id": "0x5678efgh",
+      "outcome": "No",
+      "size": 75.0,
+      "average_price": 0.80,
+      "current_price": 0.72
+    }
+  ]
+}
+```
+</ResponseExample>

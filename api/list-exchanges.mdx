@@ -1,0 +1,75 @@
+---
+title: "List Exchanges"
+description: "Get all available prediction market exchanges"
+---
+
+`GET /api/v1/exchanges`
+
+Returns all registered exchanges and their capabilities.
+
+## Parameters
+
+No parameters required.
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="exchanges" type="array">
+      <Expandable title="items">
+        <ResponseField name="id" type="string">
+          Exchange identifier used in other API calls (e.g., `polymarket`, `kalshi`).
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Human-readable display name.
+        </ResponseField>
+        <ResponseField name="has_fetch_markets" type="boolean">
+          Whether this exchange supports fetching market data.
+        </ResponseField>
+        <ResponseField name="has_create_order" type="boolean">
+          Whether this exchange supports order creation.
+        </ResponseField>
+        <ResponseField name="has_websocket" type="boolean">
+          Whether this exchange supports WebSocket streaming.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  http://localhost:3000/api/v1/exchanges
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "exchanges": [
+      {
+        "id": "polymarket",
+        "name": "Polymarket",
+        "has_fetch_markets": true,
+        "has_create_order": true,
+        "has_websocket": true
+      },
+      {
+        "id": "kalshi",
+        "name": "Kalshi",
+        "has_fetch_markets": true,
+        "has_create_order": true,
+        "has_websocket": false
+      }
+    ]
+  }
+}
+```
+</ResponseExample>

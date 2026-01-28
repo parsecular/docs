@@ -1,0 +1,92 @@
+---
+title: "List Markets"
+description: "Get prediction markets from a specific exchange"
+---
+
+`GET /api/v1/markets`
+
+Returns a list of prediction markets for the specified exchange.
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+<ParamField query="limit" type="integer">
+  Maximum number of markets to return. Returns all available if omitted.
+</ParamField>
+
+<ParamField query="active_only" type="boolean" default="true">
+  When `true`, only returns markets currently open for trading.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="Market[]">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique market identifier.
+    </ResponseField>
+    <ResponseField name="question" type="string">
+      The prediction question.
+    </ResponseField>
+    <ResponseField name="outcomes" type="string[]">
+      Possible outcomes (e.g., `["Yes", "No"]`).
+    </ResponseField>
+    <ResponseField name="close_time" type="string | null">
+      ISO 8601 timestamp when the market closes.
+    </ResponseField>
+    <ResponseField name="volume" type="number">
+      Total trading volume in USD.
+    </ResponseField>
+    <ResponseField name="liquidity" type="number">
+      Available liquidity in USD.
+    </ResponseField>
+    <ResponseField name="prices" type="object">
+      Current prices per outcome (e.g., `{"Yes": 0.65, "No": 0.35}`).
+    </ResponseField>
+    <ResponseField name="tick_size" type="number">
+      Minimum price increment.
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Detailed market description.
+    </ResponseField>
+    <ResponseField name="metadata" type="object">
+      Exchange-specific additional data.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/markets?exchange=polymarket&limit=2&active_only=true"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "0x1234abcd",
+      "question": "Will Bitcoin reach $100k in 2025?",
+      "outcomes": ["Yes", "No"],
+      "close_time": "2025-12-31T23:59:59Z",
+      "volume": 1500000.0,
+      "liquidity": 250000.0,
+      "prices": { "Yes": 0.65, "No": 0.35 },
+      "tick_size": 0.01,
+      "description": "This market resolves to Yes if...",
+      "metadata": {}
+    }
+  ]
+}
+```
+</ResponseExample>

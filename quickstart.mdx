@@ -1,80 +1,267 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with Parsecular in 5 minutes"
 ---
 
-## Get started in three steps
+## Prerequisites
 
-Get your documentation site running locally and make your first customization.
+Before you begin, ensure you have:
 
-### Step 1: Set up your local environment
+- **Rust 1.70+** installed ([rustup.rs](https://rustup.rs))
+- **Tokio** runtime for async support
+- API credentials for the exchange(s) you want to use
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Installation
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Add Dependencies">
+    Add Parsecular crates to your `Cargo.toml`:
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```toml
+    [dependencies]
+    # Core library (required)
+    pc-core = { path = "pc-core" }
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    # Add exchange implementations you need
+    pc-exchange-polymarket = { path = "pc-exchange-polymarket" }
+    pc-exchange-limitless = { path = "pc-exchange-limitless" }
+    pc-exchange-kalshi = { path = "pc-exchange-kalshi" }
+    pc-exchange-opinion = { path = "pc-exchange-opinion" }
+    pc-exchange-predictfun = { path = "pc-exchange-predictfun" }
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    # Required dependencies
+    tokio = { version = "1", features = ["full"] }
+    anyhow = "1"
+    ```
+  </Step>
 
-### Step 3: Go live
+  <Step title="Set Environment Variables">
+    Configure your API credentials. Each exchange requires different environment variables:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    <Tabs>
+      <Tab title="Polymarket">
+        ```bash
+        export POLYMARKET_PRIVATE_KEY="0x..."
+        export POLYMARKET_FUNDER="0x..."
+        ```
+      </Tab>
+      <Tab title="Limitless">
+        ```bash
+        export LIMITLESS_PRIVATE_KEY="0x..."
+        ```
+      </Tab>
+      <Tab title="Kalshi">
+        ```bash
+        export KALSHI_API_KEY_ID="your-api-key-id"
+        export KALSHI_PRIVATE_KEY_PATH="/path/to/private-key.pem"
+        ```
+      </Tab>
+      <Tab title="Opinion">
+        ```bash
+        export OPINION_API_KEY="your-api-key"
+        export OPINION_PRIVATE_KEY="0x..."
+        export OPINION_MULTI_SIG_ADDR="0x..."
+        ```
+      </Tab>
+      <Tab title="Predict.fun">
+        ```bash
+        export PREDICTFUN_API_KEY="your-api-key"
+        export PREDICTFUN_PRIVATE_KEY="0x..."
+        ```
+      </Tab>
+    </Tabs>
 
-## Next steps
+    <Note>
+      Authentication is only required for trading operations. You can fetch public market data without credentials.
+    </Note>
+  </Step>
 
-Now that you have your docs running, explore these key features:
+  <Step title="Write Your First Program">
+    Create a simple program to fetch markets:
+
+    ```rust
+    use pc_core::{Exchange, FetchMarketsParams};
+    use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+
+    #[tokio::main]
+    async fn main() -> anyhow::Result<()> {
+        // Initialize the exchange (no auth needed for public data)
+        let config = PolymarketConfig::new();
+        let exchange = Polymarket::new(config)?;
+
+        // Print exchange info
+        println!("Connected to: {} ({})", exchange.name(), exchange.id());
+
+        // Fetch active markets
+        let markets = exchange
+            .fetch_markets(Some(FetchMarketsParams {
+                limit: Some(5),
+                active_only: true,
+            }))
+            .await?;
+
+        // Display markets
+        for market in markets {
+            println!("\n─────────────────────────────────");
+            println!("ID:       {}", market.id);
+            println!("Question: {}", market.question);
+            println!("Outcomes: {}", market.outcomes.join(" vs "));
+
+            // Show prices
+            for (outcome, price) in &market.prices {
+                println!("  {}: {:.1}%", outcome, price * 100.0);
+            }
+
+            println!("Volume:    ${:.0}", market.volume);
+            println!("Liquidity: ${:.0}", market.liquidity);
+        }
+
+        Ok(())
+    }
+    ```
+  </Step>
+
+  <Step title="Run the Program">
+    ```bash
+    cargo run
+    ```
+
+    You should see output like:
+    ```
+    Connected to: Polymarket (polymarket)
+
+    ─────────────────────────────────
+    ID:       0x1234...
+    Question: Will Bitcoin reach $100k by end of 2024?
+    Outcomes: Yes vs No
+      Yes: 65.2%
+      No: 34.8%
+    Volume:    $1,234,567
+    Liquidity: $456,789
+    ```
+  </Step>
+</Steps>
+
+## Common Operations
+
+### Fetch a Single Market
+
+```rust
+let market = exchange.fetch_market("market-id-here").await?;
+println!("Question: {}", market.question);
+```
+
+### Create an Order (Requires Authentication)
+
+```rust
+use pc_core::OrderSide;
+use std::collections::HashMap;
+
+// Configure with credentials
+let config = PolymarketConfig::new()
+    .with_private_key("0x...")
+    .with_funder("0x...");
+let exchange = Polymarket::new(config)?;
+
+// Place a buy order
+let order = exchange
+    .create_order(
+        "market-id",      // market ID
+        "Yes",            // outcome
+        OrderSide::Buy,   // side
+        0.65,             // price (65 cents)
+        100.0,            // size (100 shares)
+        HashMap::new(),   // additional params
+    )
+    .await?;
+
+println!("Order placed: {}", order.id);
+println!("Status: {:?}", order.status);
+```
+
+### Fetch Your Positions
+
+```rust
+let positions = exchange.fetch_positions(None).await?;
+
+for pos in positions {
+    println!(
+        "{} - {}: {} shares @ ${:.2}",
+        pos.market_id, pos.outcome, pos.size, pos.average_price
+    );
+    println!("  P&L: ${:.2} ({:.1}%)",
+        pos.unrealized_pnl(),
+        pos.unrealized_pnl_percent()
+    );
+}
+```
+
+### Check Your Balance
+
+```rust
+let balance = exchange.fetch_balance().await?;
+
+for (asset, amount) in balance {
+    println!("{}: ${:.2}", asset, amount);
+}
+```
+
+## Multi-Exchange Example
+
+One of Parsecular's key features is the ability to work with multiple exchanges using the same interface:
+
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+use pc_exchange_limitless::{Limitless, LimitlessConfig};
+use pc_exchange_kalshi::{Kalshi, KalshiConfig};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Create multiple exchanges
+    let polymarket = Polymarket::new(PolymarketConfig::new())?;
+    let limitless = Limitless::new(LimitlessConfig::new())?;
+    let kalshi = Kalshi::new(KalshiConfig::demo())?;
+
+    // Use the same interface for all
+    let exchanges: Vec<Box<dyn Exchange>> = vec![
+        Box::new(polymarket),
+        Box::new(limitless),
+        Box::new(kalshi),
+    ];
+
+    for exchange in exchanges {
+        println!("\n=== {} ===", exchange.name());
+
+        let markets = exchange
+            .fetch_markets(Some(FetchMarketsParams {
+                limit: Some(3),
+                active_only: true,
+            }))
+            .await?;
+
+        for market in markets {
+            println!("  {} - {}", market.id, market.question);
+        }
+    }
+
+    Ok(())
+}
+```
+
+## Next Steps
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Exchange Setup" icon="building-columns" href="/exchanges/overview">
+    Learn about each exchange's specific features and configuration.
+  </Card>
+  <Card title="Data Models" icon="database" href="/models/market">
+    Understand the Market, Order, Position, and Orderbook models.
+  </Card>
+  <Card title="WebSocket Streaming" icon="signal" href="/websocket/overview">
+    Stream real-time orderbook data.
+  </Card>
+  <Card title="Strategy Framework" icon="chart-line" href="/strategy/overview">
+    Build automated trading strategies.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

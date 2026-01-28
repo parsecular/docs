@@ -1,0 +1,315 @@
+---
+title: "WebSocket Overview"
+description: "Real-time orderbook streaming via WebSocket"
+---
+
+## Overview
+
+Parsecular provides WebSocket support for real-time orderbook streaming on supported exchanges. This enables you to receive live updates without polling the REST API.
+
+## Supported Exchanges
+
+| Exchange | WebSocket Support |
+|----------|-------------------|
+| Polymarket | Yes - Full orderbook streaming |
+| Limitless | Yes - Full orderbook streaming |
+| Kalshi | No |
+| Opinion | No |
+| Predict.fun | No |
+
+## The OrderBookWebSocket Trait
+
+```rust
+pub type OrderbookStream = Pin<Box<dyn Stream<Item = Result<Orderbook, WebSocketError>> + Send>>;
+
+#[async_trait]
+pub trait OrderBookWebSocket: Send + Sync {
+    async fn connect(&mut self) -> Result<(), WebSocketError>;
+    async fn disconnect(&mut self) -> Result<(), WebSocketError>;
+    async fn subscribe(&mut self, market_id: &str) -> Result<(), WebSocketError>;
+    async fn unsubscribe(&mut self, market_id: &str) -> Result<(), WebSocketError>;
+    fn state(&self) -> WebSocketState;
+    async fn orderbook_stream(&mut self, market_id: &str)
+        -> Result<OrderbookStream, WebSocketError>;
+}
+```
+
+## WebSocket States
+
+```rust
+pub enum WebSocketState {
+    Disconnected,   // Not connected
+    Connecting,     // Connection in progress
+    Connected,      // Successfully connected
+    Reconnecting,   // Attempting reconnection
+    Closed,         // Connection closed
+}
+```
+
+## Basic Example
+
+```rust
+use pc_core::OrderBookWebSocket;
+use pc_exchange_polymarket::PolymarketWebSocket;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Create WebSocket instance
+    let mut ws = PolymarketWebSocket::new();
+
+    // Connect to the WebSocket server
+    println!("Connecting...");
+    ws.connect().await?;
+    println!("Connected! State: {:?}", ws.state());
+
+    // Subscribe to a token's orderbook
+    let token_id = "21742633143463906290569050155826241533067272736897614950488156847949938836455";
+    ws.subscribe(token_id).await?;
+    println!("Subscribed to orderbook");
+
+    // Get the orderbook stream
+    let mut stream = ws.orderbook_stream(token_id).await?;
+
+    // Process updates
+    println!("\nReceiving orderbook updates...\n");
+    let mut count = 0;
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(orderbook) => {
+                count += 1;
+
+                if let (Some(bid), Some(ask)) = (orderbook.best_bid(), orderbook.best_ask()) {
+                    let spread = ask - bid;
+                    let spread_bps = spread / ((bid + ask) / 2.0) * 10000.0;
+
+                    println!(
+                        "[#{:>3}] Bid: {:.4} | Ask: {:.4} | Spread: {:.4} ({:.1} bps)",
+                        count, bid, ask, spread, spread_bps
+                    );
+                }
+
+                if count >= 20 {
+                    println!("\nReceived 20 updates, disconnecting...");
+                    break;
+                }
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+            }
+        }
+    }
+
+    // Clean up
+    ws.disconnect().await?;
+    println!("Disconnected.");
+
+    Ok(())
+}
+```
+
+## Subscribe to Multiple Markets
+
+```rust
+use pc_core::OrderBookWebSocket;
+use pc_exchange_polymarket::PolymarketWebSocket;
+use futures::StreamExt;
+use tokio::select;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let mut ws = PolymarketWebSocket::new();
+    ws.connect().await?;
+
+    // Subscribe to both outcomes of a market
+    let yes_token = "token-id-for-yes";
+    let no_token = "token-id-for-no";
+
+    ws.subscribe(yes_token).await?;
+    ws.subscribe(no_token).await?;
+
+    let mut yes_stream = ws.orderbook_stream(yes_token).await?;
+    let mut no_stream = ws.orderbook_stream(no_token).await?;
+
+    // Process both streams
+    loop {
+        select! {
+            Some(result) = yes_stream.next() => {
+                if let Ok(ob) = result {
+                    println!("YES: Bid={:?}, Ask={:?}",
+                        ob.best_bid(), ob.best_ask());
+                }
+            }
+            Some(result) = no_stream.next() => {
+                if let Ok(ob) = result {
+                    println!("NO:  Bid={:?}, Ask={:?}",
+                        ob.best_bid(), ob.best_ask());
+                }
+            }
+            else => break,
+        }
+    }
+
+    ws.disconnect().await?;
+    Ok(())
+}
+```
+
+## With OrderbookManager
+
+```rust
+use pc_core::{OrderBookWebSocket, OrderbookManager};
+use pc_exchange_polymarket::PolymarketWebSocket;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let mut ws = PolymarketWebSocket::new();
+    let mut manager = OrderbookManager::new();
+
+    ws.connect().await?;
+
+    let tokens = ["token-yes", "token-no"];
+    for token in &tokens {
+        ws.subscribe(token).await?;
+    }
+
+    let mut yes_stream = ws.orderbook_stream("token-yes").await?;
+    let mut no_stream = ws.orderbook_stream("token-no").await?;
+
+    loop {
+        tokio::select! {
+            Some(Ok(ob)) = yes_stream.next() => {
+                manager.update("token-yes", ob);
+            }
+            Some(Ok(ob)) = no_stream.next() => {
+                manager.update("token-no", ob);
+            }
+            else => break,
+        }
+
+        // Check if we have data for both
+        if manager.has_all_data(&["token-yes", "token-no"]) {
+            let (yes_bid, yes_ask) = manager.get_best_bid_ask("token-yes");
+            let (no_bid, no_ask) = manager.get_best_bid_ask("token-no");
+
+            println!("YES: {:?} / {:?}", yes_bid, yes_ask);
+            println!("NO:  {:?} / {:?}", no_bid, no_ask);
+        }
+    }
+
+    Ok(())
+}
+```
+
+## Error Handling
+
+```rust
+use pc_core::{OrderBookWebSocket, WebSocketError};
+
+match ws.connect().await {
+    Ok(()) => println!("Connected"),
+    Err(WebSocketError::Connection(msg)) => {
+        println!("Connection failed: {}", msg);
+    }
+    Err(WebSocketError::Closed) => {
+        println!("Connection closed unexpectedly");
+    }
+    Err(WebSocketError::Protocol(msg)) => {
+        println!("Protocol error: {}", msg);
+    }
+    Err(WebSocketError::Subscription(msg)) => {
+        println!("Subscription failed: {}", msg);
+    }
+}
+```
+
+## WebSocket Errors
+
+```rust
+pub enum WebSocketError {
+    Connection(String),    // Connection failed
+    Closed,               // Connection closed
+    Protocol(String),     // Protocol error
+    Subscription(String), // Subscription failed
+}
+```
+
+## Reconnection Handling
+
+```rust
+use pc_core::{OrderBookWebSocket, WebSocketState};
+use pc_exchange_polymarket::PolymarketWebSocket;
+
+async fn with_reconnection() -> anyhow::Result<()> {
+    let mut ws = PolymarketWebSocket::new();
+    let token = "token-id";
+
+    loop {
+        // Connect if not connected
+        if ws.state() == WebSocketState::Disconnected {
+            println!("Connecting...");
+            if let Err(e) = ws.connect().await {
+                eprintln!("Connection failed: {}", e);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                continue;
+            }
+            ws.subscribe(token).await?;
+        }
+
+        // Process stream
+        let mut stream = ws.orderbook_stream(token).await?;
+
+        while let Some(result) = stream.next().await {
+            match result {
+                Ok(orderbook) => {
+                    // Process orderbook
+                    println!("Update received");
+                }
+                Err(e) => {
+                    eprintln!("Stream error: {}", e);
+                    break; // Will reconnect on next iteration
+                }
+            }
+        }
+
+        // Wait before reconnecting
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always disconnect cleanly">
+    Call `disconnect()` when done to properly close the connection.
+    ```rust
+    ws.disconnect().await?;
+    ```
+  </Accordion>
+
+  <Accordion title="Handle errors gracefully">
+    WebSocket connections can fail. Always handle errors and implement reconnection logic.
+  </Accordion>
+
+  <Accordion title="Use OrderbookManager for multiple markets">
+    When tracking multiple orderbooks, use `OrderbookManager` to keep them organized.
+  </Accordion>
+
+  <Accordion title="Check connection state">
+    Use `ws.state()` to check the current connection state before operations.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Orderbook Model" icon="book" href="/models/orderbook">
+    Learn about the Orderbook data structure.
+  </Card>
+  <Card title="Strategy Framework" icon="chart-line" href="/strategy/overview">
+    Build trading strategies with real-time data.
+  </Card>
+</CardGroup>

@@ -1,0 +1,292 @@
+---
+title: "Market"
+description: "Understanding the Market data model"
+---
+
+## Overview
+
+The `Market` struct represents a prediction market. It contains all the information about a market including its question, outcomes, prices, and trading metadata.
+
+## Structure
+
+```rust
+pub struct Market {
+    pub id: String,
+    pub question: String,
+    pub outcomes: Vec<String>,
+    pub close_time: Option<DateTime<Utc>>,
+    pub volume: f64,
+    pub liquidity: f64,
+    pub prices: HashMap<String, f64>,
+    pub metadata: serde_json::Value,
+    pub tick_size: f64,
+    pub description: String,
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `String` | Unique market identifier |
+| `question` | `String` | The prediction question |
+| `outcomes` | `Vec<String>` | Possible outcomes (e.g., `["Yes", "No"]`) |
+| `close_time` | `Option<DateTime<Utc>>` | When the market closes |
+| `volume` | `f64` | Total trading volume in USD |
+| `liquidity` | `f64` | Current market liquidity |
+| `prices` | `HashMap<String, f64>` | Current price for each outcome |
+| `metadata` | `serde_json::Value` | Exchange-specific metadata |
+| `tick_size` | `f64` | Minimum price increment |
+| `description` | `String` | Detailed market description |
+
+## Methods
+
+### `is_binary()`
+
+Check if the market is a binary market (exactly 2 outcomes):
+
+```rust
+let market = exchange.fetch_market("market-id").await?;
+
+if market.is_binary() {
+    println!("This is a Yes/No market");
+} else {
+    println!("This market has {} outcomes", market.outcomes.len());
+}
+```
+
+### `is_open()`
+
+Check if the market is currently open for trading:
+
+```rust
+if market.is_open() {
+    println!("Market is open for trading");
+} else {
+    println!("Market is closed");
+}
+```
+
+The method checks:
+1. The `closed` field in metadata (if present)
+2. Whether current time is before `close_time`
+
+### `spread()`
+
+Calculate the market spread for binary markets:
+
+```rust
+if let Some(spread) = market.spread() {
+    println!("Market spread: {:.2}%", spread * 100.0);
+} else {
+    println!("Spread not available (non-binary market)");
+}
+```
+
+<Note>
+  Returns `None` for non-binary markets.
+</Note>
+
+### `get_token_ids()`
+
+Get the CLOB token IDs from market metadata (primarily for Polymarket):
+
+```rust
+let token_ids = market.get_token_ids();
+// ["token-id-for-yes", "token-id-for-no"]
+
+for (i, token_id) in token_ids.iter().enumerate() {
+    println!("Outcome {}: {}", market.outcomes[i], token_id);
+}
+```
+
+### `get_outcome_tokens()`
+
+Get outcome-token pairs for easier handling:
+
+```rust
+let outcome_tokens = market.get_outcome_tokens();
+
+for ot in outcome_tokens {
+    println!("{} -> {}", ot.outcome, ot.token_id);
+}
+// Yes -> 21742633143463906290569050155826241533067272736897614950488156847949938836455
+// No -> 48331043336612883890938759509493159234755048973500640148014422747788308965732
+```
+
+Returns a `Vec<OutcomeToken>`:
+
+```rust
+pub struct OutcomeToken {
+    pub outcome: String,
+    pub token_id: String,
+}
+```
+
+## Examples
+
+### Fetch and Display Market
+
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let exchange = Polymarket::new(PolymarketConfig::new())?;
+
+    let markets = exchange
+        .fetch_markets(Some(FetchMarketsParams {
+            limit: Some(5),
+            active_only: true,
+        }))
+        .await?;
+
+    for market in markets {
+        println!("═══════════════════════════════════════");
+        println!("ID:       {}", market.id);
+        println!("Question: {}", market.question);
+        println!("Binary:   {}", market.is_binary());
+        println!("Open:     {}", market.is_open());
+
+        // Display outcomes and prices
+        println!("Outcomes:");
+        for outcome in &market.outcomes {
+            if let Some(price) = market.prices.get(outcome) {
+                println!("  {}: {:.1}%", outcome, price * 100.0);
+            }
+        }
+
+        // Display spread for binary markets
+        if let Some(spread) = market.spread() {
+            println!("Spread:   {:.2}%", spread * 100.0);
+        }
+
+        println!("Volume:    ${:,.0}", market.volume);
+        println!("Liquidity: ${:,.0}", market.liquidity);
+        println!("Tick Size: {}", market.tick_size);
+
+        // Display close time
+        if let Some(close_time) = market.close_time {
+            println!("Closes:    {}", close_time.format("%Y-%m-%d %H:%M UTC"));
+        }
+    }
+
+    Ok(())
+}
+```
+
+### Working with Token IDs
+
+```rust
+// Fetch a specific market
+let market = exchange.fetch_market("condition-id").await?;
+
+// Get tokens for trading
+let tokens = market.get_outcome_tokens();
+
+// Find the token for a specific outcome
+let yes_token = tokens.iter()
+    .find(|t| t.outcome == "Yes")
+    .expect("Yes outcome not found");
+
+println!("Yes token ID: {}", yes_token.token_id);
+
+// Use token ID in order params
+let mut params = HashMap::new();
+params.insert("token_id".to_string(), yes_token.token_id.clone());
+```
+
+### Filter Markets by Criteria
+
+```rust
+let markets = exchange.fetch_markets(None).await?;
+
+// Filter for binary markets with high volume
+let high_volume_binary: Vec<_> = markets
+    .iter()
+    .filter(|m| m.is_binary() && m.volume > 100_000.0)
+    .collect();
+
+// Filter for open markets closing soon
+let closing_soon: Vec<_> = markets
+    .iter()
+    .filter(|m| {
+        if let Some(close_time) = m.close_time {
+            let hours_until_close = (close_time - Utc::now()).num_hours();
+            m.is_open() && hours_until_close < 24 && hours_until_close > 0
+        } else {
+            false
+        }
+    })
+    .collect();
+```
+
+## Metadata
+
+The `metadata` field contains exchange-specific data as JSON. Common fields include:
+
+### Polymarket
+
+```rust
+// Access Polymarket-specific metadata
+if let Some(obj) = market.metadata.as_object() {
+    // CLOB token IDs
+    if let Some(tokens) = obj.get("clobTokenIds") {
+        println!("Token IDs: {:?}", tokens);
+    }
+
+    // Condition ID
+    if let Some(condition_id) = obj.get("conditionId") {
+        println!("Condition ID: {}", condition_id);
+    }
+
+    // Market slug
+    if let Some(slug) = obj.get("slug") {
+        println!("Slug: {}", slug);
+    }
+}
+```
+
+### Kalshi
+
+```rust
+// Access Kalshi-specific metadata
+if let Some(obj) = market.metadata.as_object() {
+    // Ticker
+    if let Some(ticker) = obj.get("ticker") {
+        println!("Ticker: {}", ticker);
+    }
+
+    // Event ID
+    if let Some(event_id) = obj.get("eventId") {
+        println!("Event ID: {}", event_id);
+    }
+}
+```
+
+## Serialization
+
+Markets can be serialized/deserialized using serde:
+
+```rust
+use serde_json;
+
+// Serialize to JSON
+let json = serde_json::to_string_pretty(&market)?;
+println!("{}", json);
+
+// Deserialize from JSON
+let market: Market = serde_json::from_str(&json)?;
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Order Model" icon="receipt" href="/models/order">
+    Learn about order data structures.
+  </Card>
+  <Card title="Position Model" icon="wallet" href="/models/position">
+    Understand position tracking.
+  </Card>
+</CardGroup>

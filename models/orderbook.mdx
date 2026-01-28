@@ -1,0 +1,311 @@
+---
+title: "Orderbook"
+description: "Understanding the Orderbook data model"
+---
+
+## Overview
+
+The `Orderbook` struct represents the order book for a market, showing all open buy (bid) and sell (ask) orders at different price levels.
+
+## Structure
+
+```rust
+pub struct Orderbook {
+    pub market_id: String,
+    pub asset_id: String,
+    pub bids: Vec<PriceLevel>,
+    pub asks: Vec<PriceLevel>,
+    pub last_update_id: Option<u64>,
+    pub timestamp: Option<DateTime<Utc>>,
+}
+
+pub struct PriceLevel {
+    pub price: f64,
+    pub size: f64,
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `market_id` | `String` | ID of the market |
+| `asset_id` | `String` | ID of the specific asset/token |
+| `bids` | `Vec<PriceLevel>` | Buy orders (highest first) |
+| `asks` | `Vec<PriceLevel>` | Sell orders (lowest first) |
+| `last_update_id` | `Option<u64>` | Sequence number for updates |
+| `timestamp` | `Option<DateTime<Utc>>` | Last update timestamp |
+
+### PriceLevel
+
+```rust
+pub struct PriceLevel {
+    pub price: f64,
+    pub size: f64,
+}
+
+impl PriceLevel {
+    pub fn new(price: f64, size: f64) -> Self;
+}
+```
+
+## Methods
+
+### `best_bid()`
+
+Get the highest bid price:
+
+```rust
+if let Some(bid) = orderbook.best_bid() {
+    println!("Best bid: ${:.4}", bid);
+} else {
+    println!("No bids");
+}
+```
+
+### `best_ask()`
+
+Get the lowest ask price:
+
+```rust
+if let Some(ask) = orderbook.best_ask() {
+    println!("Best ask: ${:.4}", ask);
+} else {
+    println!("No asks");
+}
+```
+
+### `mid_price()`
+
+Calculate the mid-market price:
+
+```rust
+if let Some(mid) = orderbook.mid_price() {
+    println!("Mid price: ${:.4}", mid);
+}
+// mid = (best_bid + best_ask) / 2
+```
+
+### `spread()`
+
+Calculate the bid-ask spread:
+
+```rust
+if let Some(spread) = orderbook.spread() {
+    println!("Spread: ${:.4}", spread);
+}
+// spread = best_ask - best_bid
+```
+
+### `has_data()`
+
+Check if the orderbook has any data:
+
+```rust
+if orderbook.has_data() {
+    println!("Orderbook is populated");
+} else {
+    println!("Orderbook is empty");
+}
+```
+
+### `from_rest_response()`
+
+Create an orderbook from REST API response:
+
+```rust
+let orderbook = Orderbook::from_rest_response(
+    &bid_levels,  // Vec<RestPriceLevel>
+    &ask_levels,  // Vec<RestPriceLevel>
+    "asset-id",
+);
+```
+
+## Examples
+
+### Display Orderbook
+
+```rust
+fn print_orderbook(orderbook: &Orderbook) {
+    println!("═══════════════════════════════════════");
+    println!("Market: {}", orderbook.market_id);
+    println!("Asset:  {}", orderbook.asset_id);
+
+    if let Some(ts) = orderbook.timestamp {
+        println!("Time:   {}", ts.format("%H:%M:%S%.3f UTC"));
+    }
+
+    println!("\n  {:>10} {:>10}", "PRICE", "SIZE");
+    println!("  ─────────────────────");
+
+    // Show top 5 asks (reversed for display)
+    for level in orderbook.asks.iter().take(5).rev() {
+        println!("  {:>10.4} {:>10.0}  ASK", level.price, level.size);
+    }
+
+    println!("  ─────────────────────");
+
+    // Show top 5 bids
+    for level in orderbook.bids.iter().take(5) {
+        println!("  {:>10.4} {:>10.0}  BID", level.price, level.size);
+    }
+
+    // Summary
+    if let (Some(bid), Some(ask)) = (orderbook.best_bid(), orderbook.best_ask()) {
+        println!("\nBest Bid: ${:.4}", bid);
+        println!("Best Ask: ${:.4}", ask);
+        println!("Spread:   ${:.4} ({:.2}%)",
+            ask - bid,
+            (ask - bid) / ((bid + ask) / 2.0) * 100.0
+        );
+    }
+
+    if let Some(mid) = orderbook.mid_price() {
+        println!("Mid:      ${:.4}", mid);
+    }
+}
+```
+
+### Stream Orderbook Updates
+
+```rust
+use pc_core::OrderBookWebSocket;
+use pc_exchange_polymarket::PolymarketWebSocket;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let mut ws = PolymarketWebSocket::new();
+
+    ws.connect().await?;
+
+    let token_id = "token-id-here";
+    ws.subscribe(token_id).await?;
+
+    let mut stream = ws.orderbook_stream(token_id).await?;
+
+    while let Some(result) = stream.next().await {
+        let orderbook = result?;
+
+        if let (Some(bid), Some(ask)) = (orderbook.best_bid(), orderbook.best_ask()) {
+            println!(
+                "[{}] Bid: {:.4} | Ask: {:.4} | Spread: {:.4}",
+                orderbook.timestamp
+                    .map(|t| t.format("%H:%M:%S").to_string())
+                    .unwrap_or_default(),
+                bid,
+                ask,
+                ask - bid
+            );
+        }
+    }
+
+    Ok(())
+}
+```
+
+## OrderbookManager
+
+The `OrderbookManager` helps track multiple orderbooks:
+
+```rust
+pub struct OrderbookManager {
+    orderbooks: HashMap<String, Orderbook>,
+}
+
+impl OrderbookManager {
+    pub fn new() -> Self;
+    pub fn update(&mut self, token_id: impl Into<String>, orderbook: Orderbook);
+    pub fn get(&self, token_id: &str) -> Option<&Orderbook>;
+    pub fn get_best_bid_ask(&self, token_id: &str) -> (Option<f64>, Option<f64>);
+    pub fn has_data(&self, token_id: &str) -> bool;
+    pub fn has_all_data(&self, token_ids: &[&str]) -> bool;
+    pub fn clear(&mut self);
+    pub fn len(&self) -> usize;
+    pub fn is_empty(&self) -> bool;
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Orderbook)>;
+}
+```
+
+### Example: Managing Multiple Orderbooks
+
+```rust
+use pc_core::OrderbookManager;
+
+let mut manager = OrderbookManager::new();
+
+// Update orderbooks from WebSocket
+manager.update("token-yes", orderbook_yes);
+manager.update("token-no", orderbook_no);
+
+// Check if we have data for both
+let tokens = ["token-yes", "token-no"];
+if manager.has_all_data(&tokens) {
+    // Get best prices
+    let (bid_yes, ask_yes) = manager.get_best_bid_ask("token-yes");
+    let (bid_no, ask_no) = manager.get_best_bid_ask("token-no");
+
+    println!("Yes: Bid={:?}, Ask={:?}", bid_yes, ask_yes);
+    println!("No:  Bid={:?}, Ask={:?}", bid_no, ask_no);
+}
+
+// Iterate over all orderbooks
+for (token_id, orderbook) in manager.iter() {
+    println!("{}: {:?} bids, {:?} asks",
+        token_id,
+        orderbook.bids.len(),
+        orderbook.asks.len()
+    );
+}
+```
+
+## Calculating Liquidity
+
+```rust
+fn calculate_depth(orderbook: &Orderbook, price_range: f64) -> (f64, f64) {
+    let mid = match orderbook.mid_price() {
+        Some(m) => m,
+        None => return (0.0, 0.0),
+    };
+
+    let bid_depth: f64 = orderbook.bids
+        .iter()
+        .filter(|l| l.price >= mid - price_range)
+        .map(|l| l.size * l.price)
+        .sum();
+
+    let ask_depth: f64 = orderbook.asks
+        .iter()
+        .filter(|l| l.price <= mid + price_range)
+        .map(|l| l.size * l.price)
+        .sum();
+
+    (bid_depth, ask_depth)
+}
+
+// Usage
+let (bid_depth, ask_depth) = calculate_depth(&orderbook, 0.05);
+println!("Depth within 5 cents of mid:");
+println!("  Bid side: ${:.2}", bid_depth);
+println!("  Ask side: ${:.2}", ask_depth);
+```
+
+## Serialization
+
+```rust
+use serde_json;
+
+let json = serde_json::to_string(&orderbook)?;
+let orderbook: Orderbook = serde_json::from_str(&json)?;
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="WebSocket Overview" icon="signal" href="/websocket/overview">
+    Stream real-time orderbook data.
+  </Card>
+  <Card title="Strategy Framework" icon="chart-line" href="/strategy/overview">
+    Build trading strategies using orderbook data.
+  </Card>
+</CardGroup>

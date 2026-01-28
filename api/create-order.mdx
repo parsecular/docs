@@ -1,0 +1,117 @@
+---
+title: "Create Order"
+description: "Place a new order on a prediction market"
+---
+
+`POST /api/v1/orders`
+
+Places a new limit order on the specified exchange.
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+### Body
+
+<ParamField body="market_id" type="string" required>
+  The market to place the order on.
+</ParamField>
+
+<ParamField body="outcome" type="string" required>
+  The outcome to trade (e.g., `"Yes"` or `"No"`).
+</ParamField>
+
+<ParamField body="side" type="string" required>
+  Order side: `"buy"` or `"sell"`.
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Limit price between 0 and 1 (e.g., `0.65` for 65 cents).
+</ParamField>
+
+<ParamField body="size" type="number" required>
+  Order size in contracts/shares.
+</ParamField>
+
+<ParamField body="params" type="object">
+  Exchange-specific parameters. For Polymarket, use `token_id` to specify the outcome token and `order_type` (`GTC`, `FOK`, `IOC`).
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="Order">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique order identifier.
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Market the order was placed on.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome being traded.
+    </ResponseField>
+    <ResponseField name="side" type="string">
+      `"buy"` or `"sell"`.
+    </ResponseField>
+    <ResponseField name="price" type="number">
+      Order price.
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      Total order size.
+    </ResponseField>
+    <ResponseField name="filled" type="number">
+      Amount filled so far.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      One of: `pending`, `open`, `filled`, `partially_filled`, `cancelled`, `rejected`.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 creation timestamp.
+    </ResponseField>
+    <ResponseField name="updated_at" type="string | null">
+      ISO 8601 last update timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 100
+  }' \
+  "http://localhost:3000/api/v1/orders?exchange=polymarket"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "id": "order_abc123",
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 100.0,
+    "filled": 0.0,
+    "status": "open",
+    "created_at": "2025-01-26T12:00:00Z",
+    "updated_at": null
+  }
+}
+```
+</ResponseExample>

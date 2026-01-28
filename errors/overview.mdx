@@ -1,0 +1,333 @@
+---
+title: "Error Handling"
+description: "Understanding and handling errors in Parsecular"
+---
+
+## Overview
+
+Parsecular uses a structured error hierarchy that helps you handle different types of failures appropriately. All operations return `Result<T, ParsecError>`.
+
+## Error Hierarchy
+
+```rust
+pub enum ParsecError {
+    Network(NetworkError),       // HTTP/connection issues
+    Exchange(ExchangeError),     // Exchange-specific errors
+    WebSocket(WebSocketError),   // WebSocket errors
+    Signing(SigningError),       // Cryptographic errors
+    RateLimitExceeded,           // Rate limit hit
+    Serialization(serde_json::Error), // JSON parsing
+    Config(String),              // Configuration errors
+    InvalidInput(String),        // Validation errors
+    Other(String),               // Generic errors
+}
+```
+
+## NetworkError
+
+Connection and HTTP-related errors:
+
+```rust
+pub enum NetworkError {
+    Http(String),           // HTTP request failed
+    Timeout(u64),           // Request timed out (ms)
+    Connection(String),     // Connection failed
+}
+```
+
+### Example
+
+```rust
+use pc_core::{ParsecError, NetworkError};
+
+match exchange.fetch_markets(None).await {
+    Ok(markets) => println!("Success"),
+    Err(ParsecError::Network(NetworkError::Timeout(ms))) => {
+        println!("Request timed out after {}ms", ms);
+    }
+    Err(ParsecError::Network(NetworkError::Connection(msg))) => {
+        println!("Connection failed: {}", msg);
+    }
+    Err(ParsecError::Network(NetworkError::Http(msg))) => {
+        println!("HTTP error: {}", msg);
+    }
+    Err(e) => println!("Other error: {}", e),
+}
+```
+
+## ExchangeError
+
+Exchange-specific business logic errors:
+
+```rust
+pub enum ExchangeError {
+    MarketNotFound(String),     // Market doesn't exist
+    InvalidOrder(String),       // Order validation failed
+    OrderRejected(String),      // Exchange rejected order
+    InsufficientFunds(String),  // Not enough balance
+    Authentication(String),     // Auth failed
+    NotSupported(String),       // Feature not supported
+    Api(String),                // Generic API error
+}
+```
+
+### Example
+
+```rust
+use pc_core::{ParsecError, ExchangeError, OrderSide};
+use std::collections::HashMap;
+
+match exchange.create_order("market-id", "Yes", OrderSide::Buy, 0.65, 100.0, HashMap::new()).await {
+    Ok(order) => println!("Order placed: {}", order.id),
+
+    Err(ParsecError::Exchange(ExchangeError::InsufficientFunds(msg))) => {
+        println!("Not enough balance: {}", msg);
+    }
+
+    Err(ParsecError::Exchange(ExchangeError::InvalidOrder(msg))) => {
+        println!("Invalid order: {}", msg);
+    }
+
+    Err(ParsecError::Exchange(ExchangeError::OrderRejected(msg))) => {
+        println!("Order rejected: {}", msg);
+    }
+
+    Err(ParsecError::Exchange(ExchangeError::MarketNotFound(id))) => {
+        println!("Market not found: {}", id);
+    }
+
+    Err(ParsecError::Exchange(ExchangeError::Authentication(msg))) => {
+        println!("Authentication failed: {}", msg);
+        println!("Check your API credentials");
+    }
+
+    Err(ParsecError::Exchange(ExchangeError::NotSupported(feature))) => {
+        println!("Feature not supported: {}", feature);
+    }
+
+    Err(e) => println!("Error: {}", e),
+}
+```
+
+## WebSocketError
+
+WebSocket connection and protocol errors:
+
+```rust
+pub enum WebSocketError {
+    Connection(String),     // Connection failed
+    Closed,                 // Connection closed
+    Protocol(String),       // Protocol error
+    Subscription(String),   // Subscription failed
+}
+```
+
+### Example
+
+```rust
+use pc_core::{OrderBookWebSocket, WebSocketError};
+
+match ws.connect().await {
+    Ok(()) => println!("Connected"),
+
+    Err(WebSocketError::Connection(msg)) => {
+        println!("Could not connect: {}", msg);
+    }
+
+    Err(WebSocketError::Closed) => {
+        println!("Connection was closed");
+    }
+
+    Err(WebSocketError::Protocol(msg)) => {
+        println!("Protocol error: {}", msg);
+    }
+
+    Err(WebSocketError::Subscription(msg)) => {
+        println!("Subscription failed: {}", msg);
+    }
+}
+```
+
+## SigningError
+
+Cryptographic signing errors:
+
+```rust
+pub enum SigningError {
+    InvalidKey,             // Invalid private key
+    SigningFailed(String),  // Signing operation failed
+    Unsupported(String),    // Unsupported operation
+}
+```
+
+### Example
+
+```rust
+use pc_core::{ParsecError, SigningError};
+
+match exchange.create_order(...).await {
+    Ok(order) => println!("Success"),
+
+    Err(ParsecError::Signing(SigningError::InvalidKey)) => {
+        println!("Invalid private key format");
+    }
+
+    Err(ParsecError::Signing(SigningError::SigningFailed(msg))) => {
+        println!("Could not sign transaction: {}", msg);
+    }
+
+    Err(e) => println!("Error: {}", e),
+}
+```
+
+## Common Error Handling Patterns
+
+### Catch-All with Display
+
+```rust
+match exchange.fetch_markets(None).await {
+    Ok(markets) => {
+        for market in markets {
+            println!("{}", market.question);
+        }
+    }
+    Err(e) => {
+        // ParsecError implements Display
+        eprintln!("Error: {}", e);
+    }
+}
+```
+
+### Using anyhow
+
+```rust
+use anyhow::Result;
+
+async fn my_function() -> Result<()> {
+    let markets = exchange.fetch_markets(None).await?;
+    // Error automatically converted
+    Ok(())
+}
+```
+
+### Retry on Transient Errors
+
+```rust
+use pc_core::{ParsecError, NetworkError, retry_with_backoff};
+use std::time::Duration;
+
+async fn fetch_with_retry<E: Exchange>(exchange: &E) -> Result<Vec<Market>, ParsecError> {
+    retry_with_backoff(3, Duration::from_secs(1), || async {
+        exchange.fetch_markets(None).await
+    }).await
+}
+```
+
+### Custom Error Mapping
+
+```rust
+use pc_core::{ParsecError, ExchangeError};
+
+fn handle_error(e: ParsecError) -> String {
+    match e {
+        ParsecError::Network(_) =>
+            "Network error. Check your internet connection.".to_string(),
+
+        ParsecError::Exchange(ExchangeError::Authentication(_)) =>
+            "Authentication failed. Check your API credentials.".to_string(),
+
+        ParsecError::Exchange(ExchangeError::InsufficientFunds(_)) =>
+            "Not enough funds. Please deposit more.".to_string(),
+
+        ParsecError::Exchange(ExchangeError::MarketNotFound(id)) =>
+            format!("Market '{}' not found.", id),
+
+        ParsecError::RateLimitExceeded =>
+            "Too many requests. Please wait and try again.".to_string(),
+
+        ParsecError::Config(msg) =>
+            format!("Configuration error: {}", msg),
+
+        _ => format!("An error occurred: {}", e),
+    }
+}
+```
+
+### Graceful Degradation
+
+```rust
+// Try to fetch, return empty on error
+let markets = exchange.fetch_markets(None).await.unwrap_or_default();
+
+// Or with logging
+let markets = match exchange.fetch_markets(None).await {
+    Ok(m) => m,
+    Err(e) => {
+        eprintln!("Warning: could not fetch markets: {}", e);
+        Vec::new()
+    }
+};
+```
+
+## Error Conversion
+
+ParsecError implements `From` for various types:
+
+```rust
+// From NetworkError
+let e: ParsecError = NetworkError::Timeout(30000).into();
+
+// From ExchangeError
+let e: ParsecError = ExchangeError::MarketNotFound("id".to_string()).into();
+
+// From serde_json::Error
+let e: ParsecError = serde_json::from_str::<Value>("invalid").unwrap_err().into();
+```
+
+## Logging Errors
+
+```rust
+use tracing::{error, warn, info};
+
+match exchange.create_order(...).await {
+    Ok(order) => {
+        info!("Order placed: {}", order.id);
+    }
+    Err(ParsecError::Exchange(ExchangeError::InsufficientFunds(msg))) => {
+        warn!("Insufficient funds: {}", msg);
+    }
+    Err(e) => {
+        error!("Failed to place order: {}", e);
+    }
+}
+```
+
+## Error Messages
+
+All errors implement `Display` and `Error`:
+
+```rust
+let error = ParsecError::Exchange(ExchangeError::MarketNotFound("abc".to_string()));
+
+// Display
+println!("{}", error);
+// "exchange error: market not found: abc"
+
+// Debug
+println!("{:?}", error);
+// Exchange(MarketNotFound("abc"))
+
+// Error trait
+let source = error.source();
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Avoid configuration errors.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/fetch-markets">
+    See error types for each API.
+  </Card>
+</CardGroup>

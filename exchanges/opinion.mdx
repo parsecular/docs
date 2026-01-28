@@ -1,0 +1,156 @@
+---
+title: "Opinion"
+description: "Opinion exchange configuration and usage"
+---
+
+## Overview
+
+Opinion is a prediction market platform that uses a combination of API key and multi-signature wallet authentication.
+
+| Feature | Status |
+|---------|--------|
+| REST API | Full Support |
+| WebSocket | Not Supported |
+| Authentication | API Key + Multi-sig Wallet |
+
+## Configuration
+
+### Basic Setup
+
+```rust
+use pc_exchange_opinion::{Opinion, OpinionConfig};
+
+let config = OpinionConfig::new()
+    .with_api_key("your-api-key");
+
+let exchange = Opinion::new(config)?;
+```
+
+### Full Configuration
+
+```rust
+use pc_exchange_opinion::{Opinion, OpinionConfig};
+
+let config = OpinionConfig::new()
+    .with_api_key("your-api-key")
+    .with_private_key("0x...")            // Ethereum private key
+    .with_multi_sig_addr("0x...")         // Multi-sig wallet address
+    .with_verbose(true);
+
+let exchange = Opinion::new(config)?;
+```
+
+## Environment Variables
+
+```bash
+export OPINION_API_KEY="your-api-key"
+export OPINION_PRIVATE_KEY="0x..."
+export OPINION_MULTI_SIG_ADDR="0x..."
+```
+
+Load from environment:
+
+```rust
+use std::env;
+
+let config = OpinionConfig::new()
+    .with_api_key(env::var("OPINION_API_KEY")?)
+    .with_private_key(env::var("OPINION_PRIVATE_KEY")?)
+    .with_multi_sig_addr(env::var("OPINION_MULTI_SIG_ADDR")?);
+```
+
+## Examples
+
+### Fetch Markets
+
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+use pc_exchange_opinion::{Opinion, OpinionConfig};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let config = OpinionConfig::new()
+        .with_api_key("your-api-key");
+
+    let exchange = Opinion::new(config)?;
+
+    let markets = exchange
+        .fetch_markets(Some(FetchMarketsParams {
+            limit: Some(10),
+            active_only: true,
+        }))
+        .await?;
+
+    for market in markets {
+        println!("─────────────────────────────────");
+        println!("ID: {}", market.id);
+        println!("Question: {}", market.question);
+        println!("Outcomes: {:?}", market.outcomes);
+    }
+
+    Ok(())
+}
+```
+
+### Place an Order
+
+```rust
+use pc_core::{Exchange, OrderSide};
+use std::collections::HashMap;
+
+let config = OpinionConfig::new()
+    .with_api_key("your-api-key")
+    .with_private_key("0x...")
+    .with_multi_sig_addr("0x...");
+
+let exchange = Opinion::new(config)?;
+
+let order = exchange
+    .create_order(
+        "market-id",
+        "Yes",
+        OrderSide::Buy,
+        0.55,
+        25.0,
+        HashMap::new(),
+    )
+    .await?;
+
+println!("Order placed: {}", order.id);
+```
+
+### Fetch Positions
+
+```rust
+let positions = exchange.fetch_positions(None).await?;
+
+for pos in positions {
+    println!(
+        "{} - {}: {} shares",
+        pos.market_id, pos.outcome, pos.size
+    );
+}
+```
+
+## Multi-Sig Authentication
+
+Opinion uses a multi-signature wallet system for enhanced security. The authentication flow:
+
+1. API key authenticates your application
+2. Private key signs transactions
+3. Multi-sig address verifies and processes transactions
+
+<Note>
+  Ensure all three credentials are properly configured for trading operations.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Other Exchanges" icon="building-columns" href="/exchanges/overview">
+    Compare with other platforms.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/fetch-markets">
+    Explore API methods.
+  </Card>
+</CardGroup>

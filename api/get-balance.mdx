@@ -1,0 +1,50 @@
+---
+title: "Get Balance"
+description: "Get your account balance"
+---
+
+`GET /api/v1/balance`
+
+Returns the account balance for the authenticated user on the specified exchange.
+
+For Polymarket, the balance query automatically includes the configured `signature_type` to ensure the correct wallet balance is returned across all wallet types (EOA, Proxy, GnosisSafe).
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="balances" type="object">
+      Map of asset symbol to balance amount. Common assets: `USDC` (Polymarket, Limitless, Opinion, PredictFun), `USD` (Kalshi).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/balance?exchange=polymarket"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "balances": {
+      "USDC": 1250.50
+    }
+  }
+}
+```
+</ResponseExample>

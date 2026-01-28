@@ -1,0 +1,204 @@
+---
+title: "Exchange Overview"
+description: "Understanding the unified Exchange trait and platform implementations"
+---
+
+## The Exchange Trait
+
+The `Exchange` trait is the core abstraction in Parsecular. It defines a consistent interface that all prediction market platforms must implement, allowing you to write code that works across multiple exchanges.
+
+```rust
+#[async_trait]
+pub trait Exchange: Send + Sync {
+    // Identification
+    fn id(&self) -> &'static str;
+    fn name(&self) -> &'static str;
+
+    // Market Operations
+    async fn fetch_markets(&self, params: Option<FetchMarketsParams>)
+        -> Result<Vec<Market>, ParsecError>;
+    async fn fetch_market(&self, market_id: &str)
+        -> Result<Market, ParsecError>;
+    async fn fetch_markets_by_slug(&self, slug: &str)
+        -> Result<Vec<Market>, ParsecError>;
+
+    // Order Operations
+    async fn create_order(
+        &self,
+        market_id: &str,
+        outcome: &str,
+        side: OrderSide,
+        price: f64,
+        size: f64,
+        params: HashMap<String, String>,
+    ) -> Result<Order, ParsecError>;
+    async fn cancel_order(&self, order_id: &str, market_id: Option<&str>)
+        -> Result<Order, ParsecError>;
+    async fn fetch_order(&self, order_id: &str, market_id: Option<&str>)
+        -> Result<Order, ParsecError>;
+    async fn fetch_open_orders(&self, params: Option<FetchOrdersParams>)
+        -> Result<Vec<Order>, ParsecError>;
+
+    // Account Operations
+    async fn fetch_positions(&self, market_id: Option<&str>)
+        -> Result<Vec<Position>, ParsecError>;
+    async fn fetch_balance(&self)
+        -> Result<HashMap<String, f64>, ParsecError>;
+
+    // Metadata
+    fn describe(&self) -> ExchangeInfo;
+}
+```
+
+## Supported Exchanges
+
+<CardGroup cols={2}>
+  <Card title="Polymarket" icon="chart-pie" href="/exchanges/polymarket">
+    Decentralized prediction market on Polygon. Supports WebSocket orderbook streaming.
+  </Card>
+  <Card title="Limitless" icon="infinity" href="/exchanges/limitless">
+    Decentralized prediction market with WebSocket support.
+  </Card>
+  <Card title="Kalshi" icon="building" href="/exchanges/kalshi">
+    CFTC-regulated prediction market for US users.
+  </Card>
+  <Card title="Opinion" icon="comments" href="/exchanges/opinion">
+    Prediction market with multi-sig wallet support.
+  </Card>
+  <Card title="Predict.fun" icon="dice" href="/exchanges/predictfun">
+    Prediction market platform with API key authentication.
+  </Card>
+</CardGroup>
+
+## Exchange Capabilities
+
+Each exchange has different capabilities. Use `describe()` to check what features are available:
+
+```rust
+let info = exchange.describe();
+
+println!("Exchange: {} ({})", info.name, info.id);
+println!("Has fetch_markets: {}", info.has_fetch_markets);
+println!("Has create_order: {}", info.has_create_order);
+println!("Has websocket: {}", info.has_websocket);
+```
+
+### Feature Matrix
+
+| Feature | Polymarket | Limitless | Kalshi | Opinion | Predict.fun |
+|---------|------------|-----------|--------|---------|-------------|
+| `fetch_markets` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_market` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_markets_by_slug` | Yes | No | No | No | No |
+| `create_order` | Yes | Yes | Yes | Yes | Yes |
+| `cancel_order` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_order` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_open_orders` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_positions` | Yes | Yes | Yes | Yes | Yes |
+| `fetch_balance` | Yes | Yes | Yes | Yes | Yes |
+| WebSocket | Yes | Yes | No | No | No |
+
+## Exchange Factory
+
+Parsecular provides utilities for working with exchanges programmatically:
+
+```rust
+use pc_core::{ExchangeId, list_exchanges, list_exchange_names, validate_env_config};
+
+// List all available exchange IDs
+let exchanges = list_exchanges();
+// [Polymarket, Opinion, Limitless, Kalshi, PredictFun]
+
+// List exchange names as strings
+let names = list_exchange_names();
+// ["polymarket", "opinion", "limitless", "kalshi", "predictfun"]
+
+// Parse exchange ID from string
+let id: ExchangeId = "polymarket".parse().unwrap();
+
+// Validate environment configuration
+match validate_env_config(ExchangeId::Polymarket) {
+    Ok(()) => println!("Configuration valid"),
+    Err(e) => println!("Missing env vars: {}", e),
+}
+```
+
+## Base Configuration
+
+All exchanges share a common base configuration:
+
+```rust
+use std::time::Duration;
+use pc_core::ExchangeConfig;
+
+let config = ExchangeConfig::default()
+    .with_timeout(Duration::from_secs(30))      // Request timeout
+    .with_rate_limit(10)                         // Requests per second
+    .with_retries(3, Duration::from_secs(1))    // Max retries & delay
+    .with_verbose(true);                         // Enable logging
+```
+
+### Default Values
+
+| Setting | Default Value |
+|---------|---------------|
+| `timeout` | 30 seconds |
+| `rate_limit_per_second` | 10 |
+| `max_retries` | 3 |
+| `retry_delay` | 1 second |
+| `verbose` | false |
+
+## Dynamic Exchange Usage
+
+You can use exchanges polymorphically through trait objects:
+
+```rust
+use pc_core::Exchange;
+
+async fn fetch_from_any_exchange(exchange: &dyn Exchange) -> anyhow::Result<()> {
+    let markets = exchange.fetch_markets(None).await?;
+
+    println!("Fetched {} markets from {}", markets.len(), exchange.name());
+
+    Ok(())
+}
+
+// Usage with any exchange
+let polymarket = Polymarket::new(PolymarketConfig::new())?;
+fetch_from_any_exchange(&polymarket).await?;
+
+let kalshi = Kalshi::new(KalshiConfig::demo())?;
+fetch_from_any_exchange(&kalshi).await?;
+```
+
+## Error Handling
+
+All exchange operations return `Result<T, ParsecError>`. See the [Error Handling](/errors/overview) section for details.
+
+```rust
+match exchange.fetch_markets(None).await {
+    Ok(markets) => {
+        println!("Found {} markets", markets.len());
+    }
+    Err(ParsecError::Network(e)) => {
+        println!("Network error: {}", e);
+    }
+    Err(ParsecError::Exchange(ExchangeError::Authentication(msg))) => {
+        println!("Auth failed: {}", msg);
+    }
+    Err(e) => {
+        println!("Other error: {}", e);
+    }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Polymarket" icon="chart-pie" href="/exchanges/polymarket">
+    Configure and use Polymarket.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/fetch-markets">
+    Explore all available API methods.
+  </Card>
+</CardGroup>

@@ -1,0 +1,87 @@
+---
+title: "Cancel Order"
+description: "Cancel an open order"
+---
+
+`DELETE /api/v1/orders/:order_id`
+
+Cancels an open order on the specified exchange.
+
+## Parameters
+
+<ParamField path="order_id" type="string" required>
+  The unique identifier of the order to cancel.
+</ParamField>
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="Order">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique order identifier.
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Market the order was on.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome that was being traded.
+    </ResponseField>
+    <ResponseField name="side" type="string">
+      `"buy"` or `"sell"`.
+    </ResponseField>
+    <ResponseField name="price" type="number">
+      Order price.
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      Total order size.
+    </ResponseField>
+    <ResponseField name="filled" type="number">
+      Amount filled before cancellation.
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Will be `"cancelled"`.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 creation timestamp.
+    </ResponseField>
+    <ResponseField name="updated_at" type="string">
+      ISO 8601 cancellation timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -X DELETE \
+  -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/orders/order_abc123?exchange=polymarket"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "id": "order_abc123",
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 100.0,
+    "filled": 25.0,
+    "status": "cancelled",
+    "created_at": "2025-01-26T10:00:00Z",
+    "updated_at": "2025-01-26T12:00:00Z"
+  }
+}
+```
+</ResponseExample>

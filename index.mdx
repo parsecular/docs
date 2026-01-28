@@ -1,97 +1,136 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Parsecular"
+description: "A CCXT-style unified API for prediction markets in Rust"
 ---
 
-## Setting up
+## Overview
 
-Get your documentation site up and running in minutes.
+Parsecular is a unified API layer for prediction markets, designed with the same philosophy as CCXT for cryptocurrency exchanges. It provides a consistent, type-safe interface for interacting with multiple prediction market platforms through a single API.
 
 <Card
-  title="Start here"
+  title="Quickstart"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Get up and running in minutes with our quickstart guide.
 </Card>
 
-## Make it yours
+## Supported Exchanges
 
-Design a docs site that looks great and empowers your users.
+Parsecular supports five major prediction market platforms:
+
+| Exchange | REST API | WebSocket | Auth Type |
+|----------|----------|-----------|-----------|
+| **Polymarket** | Full | Orderbook | Ethereum Wallet |
+| **Limitless** | Full | Orderbook | Ethereum Wallet |
+| **Kalshi** | Full | - | RSA Certificate |
+| **Opinion** | Full | - | API Key + Multi-sig |
+| **Predict.fun** | Full | - | API Key + Ethereum |
+
+## Key Features
 
 <Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+  <Card title="Unified Interface" icon="layer-group">
+    One API to rule them all. Switch between exchanges with minimal code changes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Type-Safe" icon="shield-check">
+    Strongly typed Rust models prevent runtime errors and improve developer experience.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Async-First" icon="bolt">
+    Built on Tokio for high-performance async operations.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Real-Time Data" icon="signal-stream">
+    WebSocket support for live orderbook streaming on supported exchanges.
   </Card>
 </Columns>
 
-## Create beautiful pages
+## Quick Example
 
-Everything you need to create world-class documentation.
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    // Initialize exchange
+    let exchange = Polymarket::new(PolymarketConfig::new())?;
+
+    // Fetch markets
+    let markets = exchange
+        .fetch_markets(Some(FetchMarketsParams {
+            limit: Some(5),
+            active_only: true,
+        }))
+        .await?;
+
+    for market in markets {
+        println!("{}: {}", market.id, market.question);
+    }
+
+    Ok(())
+}
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Your Application                      │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+┌─────────────────────────▼───────────────────────────────┐
+│                  pc-core (Unified API)                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │
+│  │   Exchange  │  │   Models    │  │  Strategy   │      │
+│  │    Trait    │  │   & Types   │  │  Framework  │      │
+│  └─────────────┘  └─────────────┘  └─────────────┘      │
+└─────────────────────────┬───────────────────────────────┘
+                          │
+    ┌─────────┬─────────┬─┴───────┬─────────┬─────────┐
+    ▼         ▼         ▼         ▼         ▼
+┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────────┐
+│Poly-  │ │Limit- │ │Kalshi │ │Opinion│ │Predict.fun│
+│market │ │less   │ │       │ │       │ │           │
+└───────┘ └───────┘ └───────┘ └───────┘ └───────────┘
+```
+
+## Documentation Sections
 
 <Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+  <Card title="Exchanges" icon="building-columns" href="/exchanges/overview">
+    Learn about the Exchange trait and platform-specific implementations.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Data Models" icon="database" href="/models/market">
+    Understand the core data structures: Markets, Orders, Positions, and Orderbooks.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="API Reference" icon="code" href="/api/fetch-markets">
+    Complete reference for all available API methods.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="WebSocket" icon="signal" href="/websocket/overview">
+    Real-time orderbook streaming documentation.
+  </Card>
+  <Card title="Strategy Framework" icon="chart-line" href="/strategy/overview">
+    Build automated trading strategies with the built-in framework.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Environment variables and configuration options.
   </Card>
 </Columns>
 
-## Need inspiration?
+## Installation
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Add Parsecular to your `Cargo.toml`:
+
+```toml
+[dependencies]
+pc-core = { path = "pc-core" }
+pc-exchange-polymarket = { path = "pc-exchange-polymarket" }
+pc-exchange-limitless = { path = "pc-exchange-limitless" }
+pc-exchange-kalshi = { path = "pc-exchange-kalshi" }
+pc-exchange-opinion = { path = "pc-exchange-opinion" }
+pc-exchange-predictfun = { path = "pc-exchange-predictfun" }
+
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+```

@@ -1,0 +1,59 @@
+---
+title: "Ping"
+description: "Verify exchange authentication status"
+---
+
+`GET /api/v1/ping`
+
+Checks authentication status for one or all registered exchanges.
+
+## Parameters
+
+<ParamField query="exchange" type="string">
+  Exchange identifier. If omitted, pings all registered exchanges.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="PingResult[]">
+  <Expandable title="properties">
+    <ResponseField name="exchange" type="string">
+      Exchange identifier.
+    </ResponseField>
+    <ResponseField name="authenticated" type="boolean">
+      Whether the exchange is authenticated and ready for trading.
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Status message or error details.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+# Ping specific exchange
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/ping?exchange=polymarket"
+
+# Ping all exchanges
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/api/v1/ping"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": [
+    { "exchange": "polymarket", "authenticated": true, "message": "authenticated" },
+    { "exchange": "kalshi", "authenticated": true, "message": "authenticated" },
+    { "exchange": "limitless", "authenticated": false, "message": "not authenticated" }
+  ]
+}
+```
+</ResponseExample>

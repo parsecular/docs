@@ -1,0 +1,340 @@
+---
+title: "Configuration"
+description: "Exchange configuration and environment setup"
+---
+
+## Overview
+
+Each exchange in Parsecular has its own configuration struct with exchange-specific options. All configurations share a common base that provides networking and retry settings.
+
+## Base Configuration
+
+All exchanges inherit from `ExchangeConfig`:
+
+```rust
+pub struct ExchangeConfig {
+    pub timeout: Duration,           // Request timeout
+    pub rate_limit_per_second: u32,  // Max requests per second
+    pub max_retries: u32,            // Retry attempts
+    pub retry_delay: Duration,       // Delay between retries
+    pub verbose: bool,               // Enable logging
+}
+```
+
+### Defaults
+
+| Setting | Default Value |
+|---------|---------------|
+| `timeout` | 30 seconds |
+| `rate_limit_per_second` | 10 |
+| `max_retries` | 3 |
+| `retry_delay` | 1 second |
+| `verbose` | false |
+
+### Builder Pattern
+
+```rust
+use pc_core::ExchangeConfig;
+use std::time::Duration;
+
+let config = ExchangeConfig::default()
+    .with_timeout(Duration::from_secs(60))
+    .with_rate_limit(5)
+    .with_retries(5, Duration::from_secs(2))
+    .with_verbose(true);
+```
+
+## Exchange-Specific Configurations
+
+### Polymarket
+
+```rust
+use pc_exchange_polymarket::{PolymarketConfig, PolymarketSignatureType};
+
+let config = PolymarketConfig::new()
+    .with_private_key("0x...")                             // Ethereum private key
+    .with_funder("0x...")                                  // Funder wallet address
+    .with_signature_type(PolymarketSignatureType::Proxy)   // Wallet type
+    .with_api_credentials("key", "secret", "passphrase")   // Pre-existing creds (optional)
+    .with_gamma_url("https://...")                          // Custom Gamma API URL
+    .with_clob_url("https://...")                           // Custom CLOB API URL
+    .with_verbose(true);
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `private_key` | For trading | Ethereum private key |
+| `funder` | For Proxy/GnosisSafe | Funder wallet address (auto-derived if omitted) |
+| `signature_type` | No | Wallet type: `Eoa` (default), `Proxy`, or `GnosisSafe` |
+| `api_key` | No | Pre-existing CLOB API key (auto-derived if omitted) |
+| `api_secret` | No | Pre-existing CLOB API secret |
+| `api_passphrase` | No | Pre-existing CLOB API passphrase |
+| `gamma_url` | No | Gamma API endpoint |
+| `clob_url` | No | CLOB API endpoint |
+| `chain_id` | No | Polygon chain ID (default: 137) |
+
+### Limitless
+
+```rust
+use pc_exchange_limitless::LimitlessConfig;
+
+let config = LimitlessConfig::new()
+    .with_private_key("0x...")
+    .with_verbose(true);
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `private_key` | For trading | Ethereum private key |
+
+### Kalshi
+
+```rust
+use pc_exchange_kalshi::KalshiConfig;
+
+// Production
+let config = KalshiConfig::new()
+    .with_api_key_id("key-id")
+    .with_private_key_path("/path/to/key.pem")
+    .with_verbose(true);
+
+// Demo environment
+let demo = KalshiConfig::demo();
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `api_key_id` | For trading | API key identifier |
+| `private_key_path` | For trading | Path to RSA private key PEM |
+| `private_key_pem` | Alternative | PEM content directly |
+| `api_url` | No | Custom API endpoint |
+| `demo` | No | Use demo environment |
+
+### Opinion
+
+```rust
+use pc_exchange_opinion::OpinionConfig;
+
+let config = OpinionConfig::new()
+    .with_api_key("api-key")
+    .with_private_key("0x...")
+    .with_multi_sig_addr("0x...")
+    .with_verbose(true);
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `api_key` | Yes | API key |
+| `private_key` | For trading | Ethereum private key |
+| `multi_sig_addr` | For trading | Multi-sig wallet address |
+
+### Predict.fun
+
+```rust
+use pc_exchange_predictfun::PredictFunConfig;
+
+// Production
+let config = PredictFunConfig::new()
+    .with_api_key("api-key")
+    .with_private_key("0x...")
+    .with_verbose(true);
+
+// Testnet
+let testnet = PredictFunConfig::testnet();
+```
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `api_key` | For production | API key |
+| `private_key` | For trading | Ethereum private key |
+
+## Environment Variables
+
+### Required Variables by Exchange
+
+<Tabs>
+  <Tab title="Polymarket">
+    ```bash
+    export POLYMARKET_PRIVATE_KEY="0x..."
+    export POLYMARKET_FUNDER="0x..."
+    # Wallet type: eoa (default), proxy (Magic/email), gnosis (MetaMask/browser)
+    export POLYMARKET_SIGNATURE_TYPE="eoa"
+    # Optional: pre-existing API credentials (auto-derived if omitted)
+    export POLYMARKET_API_KEY="..."
+    export POLYMARKET_API_SECRET="..."
+    export POLYMARKET_API_PASSPHRASE="..."
+    ```
+  </Tab>
+  <Tab title="Limitless">
+    ```bash
+    export LIMITLESS_PRIVATE_KEY="0x..."
+    ```
+  </Tab>
+  <Tab title="Kalshi">
+    ```bash
+    export KALSHI_API_KEY_ID="your-key-id"
+    export KALSHI_PRIVATE_KEY_PATH="/path/to/key.pem"
+    ```
+  </Tab>
+  <Tab title="Opinion">
+    ```bash
+    export OPINION_API_KEY="your-api-key"
+    export OPINION_PRIVATE_KEY="0x..."
+    export OPINION_MULTI_SIG_ADDR="0x..."
+    ```
+  </Tab>
+  <Tab title="Predict.fun">
+    ```bash
+    export PREDICTFUN_API_KEY="your-api-key"
+    export PREDICTFUN_PRIVATE_KEY="0x..."
+    ```
+  </Tab>
+</Tabs>
+
+### Loading from Environment
+
+```rust
+use std::env;
+
+// Manual loading
+let mut config = PolymarketConfig::new()
+    .with_private_key(env::var("POLYMARKET_PRIVATE_KEY")?);
+
+if let Ok(funder) = env::var("POLYMARKET_FUNDER") {
+    config = config.with_funder(funder);
+}
+
+if let Ok(sig_type) = env::var("POLYMARKET_SIGNATURE_TYPE") {
+    config = config.with_signature_type(
+        pc_exchange_polymarket::PolymarketSignatureType::from(sig_type.as_str())
+    );
+}
+
+// Or use validation helper
+use pc_core::{ExchangeId, validate_env_config};
+
+match validate_env_config(ExchangeId::Polymarket) {
+    Ok(()) => println!("Configuration valid"),
+    Err(e) => println!("Missing env vars: {}", e),
+}
+```
+
+## Validation Helpers
+
+### Validate Environment
+
+```rust
+use pc_core::{ExchangeId, validate_env_config};
+
+// Check if all required env vars are set
+let result = validate_env_config(ExchangeId::Polymarket);
+```
+
+### Validate Private Key
+
+```rust
+use pc_core::validate_private_key;
+
+match validate_private_key("0x...") {
+    Ok(()) => println!("Valid key"),
+    Err(e) => println!("Invalid: {}", e),
+}
+```
+
+Key validation checks:
+- Not empty
+- 64 hex characters (with optional 0x prefix)
+- Valid hexadecimal format
+
+### List Exchanges
+
+```rust
+use pc_core::{list_exchanges, list_exchange_names, ExchangeId};
+
+// Get all exchange IDs
+let ids = list_exchanges();
+// [Polymarket, Opinion, Limitless, Kalshi, PredictFun]
+
+// Get names as strings
+let names = list_exchange_names();
+// ["polymarket", "opinion", "limitless", "kalshi", "predictfun"]
+
+// Parse from string
+let id: ExchangeId = "polymarket".parse().unwrap();
+
+// Get required env vars
+let vars = id.required_env_vars();
+// ["POLYMARKET_PRIVATE_KEY", "POLYMARKET_FUNDER"]
+```
+
+## Rate Limiting
+
+Built-in rate limiting prevents API throttling:
+
+```rust
+use pc_core::RateLimiter;
+
+// Create a limiter for 5 requests/second
+let mut limiter = RateLimiter::new(5);
+
+// Automatically waits if needed
+limiter.wait().await;
+make_request().await;
+
+limiter.wait().await;
+make_request().await;
+```
+
+## Retry with Backoff
+
+```rust
+use pc_core::retry_with_backoff;
+use std::time::Duration;
+
+let result = retry_with_backoff(
+    3,                           // max attempts
+    Duration::from_secs(1),      // initial delay
+    || async {
+        exchange.fetch_markets(None).await
+    },
+).await?;
+```
+
+## Security Best Practices
+
+<Warning>
+  Never commit private keys or API credentials to version control.
+</Warning>
+
+<AccordionGroup>
+  <Accordion title="Use environment variables">
+    Store credentials in environment variables, not in code.
+  </Accordion>
+
+  <Accordion title="Use a secrets manager">
+    For production, consider using AWS Secrets Manager, HashiCorp Vault, or similar.
+  </Accordion>
+
+  <Accordion title="Rotate keys regularly">
+    Periodically rotate API keys and private keys.
+  </Accordion>
+
+  <Accordion title="Use separate keys for testing">
+    Use different credentials for development and production.
+  </Accordion>
+
+  <Accordion title="Limit key permissions">
+    Some exchanges allow read-only or trading-only keys.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Exchange Setup" icon="building-columns" href="/exchanges/overview">
+    Configure specific exchanges.
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/errors/overview">
+    Handle configuration errors.
+  </Card>
+</CardGroup>

@@ -1,0 +1,409 @@
+---
+title: "Polymarket"
+description: "Polymarket exchange configuration and usage"
+---
+
+## Overview
+
+Polymarket is a decentralized prediction market built on Polygon. It's one of the largest prediction market platforms with deep liquidity and a wide variety of markets.
+
+| Feature | Status |
+|---------|--------|
+| REST API | Full Support |
+| WebSocket | Orderbook Streaming |
+| Authentication | Ethereum Wallet |
+| Chain | Polygon (Chain ID: 137) |
+
+## Configuration
+
+### Basic Setup (Public Data Only)
+
+```rust
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+
+let config = PolymarketConfig::new();
+let exchange = Polymarket::new(config)?;
+
+// Fetch public market data
+let markets = exchange.fetch_markets(None).await?;
+```
+
+### Authenticated Setup (Trading)
+
+```rust
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig, PolymarketSignatureType};
+
+let config = PolymarketConfig::new()
+    .with_private_key("0x...")              // Your Ethereum private key
+    .with_funder("0x...")                   // Your funder/proxy wallet address
+    .with_signature_type(PolymarketSignatureType::Proxy);  // Wallet type
+
+let exchange = Polymarket::new(config)?;
+
+// Now you can trade
+let order = exchange.create_order(...).await?;
+```
+
+### Signature Types
+
+Polymarket supports three wallet/signature types. You **must** set the correct type for your wallet:
+
+| Type | Value | Description |
+|------|-------|-------------|
+| `Eoa` | `0` | Direct wallet (default). No funder address needed. |
+| `Proxy` | `1` | Magic Link / email login wallet. Requires funder address. |
+| `GnosisSafe` | `2` | MetaMask / browser wallet (Gnosis Safe). Requires funder address. |
+
+For `Proxy` and `GnosisSafe` types, if you omit the funder address, Parsecular will automatically derive it from your private key using the Polymarket SDK.
+
+### Auto-Authentication
+
+When the API server starts, if a private key is configured but no API credentials are provided, Parsecular automatically derives CLOB API credentials via L1 authentication (EIP-712 signing). This means trading endpoints work immediately without a manual auth step.
+
+If you already have API credentials (e.g., from a prior session), you can provide them directly to skip the derivation:
+
+```rust
+let config = PolymarketConfig::new()
+    .with_private_key("0x...")
+    .with_signature_type(PolymarketSignatureType::Proxy)
+    .with_funder("0x...")
+    .with_api_credentials("api-key", "secret", "passphrase");
+```
+
+### Full Configuration Options
+
+```rust
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig, PolymarketSignatureType};
+
+let config = PolymarketConfig::new()
+    // Authentication
+    .with_private_key("0x...")
+    .with_funder("0x...")
+    .with_signature_type(PolymarketSignatureType::Proxy)
+
+    // Pre-existing API credentials (optional — auto-derived if omitted)
+    .with_api_credentials("api-key", "secret", "passphrase")
+
+    // API endpoints (optional - defaults to production)
+    .with_gamma_url("https://gamma-api.polymarket.com")
+    .with_clob_url("https://clob.polymarket.com")
+
+    // Logging
+    .with_verbose(true);
+
+let exchange = Polymarket::new(config)?;
+```
+
+### Configuration Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `private_key` | `Option<String>` | `None` | Ethereum private key for signing |
+| `funder` | `Option<String>` | `None` | Funder wallet address (required for Proxy/GnosisSafe, auto-derived if omitted) |
+| `signature_type` | `PolymarketSignatureType` | `Eoa` | Wallet type: `Eoa`, `Proxy`, or `GnosisSafe` |
+| `api_key` | `Option<String>` | `None` | Pre-existing CLOB API key |
+| `api_secret` | `Option<String>` | `None` | Pre-existing CLOB API secret |
+| `api_passphrase` | `Option<String>` | `None` | Pre-existing CLOB API passphrase |
+| `gamma_url` | `String` | Production URL | Gamma API endpoint |
+| `clob_url` | `String` | Production URL | CLOB API endpoint |
+| `chain_id` | `u64` | `137` | Polygon chain ID |
+| `verbose` | `bool` | `false` | Enable debug logging |
+
+## Environment Variables
+
+Set these environment variables for authenticated access:
+
+```bash
+# Required for trading
+export POLYMARKET_PRIVATE_KEY="0x..."
+
+# Wallet type: eoa (default), proxy (Magic/email), gnosis (MetaMask/browser)
+export POLYMARKET_SIGNATURE_TYPE="eoa"
+
+# Funder address (required for proxy/gnosis, auto-derived if omitted)
+export POLYMARKET_FUNDER="0x..."
+
+# Pre-existing API credentials (optional — auto-derived from private key if omitted)
+export POLYMARKET_API_KEY="..."
+export POLYMARKET_API_SECRET="..."
+export POLYMARKET_API_PASSPHRASE="..."
+```
+
+Then load from environment:
+
+```rust
+use std::env;
+use pc_exchange_polymarket::PolymarketSignatureType;
+
+let sig_type = env::var("POLYMARKET_SIGNATURE_TYPE").unwrap_or_default();
+
+let mut config = PolymarketConfig::new()
+    .with_private_key(env::var("POLYMARKET_PRIVATE_KEY")?)
+    .with_signature_type(PolymarketSignatureType::from(sig_type.as_str()));
+
+if let Ok(funder) = env::var("POLYMARKET_FUNDER") {
+    config = config.with_funder(funder);
+}
+```
+
+## Examples
+
+### Fetch Markets
+
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let exchange = Polymarket::new(PolymarketConfig::new())?;
+
+    // Fetch top 10 active markets
+    let markets = exchange
+        .fetch_markets(Some(FetchMarketsParams {
+            limit: Some(10),
+            active_only: true,
+        }))
+        .await?;
+
+    for market in markets {
+        println!("─────────────────────────────────");
+        println!("ID: {}", market.id);
+        println!("Question: {}", market.question);
+        println!("Outcomes: {:?}", market.outcomes);
+
+        // Get token IDs for trading
+        let tokens = market.get_outcome_tokens();
+        for token in tokens {
+            println!("  {} -> {}", token.outcome, token.token_id);
+        }
+    }
+
+    Ok(())
+}
+```
+
+### Fetch Market by Slug
+
+Polymarket supports fetching markets by their URL slug:
+
+```rust
+// Fetch all markets related to a specific event
+let markets = exchange
+    .fetch_markets_by_slug("presidential-election-2024")
+    .await?;
+
+for market in markets {
+    println!("{}: {}", market.id, market.question);
+}
+```
+
+### Place an Order
+
+```rust
+use pc_core::{Exchange, OrderSide};
+use pc_exchange_polymarket::{Polymarket, PolymarketConfig};
+use std::collections::HashMap;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let config = PolymarketConfig::new()
+        .with_private_key("0x...")
+        .with_funder("0x...");
+
+    let exchange = Polymarket::new(config)?;
+
+    // First, fetch the market to get token IDs
+    let market = exchange.fetch_market("market-condition-id").await?;
+    let tokens = market.get_outcome_tokens();
+
+    // Get the token ID for "Yes"
+    let yes_token = tokens.iter()
+        .find(|t| t.outcome == "Yes")
+        .expect("Yes outcome not found");
+
+    // Create order parameters
+    let mut params = HashMap::new();
+    params.insert("token_id".to_string(), yes_token.token_id.clone());
+
+    // Place a buy order for 100 shares at $0.65
+    let order = exchange
+        .create_order(
+            &market.id,
+            "Yes",
+            OrderSide::Buy,
+            0.65,    // price
+            100.0,   // size
+            params,
+        )
+        .await?;
+
+    println!("Order placed!");
+    println!("  ID: {}", order.id);
+    println!("  Status: {:?}", order.status);
+    println!("  Price: ${:.2}", order.price);
+    println!("  Size: {}", order.size);
+
+    Ok(())
+}
+```
+
+### Cancel an Order
+
+```rust
+let cancelled = exchange
+    .cancel_order("order-id", Some("market-id"))
+    .await?;
+
+println!("Order cancelled: {:?}", cancelled.status);
+```
+
+### Fetch Open Orders
+
+```rust
+use pc_core::FetchOrdersParams;
+
+// Fetch all open orders
+let orders = exchange.fetch_open_orders(None).await?;
+
+// Or filter by market
+let orders = exchange
+    .fetch_open_orders(Some(FetchOrdersParams {
+        market_id: Some("market-id".to_string()),
+    }))
+    .await?;
+
+for order in orders {
+    println!(
+        "{}: {} {} @ ${:.2} ({:?})",
+        order.id, order.side, order.size, order.price, order.status
+    );
+}
+```
+
+### Fetch Positions
+
+```rust
+// Fetch all positions across all markets (uses Polymarket Data API)
+let positions = exchange.fetch_positions(None).await?;
+
+// Or fetch positions for a specific market (uses CLOB token balances)
+let positions = exchange.fetch_positions(Some("market-id")).await?;
+
+for pos in positions {
+    println!("Market: {}", pos.market_id);
+    println!("  Outcome: {}", pos.outcome);
+    println!("  Size: {} shares", pos.size);
+    println!("  Avg Price: ${:.4}", pos.average_price);
+    println!("  Current: ${:.4}", pos.current_price);
+    println!("  P&L: ${:.2} ({:.1}%)",
+        pos.unrealized_pnl(),
+        pos.unrealized_pnl_percent()
+    );
+}
+```
+
+<Note>
+When fetching all positions (no `market_id`), average entry prices and current prices are provided by the Polymarket Data API. When filtering by a specific market, only token balances are available from the CLOB API, so `average_price` will be `0.0`.
+</Note>
+
+### Fetch Balance
+
+```rust
+let balance = exchange.fetch_balance().await?;
+
+for (asset, amount) in balance {
+    println!("{}: ${:.2}", asset, amount);
+}
+```
+
+## WebSocket Streaming
+
+Polymarket supports real-time orderbook streaming via WebSocket:
+
+```rust
+use pc_core::OrderBookWebSocket;
+use pc_exchange_polymarket::PolymarketWebSocket;
+use futures::StreamExt;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let mut ws = PolymarketWebSocket::new();
+
+    // Connect to WebSocket
+    ws.connect().await?;
+    println!("Connected!");
+
+    // Subscribe to a token's orderbook
+    let token_id = "21742633143463906290569050155826241533067272736897614950488156847949938836455";
+    ws.subscribe(token_id).await?;
+    println!("Subscribed to orderbook");
+
+    // Stream orderbook updates
+    let mut stream = ws.orderbook_stream(token_id).await?;
+
+    while let Some(result) = stream.next().await {
+        match result {
+            Ok(orderbook) => {
+                if let (Some(bid), Some(ask)) = (orderbook.best_bid(), orderbook.best_ask()) {
+                    println!(
+                        "Bid: {:.4} | Ask: {:.4} | Spread: {:.4}",
+                        bid, ask, ask - bid
+                    );
+                }
+            }
+            Err(e) => eprintln!("Error: {}", e),
+        }
+    }
+
+    ws.disconnect().await?;
+    Ok(())
+}
+```
+
+See [WebSocket Overview](/websocket/overview) for more details.
+
+## Token IDs
+
+Polymarket uses CLOB token IDs for trading. Each outcome in a market has a unique token ID. You can get these from the market's metadata:
+
+```rust
+let market = exchange.fetch_market("condition-id").await?;
+
+// Method 1: Get all token IDs
+let token_ids = market.get_token_ids();
+// ["token-id-for-yes", "token-id-for-no"]
+
+// Method 2: Get outcome-token pairs
+let outcome_tokens = market.get_outcome_tokens();
+for ot in outcome_tokens {
+    println!("{} -> {}", ot.outcome, ot.token_id);
+}
+// Yes -> 21742633143463906290569050155826241533067272736897614950488156847949938836455
+// No -> 48331043336612883890938759509493159234755048973500640148014422747788308965732
+```
+
+## Tick Size
+
+Polymarket uses a tick size of `0.01` (1 cent). All prices must be multiples of this value:
+
+```rust
+use pc_core::utils::round_to_tick_size;
+
+let price = 0.653;
+let tick_size = market.tick_size; // 0.01
+
+let rounded = round_to_tick_size(price, tick_size)?;
+// 0.65
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="WebSocket Streaming" icon="signal" href="/websocket/overview">
+    Real-time orderbook data.
+  </Card>
+  <Card title="Strategy Framework" icon="chart-line" href="/strategy/overview">
+    Build automated trading strategies.
+  </Card>
+</CardGroup>

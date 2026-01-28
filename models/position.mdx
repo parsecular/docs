@@ -1,0 +1,285 @@
+---
+title: "Position"
+description: "Understanding the Position data model"
+---
+
+## Overview
+
+The `Position` struct represents your holdings in a prediction market outcome. It tracks size, cost basis, and provides P&L calculations.
+
+## Structure
+
+```rust
+pub struct Position {
+    pub market_id: String,
+    pub outcome: String,
+    pub size: f64,
+    pub average_price: f64,
+    pub current_price: f64,
+}
+```
+
+## Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `market_id` | `String` | ID of the market |
+| `outcome` | `String` | The outcome held (e.g., "Yes") |
+| `size` | `f64` | Number of shares held |
+| `average_price` | `f64` | Average entry price |
+| `current_price` | `f64` | Current market price |
+
+## Methods
+
+### `cost_basis()`
+
+Calculate the total cost of the position:
+
+```rust
+let cost = position.cost_basis();
+println!("Cost basis: ${:.2}", cost);
+// cost = size * average_price
+```
+
+### `current_value()`
+
+Calculate the current market value:
+
+```rust
+let value = position.current_value();
+println!("Current value: ${:.2}", value);
+// value = size * current_price
+```
+
+### `unrealized_pnl()`
+
+Calculate unrealized profit/loss:
+
+```rust
+let pnl = position.unrealized_pnl();
+if pnl >= 0.0 {
+    println!("Profit: ${:.2}", pnl);
+} else {
+    println!("Loss: ${:.2}", pnl.abs());
+}
+// pnl = current_value - cost_basis
+```
+
+### `unrealized_pnl_percent()`
+
+Calculate P&L as a percentage:
+
+```rust
+let pnl_pct = position.unrealized_pnl_percent();
+println!("P&L: {:.1}%", pnl_pct);
+// pnl_pct = (unrealized_pnl / cost_basis) * 100
+```
+
+## Examples
+
+### Fetch and Display Positions
+
+```rust
+use pc_core::Exchange;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let exchange = /* initialize exchange */;
+
+    // Fetch all positions
+    let positions = exchange.fetch_positions(None).await?;
+
+    if positions.is_empty() {
+        println!("No open positions");
+        return Ok(());
+    }
+
+    let mut total_value = 0.0;
+    let mut total_pnl = 0.0;
+
+    for pos in &positions {
+        println!("═══════════════════════════════════════");
+        println!("Market:    {}", pos.market_id);
+        println!("Outcome:   {}", pos.outcome);
+        println!("Size:      {} shares", pos.size);
+        println!("Avg Price: ${:.4}", pos.average_price);
+        println!("Current:   ${:.4}", pos.current_price);
+        println!("Cost:      ${:.2}", pos.cost_basis());
+        println!("Value:     ${:.2}", pos.current_value());
+
+        let pnl = pos.unrealized_pnl();
+        let pnl_pct = pos.unrealized_pnl_percent();
+        let sign = if pnl >= 0.0 { "+" } else { "" };
+        println!("P&L:       {}${:.2} ({}{:.1}%)", sign, pnl, sign, pnl_pct);
+
+        total_value += pos.current_value();
+        total_pnl += pnl;
+    }
+
+    println!("\n═══════════════════════════════════════");
+    println!("Total Value: ${:.2}", total_value);
+    println!("Total P&L:   ${:.2}", total_pnl);
+
+    Ok(())
+}
+```
+
+### Filter Positions by Market
+
+```rust
+// Fetch positions for a specific market
+let market_positions = exchange
+    .fetch_positions(Some("market-id"))
+    .await?;
+
+// Or filter from all positions
+let positions = exchange.fetch_positions(None).await?;
+let market_positions: Vec<_> = positions
+    .iter()
+    .filter(|p| p.market_id == "target-market")
+    .collect();
+```
+
+### Calculate Portfolio Summary
+
+```rust
+let positions = exchange.fetch_positions(None).await?;
+
+// Calculate totals
+let total_cost: f64 = positions.iter().map(|p| p.cost_basis()).sum();
+let total_value: f64 = positions.iter().map(|p| p.current_value()).sum();
+let total_pnl: f64 = positions.iter().map(|p| p.unrealized_pnl()).sum();
+
+println!("Portfolio Summary");
+println!("─────────────────");
+println!("Positions: {}", positions.len());
+println!("Cost:      ${:.2}", total_cost);
+println!("Value:     ${:.2}", total_value);
+println!("P&L:       ${:.2} ({:.1}%)",
+    total_pnl,
+    if total_cost > 0.0 { total_pnl / total_cost * 100.0 } else { 0.0 }
+);
+```
+
+## Related Types
+
+### DeltaInfo
+
+Calculate net exposure across outcomes:
+
+```rust
+pub struct DeltaInfo {
+    pub delta: f64,
+    pub max_outcome: Option<String>,
+    pub max_position: f64,
+}
+
+// Usage
+use pc_core::calculate_delta;
+use std::collections::HashMap;
+
+let mut positions = HashMap::new();
+positions.insert("Yes".to_string(), 100.0);
+positions.insert("No".to_string(), 60.0);
+
+let delta = calculate_delta(&positions);
+println!("Delta: {} shares", delta.delta);           // 40.0
+println!("Max outcome: {:?}", delta.max_outcome);    // Some("Yes")
+println!("Max position: {}", delta.max_position);    // 100.0
+```
+
+### Nav (Net Asset Value)
+
+Calculate portfolio NAV including cash:
+
+```rust
+pub struct Nav {
+    pub nav: f64,
+    pub cash: f64,
+    pub positions_value: f64,
+    pub positions: Vec<PositionBreakdown>,
+}
+
+pub struct PositionBreakdown {
+    pub outcome: String,
+    pub size: f64,
+    pub current_price: f64,
+    pub value: f64,
+}
+
+// Usage
+use pc_core::Nav;
+
+let cash = 1000.0;
+let positions = exchange.fetch_positions(None).await?;
+
+let nav = Nav::calculate(cash, &positions);
+
+println!("NAV Breakdown");
+println!("─────────────");
+println!("Cash:      ${:.2}", nav.cash);
+println!("Positions: ${:.2}", nav.positions_value);
+println!("Total NAV: ${:.2}", nav.nav);
+
+for pos in &nav.positions {
+    println!("  {} ({} @ ${:.4}): ${:.2}",
+        pos.outcome, pos.size, pos.current_price, pos.value);
+}
+```
+
+## Profit Scenarios
+
+For binary markets, positions pay out $1 if correct, $0 if wrong:
+
+```rust
+// Example: 100 shares of "Yes" at $0.60
+let position = Position {
+    market_id: "market-1".to_string(),
+    outcome: "Yes".to_string(),
+    size: 100.0,
+    average_price: 0.60,
+    current_price: 0.75,
+};
+
+let cost = position.cost_basis();      // $60.00
+let current = position.current_value(); // $75.00
+let unrealized = position.unrealized_pnl(); // $15.00
+
+// If "Yes" wins: payout = 100 * $1.00 = $100.00, profit = $40.00
+// If "No" wins:  payout = 100 * $0.00 = $0.00, loss = -$60.00
+```
+
+## Serialization
+
+```rust
+use serde_json;
+
+// Serialize
+let json = serde_json::to_string(&position)?;
+
+// Deserialize
+let position: Position = serde_json::from_str(&json)?;
+```
+
+JSON representation:
+
+```json
+{
+  "market_id": "market-123",
+  "outcome": "Yes",
+  "size": 100.0,
+  "average_price": 0.60,
+  "current_price": 0.75
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Orderbook Model" icon="book" href="/models/orderbook">
+    Real-time market depth.
+  </Card>
+  <Card title="Fetch Positions API" icon="code" href="/api/fetch-positions">
+    API reference for fetching positions.
+  </Card>
+</CardGroup>
