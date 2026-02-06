@@ -10,7 +10,7 @@ Cancels an open order on the specified exchange.
 ## Parameters
 
 <ParamField path="order_id" type="string" required>
-  The unique identifier of the order to cancel.
+  The order identifier to cancel.
 </ParamField>
 
 <ParamField query="exchange" type="string" required>
@@ -26,7 +26,7 @@ Cancels an open order on the specified exchange.
 <ResponseField name="data" type="Order">
   <Expandable title="properties">
     <ResponseField name="id" type="string">
-      Unique order identifier.
+      Order identifier.
     </ResponseField>
     <ResponseField name="market_id" type="string">
       Market the order was on.
@@ -62,7 +62,7 @@ Cancels an open order on the specified exchange.
 ```bash
 curl -X DELETE \
   -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/orders/order_abc123?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/orders/order_abc123?exchange=polymarket"
 ```
 </RequestExample>
 

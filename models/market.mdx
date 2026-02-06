@@ -5,7 +5,7 @@ description: "Understanding the Market data model"
 
 ## Overview
 
-The `Market` struct represents a prediction market. It contains all the information about a market including its question, outcomes, prices, and trading metadata.
+The `Market` struct represents a prediction market. It contains all the information about a market including its question, outcomes, prices, trading metadata, and exchange-specific data.
 
 ## Structure
 
@@ -21,6 +21,21 @@ pub struct Market {
     pub metadata: serde_json::Value,
     pub tick_size: f64,
     pub description: String,
+    pub slug: Option<String>,
+    pub event_id: Option<String>,
+    pub condition_id: Option<String>,
+    pub token_ids: Option<Vec<String>>,
+    pub best_bid: Option<f64>,
+    pub best_ask: Option<f64>,
+    pub last_trade_price: Option<f64>,
+    pub spread: Option<f64>,
+    pub volume_24h: Option<f64>,
+    pub daily_avg_volume: Option<f64>,
+    pub open_interest: Option<f64>,
+    pub category: Option<String>,
+    pub status: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub exchange: Option<String>,
 }
 ```
 
@@ -32,12 +47,27 @@ pub struct Market {
 | `question` | `String` | The prediction question |
 | `outcomes` | `Vec<String>` | Possible outcomes (e.g., `["Yes", "No"]`) |
 | `close_time` | `Option<DateTime<Utc>>` | When the market closes |
-| `volume` | `f64` | Total trading volume in USD |
+| `volume` | `f64` | Total lifetime trading volume in USD |
 | `liquidity` | `f64` | Current market liquidity |
 | `prices` | `HashMap<String, f64>` | Current price for each outcome |
 | `metadata` | `serde_json::Value` | Exchange-specific metadata |
 | `tick_size` | `f64` | Minimum price increment |
 | `description` | `String` | Detailed market description |
+| `slug` | `Option<String>` | Market slug (Polymarket, Limitless) |
+| `event_id` | `Option<String>` | Event identifier (Polymarket conditionId, Kalshi event_ticker) |
+| `condition_id` | `Option<String>` | On-chain condition or contract ID |
+| `token_ids` | `Option<Vec<String>>` | CLOB token IDs for each outcome |
+| `best_bid` | `Option<f64>` | Best bid price |
+| `best_ask` | `Option<f64>` | Best ask price |
+| `last_trade_price` | `Option<f64>` | Last trade price |
+| `spread` | `Option<f64>` | Pre-computed bid-ask spread |
+| `volume_24h` | `Option<f64>` | 24-hour trading volume |
+| `daily_avg_volume` | `Option<f64>` | Daily average volume |
+| `open_interest` | `Option<f64>` | Open interest (outstanding contracts/positions) |
+| `category` | `Option<String>` | Market category or tag |
+| `status` | `Option<String>` | Market status string |
+| `created_at` | `Option<DateTime<Utc>>` | Creation timestamp |
+| `exchange` | `Option<String>` | Exchange identifier |
 
 ## Methods
 
@@ -73,7 +103,7 @@ The method checks:
 
 ### `spread()`
 
-Calculate the market spread for binary markets:
+Calculate the market spread for binary markets (computed fallback):
 
 ```rust
 if let Some(spread) = market.spread() {
@@ -84,7 +114,7 @@ if let Some(spread) = market.spread() {
 ```
 
 <Note>
-  Returns `None` for non-binary markets.
+  The `spread` **field** is pre-computed by each exchange from bid/ask data when available. The `spread()` **method** computes it from outcome prices as a fallback. Returns `None` for non-binary markets.
 </Note>
 
 ### `get_token_ids()`
@@ -139,41 +169,59 @@ async fn main() -> anyhow::Result<()> {
         .fetch_markets(Some(FetchMarketsParams {
             limit: Some(5),
             active_only: true,
+            ..Default::default()
         }))
         .await?;
 
     for market in markets {
-        println!("═══════════════════════════════════════");
         println!("ID:       {}", market.id);
         println!("Question: {}", market.question);
-        println!("Binary:   {}", market.is_binary());
-        println!("Open:     {}", market.is_open());
+        println!("Exchange: {:?}", market.exchange);
+        println!("Category: {:?}", market.category);
+        println!("Status:   {:?}", market.status);
 
         // Display outcomes and prices
-        println!("Outcomes:");
         for outcome in &market.outcomes {
             if let Some(price) = market.prices.get(outcome) {
                 println!("  {}: {:.1}%", outcome, price * 100.0);
             }
         }
 
-        // Display spread for binary markets
-        if let Some(spread) = market.spread() {
+        // Display spread
+        if let Some(spread) = market.spread {
             println!("Spread:   {:.2}%", spread * 100.0);
         }
 
+        // Display volume metrics
         println!("Volume:    ${:,.0}", market.volume);
-        println!("Liquidity: ${:,.0}", market.liquidity);
-        println!("Tick Size: {}", market.tick_size);
-
-        // Display close time
-        if let Some(close_time) = market.close_time {
-            println!("Closes:    {}", close_time.format("%Y-%m-%d %H:%M UTC"));
+        if let Some(v24) = market.volume_24h {
+            println!("24h Vol:   ${:,.0}", v24);
+        }
+        if let Some(avg) = market.daily_avg_volume {
+            println!("Avg Daily: ${:,.0}", avg);
+        }
+        if let Some(oi) = market.open_interest {
+            println!("Open Int:  ${:,.0}", oi);
         }
     }
 
     Ok(())
 }
+```
+
+### Fetch Markets with Category Filter
+
+```rust
+use pc_core::{Exchange, FetchMarketsParams};
+
+let markets = exchange
+    .fetch_markets(Some(FetchMarketsParams {
+        limit: Some(10),
+        active_only: true,
+        category: Some("crypto".to_string()),
+        keyword: Some("crypto".to_string()),
+    }))
+    .await?;
 ```
 
 ### Working with Token IDs
@@ -182,19 +230,20 @@ async fn main() -> anyhow::Result<()> {
 // Fetch a specific market
 let market = exchange.fetch_market("condition-id").await?;
 
-// Get tokens for trading
-let tokens = market.get_outcome_tokens();
+// Token IDs are now directly available
+if let Some(ref ids) = market.token_ids {
+    for (i, token_id) in ids.iter().enumerate() {
+        println!("{}: {}", market.outcomes[i], token_id);
+    }
+}
 
-// Find the token for a specific outcome
+// Or use the legacy method via metadata
+let tokens = market.get_outcome_tokens();
 let yes_token = tokens.iter()
     .find(|t| t.outcome == "Yes")
     .expect("Yes outcome not found");
 
 println!("Yes token ID: {}", yes_token.token_id);
-
-// Use token ID in order params
-let mut params = HashMap::new();
-params.insert("token_id".to_string(), yes_token.token_id.clone());
 ```
 
 ### Filter Markets by Criteria
@@ -206,6 +255,12 @@ let markets = exchange.fetch_markets(None).await?;
 let high_volume_binary: Vec<_> = markets
     .iter()
     .filter(|m| m.is_binary() && m.volume > 100_000.0)
+    .collect();
+
+// Filter for tight spreads
+let tight_spread: Vec<_> = markets
+    .iter()
+    .filter(|m| m.spread.map_or(false, |s| s < 0.03))
     .collect();
 
 // Filter for open markets closing soon
@@ -267,7 +322,7 @@ if let Some(obj) = market.metadata.as_object() {
 
 ## Serialization
 
-Markets can be serialized/deserialized using serde:
+Markets can be serialized/deserialized using serde. Optional fields with `None` values are omitted from JSON output:
 
 ```rust
 use serde_json;

@@ -1,0 +1,81 @@
+---
+title: "User Activity"
+description: "Get user positions and portfolio data by wallet address"
+---
+
+`GET /api/v1/user-activity`
+
+Returns raw user activity data from multiple exchanges by wallet address.
+
+## Parameters
+
+<ParamField query="address" type="string" required>
+  Wallet address to query (e.g., `0x1234...abcd`).
+</ParamField>
+
+<ParamField query="exchanges" type="string" default="polymarket,opinion,limitless,predictfun">
+  Comma-separated list of exchanges to query.
+</ParamField>
+
+<ParamField query="limit" type="number" default="100">
+  Maximum positions to return per exchange.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="[exchange_name]" type="object">
+      Raw response from each queried exchange.
+    </ResponseField>
+    <ResponseField name="status" type="object">
+      Per-exchange success/error status.
+      <Expandable title="properties">
+        <ResponseField name="[exchange_name]" type="object">
+          <ResponseField name="success" type="boolean" />
+          <ResponseField name="error" type="string | null" />
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+# All default exchanges
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/user-activity?address=0x1234567890abcdef"
+
+# Specific exchanges
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/user-activity?address=0x1234567890abcdef&exchanges=polymarket,limitless"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "polymarket": {
+      "positions": [],
+      "value": {}
+    },
+    "limitless": {
+      "positions": [],
+      "traded-volume": {}
+    },
+    "status": {
+      "polymarket": { "success": true },
+      "opinion": { "success": false, "error": "OPINION_API_KEY not configured" },
+      "limitless": { "success": true },
+      "predictfun": { "success": false, "error": "PREDICTFUN_API_KEY not configured" }
+    }
+  }
+}
+```
+</ResponseExample>

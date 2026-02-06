@@ -25,7 +25,7 @@ Checks authentication status for one or all registered exchanges.
       Exchange identifier.
     </ResponseField>
     <ResponseField name="authenticated" type="boolean">
-      Whether the exchange is authenticated and ready for trading.
+      Whether the exchange is authenticated and ready.
     </ResponseField>
     <ResponseField name="message" type="string">
       Status message or error details.
@@ -37,11 +37,11 @@ Checks authentication status for one or all registered exchanges.
 ```bash
 # Ping specific exchange
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/ping?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/ping?exchange=polymarket"
 
 # Ping all exchanges
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/ping"
+  "https://api.parsecular.com/api/v1/ping"
 ```
 </RequestExample>
 

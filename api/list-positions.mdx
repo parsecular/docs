@@ -7,8 +7,6 @@ description: "Get your current positions"
 
 Returns open positions for the authenticated user on the specified exchange.
 
-When `market_id` is omitted, returns all positions across all markets. For Polymarket, this uses the public Data API and includes average entry prices. When `market_id` is provided, queries token balances for that specific market via the authenticated CLOB API.
-
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
@@ -37,7 +35,7 @@ When `market_id` is omitted, returns all positions across all markets. For Polym
       Number of shares held.
     </ResponseField>
     <ResponseField name="average_price" type="number">
-      Average price paid per share. Returns `0.0` when filtering by `market_id` on Polymarket.
+      Average price paid per share.
     </ResponseField>
     <ResponseField name="current_price" type="number">
       Current market price of the outcome.
@@ -49,11 +47,11 @@ When `market_id` is omitted, returns all positions across all markets. For Polym
 ```bash
 # All positions
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/positions?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/positions?exchange=polymarket"
 
 # Filtered by market
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/positions?exchange=polymarket&market_id=0x1234abcd"
+  "https://api.parsecular.com/api/v1/positions?exchange=polymarket&market_id=0x1234abcd"
 ```
 </RequestExample>
 

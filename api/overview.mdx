@@ -1,0 +1,157 @@
+---
+title: "API Overview"
+description: "Complete reference for the Parsec REST API"
+---
+
+## Base URL
+
+```
+http://localhost:3000/api/v1
+```
+
+## Authentication
+
+All API requests require an API key passed via the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:3000/api/v1/markets?exchanges=polymarket
+```
+
+## Response Format
+
+All endpoints return a consistent JSON structure:
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+On error:
+
+```json
+{
+  "success": false,
+  "error": "Error message here"
+}
+```
+
+## Available Endpoints
+
+### Exchange Info
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/exchanges`](/api/list-exchanges) | List available exchanges |
+| `GET` | [`/ping`](/api/ping) | Check exchange connectivity |
+
+### Markets
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/markets`](/api/list-markets) | List markets from one or more exchanges |
+
+### Orders
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/orders`](/api/list-orders) | List open orders |
+| `POST` | [`/orders`](/api/create-order) | Create a new order |
+| `GET` | [`/orders/:id`](/api/get-order) | Get order details |
+| `DELETE` | [`/orders/:id`](/api/cancel-order) | Cancel an order |
+
+### Portfolio
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/positions`](/api/list-positions) | List positions |
+| `GET` | [`/balance`](/api/get-balance) | Get account balance |
+| `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
+
+## Multi-Exchange Support
+
+Several endpoints support fetching data from multiple exchanges in a single request:
+
+- `/markets` - Use `exchanges=polymarket,limitless,kalshi` to fetch from multiple exchanges
+
+The response groups data by exchange:
+
+```json
+{
+  "success": true,
+  "data": {
+    "polymarket": [...],
+    "limitless": [...],
+    "status": {
+      "polymarket": { "success": true },
+      "limitless": { "success": true }
+    }
+  }
+}
+```
+
+### Unified Response Format
+
+Add `?unify=true` to flatten results into a single array:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      { "exchange": "polymarket", "id": "...", ... },
+      { "exchange": "limitless", "id": "...", ... }
+    ],
+    "status": { ... }
+  }
+}
+```
+
+## Rate Limiting
+
+The API respects rate limits of underlying exchanges. If rate limited, you'll receive:
+
+```json
+{
+  "success": false,
+  "error": "rate limited"
+}
+```
+
+## Pagination
+
+Endpoints that return lists support cursor-based pagination:
+
+```bash
+# First request
+GET /markets?exchanges=polymarket&limit=100
+
+# Response includes cursor
+{
+  "data": {
+    "polymarket": [...],
+    "pagination": {
+      "count": 100,
+      "has_more": true,
+      "cursor": "eyJwb2x5bWFya2V0IjoiMTAwIn0"
+    }
+  }
+}
+
+# Next page
+GET /markets?exchanges=polymarket&limit=100&cursor=eyJwb2x5bWFya2V0IjoiMTAwIn0
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="List Markets" icon="list" href="/api/list-markets">
+    Fetch markets from multiple exchanges with unified format support.
+  </Card>
+  <Card title="Create Order" icon="plus" href="/api/create-order">
+    Place orders on prediction markets.
+  </Card>
+  <Card title="User Activity" icon="user" href="/api/user-activity">
+    Get portfolio data across all exchanges.
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/overview">
+    Server and exchange configuration.
+  </Card>
+</CardGroup>

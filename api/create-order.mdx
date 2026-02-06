@@ -5,7 +5,7 @@ description: "Place a new order on a prediction market"
 
 `POST /api/v1/orders`
 
-Places a new limit order on the specified exchange.
+Places a new order on the specified exchange.
 
 ## Parameters
 
@@ -36,7 +36,11 @@ Places a new limit order on the specified exchange.
 </ParamField>
 
 <ParamField body="params" type="object">
-  Exchange-specific parameters. For Polymarket, use `token_id` to specify the outcome token and `order_type` (`GTC`, `FOK`, `IOC`).
+  Optional exchange-specific parameters.
+
+  | Key | Values | Description |
+  |-----|--------|-------------|
+  | `order_type` | `limit` (default), `ioc` | Order type. `ioc` (Immediate-or-Cancel) fills what it can and cancels the rest. |
 </ParamField>
 
 ## Response
@@ -48,7 +52,7 @@ Places a new limit order on the specified exchange.
 <ResponseField name="data" type="Order">
   <Expandable title="properties">
     <ResponseField name="id" type="string">
-      Unique order identifier.
+      Order identifier.
     </ResponseField>
     <ResponseField name="market_id" type="string">
       Market the order was placed on.
@@ -82,6 +86,7 @@ Places a new limit order on the specified exchange.
 
 <RequestExample>
 ```bash
+# Limit order (default)
 curl -X POST \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -92,7 +97,21 @@ curl -X POST \
     "price": 0.65,
     "size": 100
   }' \
-  "http://localhost:3000/api/v1/orders?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/orders?exchange=polymarket"
+
+# IOC order
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 100,
+    "params": { "order_type": "ioc" }
+  }' \
+  "https://api.parsecular.com/api/v1/orders?exchange=polymarket"
 ```
 </RequestExample>
 

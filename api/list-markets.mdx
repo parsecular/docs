@@ -1,24 +1,51 @@
 ---
 title: "List Markets"
-description: "Get prediction markets from a specific exchange"
+description: "Get available markets from one or more exchanges"
 ---
 
 `GET /api/v1/markets`
 
-Returns a list of prediction markets for the specified exchange.
+Returns a flat array of `UnifiedMarket` objects from the specified exchanges with filtering and pagination.
+
+## Modes
+
+The endpoint operates in two modes:
+
+- **Exchanges mode** — pass `exchanges` to browse markets with optional filters.
+- **Parsec IDs mode** — pass `parsec_ids` for direct lookup. No other filters allowed.
 
 ## Parameters
 
-<ParamField query="exchange" type="string" required>
-  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+<ParamField query="exchanges" type="string">
+  Comma-separated exchange IDs: `polymarket`, `kalshi`, `limitless`, `opinion`, `predictfun`. Required unless `parsec_ids` is provided.
 </ParamField>
 
-<ParamField query="limit" type="integer">
-  Maximum number of markets to return. Returns all available if omitted.
+<ParamField query="parsec_ids" type="string">
+  Comma-separated parsec IDs for direct lookup (format: `{exchange}:{market_id}`). When provided, no other filters are allowed.
 </ParamField>
 
-<ParamField query="active_only" type="boolean" default="true">
-  When `true`, only returns markets currently open for trading.
+<ParamField query="status" type="string">
+  Filter by market status: `active`, `closed`, or `resolved`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Case-insensitive keyword search across title, description, and question.
+</ParamField>
+
+<ParamField query="min_volume" type="number">
+  Minimum volume filter.
+</ParamField>
+
+<ParamField query="min_liquidity" type="number">
+  Minimum liquidity filter.
+</ParamField>
+
+<ParamField query="limit" type="number" default="100">
+  Results per page.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from a previous response.
 </ParamField>
 
 ## Response
@@ -27,45 +54,115 @@ Returns a list of prediction markets for the specified exchange.
   Whether the request succeeded.
 </ResponseField>
 
-<ResponseField name="data" type="Market[]">
+<ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="id" type="string">
-      Unique market identifier.
+    <ResponseField name="markets" type="UnifiedMarket[]">
+      Flat array of markets from all queried exchanges.
+      <Expandable title="UnifiedMarket properties">
+        <ResponseField name="parsec_id" type="string">
+          Primary key: `{exchange}:{native_id}`.
+        </ResponseField>
+        <ResponseField name="exchange" type="string">
+          Exchange identifier.
+        </ResponseField>
+        <ResponseField name="group_id" type="string | null">
+          Group/event ID for related markets.
+        </ResponseField>
+        <ResponseField name="id" type="string">
+          Native exchange market ID.
+        </ResponseField>
+        <ResponseField name="slug" type="string | null">
+          URL-friendly identifier.
+        </ResponseField>
+        <ResponseField name="title" type="string">
+          Market title.
+        </ResponseField>
+        <ResponseField name="question" type="string | null">
+          Market question (may differ from title).
+        </ResponseField>
+        <ResponseField name="description" type="string">
+          Full description/rules.
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          `active`, `closed`, or `resolved`.
+        </ResponseField>
+        <ResponseField name="market_type" type="string">
+          Market type (e.g., `binary`, `categorical`).
+        </ResponseField>
+        <ResponseField name="token_id_yes" type="string | null">
+          Yes outcome token ID.
+        </ResponseField>
+        <ResponseField name="token_id_no" type="string | null">
+          No outcome token ID.
+        </ResponseField>
+        <ResponseField name="condition_id" type="string | null">
+          Condition ID for CTF markets.
+        </ResponseField>
+        <ResponseField name="volume" type="number">
+          Total volume (integer).
+        </ResponseField>
+        <ResponseField name="liquidity" type="number | null">
+          Current liquidity.
+        </ResponseField>
+        <ResponseField name="close_time" type="string | null">
+          ISO 8601 close time.
+        </ResponseField>
+        <ResponseField name="open_time" type="string | null">
+          ISO 8601 open time.
+        </ResponseField>
+        <ResponseField name="outcomes" type="string[]">
+          Outcome labels (e.g., `["Yes", "No"]`).
+        </ResponseField>
+        <ResponseField name="outcome_tokens" type="array">
+          Outcome-to-token mapping for orderbook subscriptions.
+        </ResponseField>
+      </Expandable>
     </ResponseField>
-    <ResponseField name="question" type="string">
-      The prediction question.
+    <ResponseField name="pagination" type="object">
+      <Expandable title="properties">
+        <ResponseField name="count" type="number">
+          Markets in this page.
+        </ResponseField>
+        <ResponseField name="total" type="number">
+          Total markets matching filters.
+        </ResponseField>
+        <ResponseField name="has_more" type="boolean">
+          Whether more results are available.
+        </ResponseField>
+        <ResponseField name="next_cursor" type="string | null">
+          Cursor for the next page.
+        </ResponseField>
+      </Expandable>
     </ResponseField>
-    <ResponseField name="outcomes" type="string[]">
-      Possible outcomes (e.g., `["Yes", "No"]`).
-    </ResponseField>
-    <ResponseField name="close_time" type="string | null">
-      ISO 8601 timestamp when the market closes.
-    </ResponseField>
-    <ResponseField name="volume" type="number">
-      Total trading volume in USD.
-    </ResponseField>
-    <ResponseField name="liquidity" type="number">
-      Available liquidity in USD.
-    </ResponseField>
-    <ResponseField name="prices" type="object">
-      Current prices per outcome (e.g., `{"Yes": 0.65, "No": 0.35}`).
-    </ResponseField>
-    <ResponseField name="tick_size" type="number">
-      Minimum price increment.
-    </ResponseField>
-    <ResponseField name="description" type="string">
-      Detailed market description.
-    </ResponseField>
-    <ResponseField name="metadata" type="object">
-      Exchange-specific additional data.
+    <ResponseField name="meta" type="object">
+      <Expandable title="properties">
+        <ResponseField name="exchanges_queried" type="string[]">
+          Exchanges that were queried.
+        </ResponseField>
+        <ResponseField name="exchanges_succeeded" type="string[]">
+          Exchanges that returned data.
+        </ResponseField>
+        <ResponseField name="exchanges_failed" type="object">
+          Map of exchange ID to error message (omitted when empty).
+        </ResponseField>
+      </Expandable>
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 <RequestExample>
 ```bash
+# Browse active Polymarket markets
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/markets?exchange=polymarket&limit=2&active_only=true"
+  "https://api.parsecular.com/api/v1/markets?exchanges=polymarket&status=active&limit=10"
+
+# Search across multiple exchanges
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
+
+# Direct lookup by parsec IDs
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/markets?parsec_ids=polymarket:0x1234,kalshi:KXBTC-25DEC"
 ```
 </RequestExample>
 
@@ -73,20 +170,50 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "0x1234abcd",
-      "question": "Will Bitcoin reach $100k in 2025?",
-      "outcomes": ["Yes", "No"],
-      "close_time": "2025-12-31T23:59:59Z",
-      "volume": 1500000.0,
-      "liquidity": 250000.0,
-      "prices": { "Yes": 0.65, "No": 0.35 },
-      "tick_size": 0.01,
-      "description": "This market resolves to Yes if...",
-      "metadata": {}
+  "data": {
+    "markets": [
+      {
+        "parsec_id": "polymarket:0x1234abcd",
+        "exchange": "polymarket",
+        "group_id": "group_123",
+        "id": "0x1234abcd",
+        "slug": "will-btc-reach-100k",
+        "title": "Will BTC reach $100k?",
+        "question": "Will BTC reach $100k by end of 2025?",
+        "description": "Resolves Yes if Bitcoin reaches $100,000...",
+        "status": "active",
+        "market_type": "binary",
+        "token_id_yes": "token_yes_123",
+        "token_id_no": "token_no_456",
+        "condition_id": "0xcond123",
+        "volume": 500000,
+        "liquidity": 75000,
+        "close_time": "2025-12-31T23:59:59Z",
+        "open_time": "2025-01-01T00:00:00Z",
+        "outcomes": ["Yes", "No"],
+        "outcome_tokens": [
+          { "outcome": "Yes", "token_id": "token_yes_123" },
+          { "outcome": "No", "token_id": "token_no_456" }
+        ]
+      }
+    ],
+    "pagination": {
+      "count": 1,
+      "total": 150,
+      "has_more": true,
+      "next_cursor": "1"
+    },
+    "meta": {
+      "exchanges_queried": ["polymarket"],
+      "exchanges_succeeded": ["polymarket"]
     }
-  ]
+  }
 }
 ```
 </ResponseExample>
+
+## Pagination
+
+1. Make an initial request without a cursor
+2. Check `pagination.has_more` — if `true`, pass `pagination.next_cursor` as `cursor` in the next request
+3. Repeat until `has_more` is `false`

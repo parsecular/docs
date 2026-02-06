@@ -10,7 +10,7 @@ Returns details for a single order.
 ## Parameters
 
 <ParamField path="order_id" type="string" required>
-  The unique identifier of the order.
+  The order identifier.
 </ParamField>
 
 <ParamField query="exchange" type="string" required>
@@ -26,7 +26,7 @@ Returns details for a single order.
 <ResponseField name="data" type="Order">
   <Expandable title="properties">
     <ResponseField name="id" type="string">
-      Unique order identifier.
+      Order identifier.
     </ResponseField>
     <ResponseField name="market_id" type="string">
       Market the order is on.
@@ -61,7 +61,7 @@ Returns details for a single order.
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/orders/order_abc123?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/orders/order_abc123?exchange=polymarket"
 ```
 </RequestExample>
 

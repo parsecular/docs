@@ -11,21 +11,24 @@
   "navigation": {
     "tabs": [
       {
+        "tab": "Getting Started",
+        "pages": [
+          "index"
+        ]
+      },
+      {
         "tab": "API Reference",
+        "pages": [
+          "api/list-exchanges",
+          "api/list-markets",
+          "api/get-orderbook",
+          "api/user-activity",
+          "api/ws-usage"
+        ]
+      },
+      {
+        "tab": "Order Router",
         "groups": [
-          {
-            "group": "Exchanges",
-            "pages": [
-              "api/list-exchanges"
-            ]
-          },
-          {
-            "group": "Markets",
-            "pages": [
-              "api/list-markets",
-              "api/get-market"
-            ]
-          },
           {
             "group": "Orders",
             "pages": [
@@ -40,33 +43,27 @@
             "pages": [
               "api/ping",
               "api/list-positions",
-              "api/get-balance"
+              "api/get-balance",
+              "api/get-approvals",
+              "api/set-approvals"
             ]
           }
         ]
+      },
+      {
+        "tab": "WebSocket",
+        "pages": [
+          "websocket/overview"
+        ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com",
-          "icon": "github"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
   "navbar": {
-    "links": [
-      {
-        "label": "GitHub",
-        "href": "https://github.com"
-      }
-    ]
+    "links": []
   },
   "contextual": {
     "options": [
@@ -78,8 +75,6 @@
     ]
   },
   "footer": {
-    "socials": {
-      "github": "https://github.com"
-    }
+    "socials": {}
   }
 }

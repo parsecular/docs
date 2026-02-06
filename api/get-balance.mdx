@@ -5,14 +5,16 @@ description: "Get your account balance"
 
 `GET /api/v1/balance`
 
-Returns the account balance for the authenticated user on the specified exchange.
-
-For Polymarket, the balance query automatically includes the configured `signature_type` to ensure the correct wallet balance is returned across all wallet types (EOA, Proxy, GnosisSafe).
+Returns the raw balance response from the specified exchange. Response format varies by exchange.
 
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
   Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+</ParamField>
+
+<ParamField query="refresh" type="boolean" default="false">
+  Force a live balance fetch from the exchange, bypassing any cache.
 </ParamField>
 
 ## Response
@@ -23,8 +25,8 @@ For Polymarket, the balance query automatically includes the configured `signatu
 
 <ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="balances" type="object">
-      Map of asset symbol to balance amount. Common assets: `USDC` (Polymarket, Limitless, Opinion, PredictFun), `USD` (Kalshi).
+    <ResponseField name="raw" type="object">
+      Raw JSON response from the exchange API. Structure varies by exchange.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -32,19 +34,45 @@ For Polymarket, the balance query automatically includes the configured `signatu
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/balance?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/balance?exchange=polymarket"
+
+# Force live fetch
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/balance?exchange=kalshi&refresh=true"
 ```
 </RequestExample>
 
 <ResponseExample>
-```json
+```json Polymarket
 {
   "success": true,
   "data": {
-    "balances": {
-      "USDC": 1250.50
+    "raw": {
+      "balance": "14328266",
+      "allowance": "115792..."
     }
   }
 }
 ```
 </ResponseExample>
+
+<ResponseExample>
+```json Kalshi
+{
+  "success": true,
+  "data": {
+    "raw": {
+      "balance": 1000
+    }
+  }
+}
+```
+</ResponseExample>
+
+## Exchange-Specific Notes
+
+| Exchange | Balance Field | Unit |
+|----------|--------------|------|
+| Polymarket | `balance` | Micro-USDC (divide by 1,000,000) |
+| Kalshi | `balance` | Cents (divide by 100) |
+| Limitless | `currentValue` | USD (PnL) |

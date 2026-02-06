@@ -1,0 +1,68 @@
+---
+title: "Get Approvals"
+description: "Check token allowances for Polymarket trading"
+---
+
+`GET /api/v1/approvals`
+
+Check current token allowances for your wallet on Polymarket. Polymarket requires on-chain approval before trading.
+
+<Note>
+This endpoint only supports Polymarket.
+</Note>
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Must be `polymarket`.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="array">
+  Array of allowance statuses.
+  <Expandable title="AllowanceStatus properties">
+    <ResponseField name="token" type="string">
+      Token type: `usdc` or `ctf`.
+    </ResponseField>
+    <ResponseField name="target" type="string">
+      Target contract: `ctf_exchange`, `neg_risk_ctf_exchange`, or `neg_risk_adapter`.
+    </ResponseField>
+    <ResponseField name="approved" type="boolean">
+      Whether the allowance is sufficient for trading.
+    </ResponseField>
+    <ResponseField name="details" type="string">
+      Human-readable allowance status.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/approvals?exchange=polymarket"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": [
+    { "token": "usdc", "target": "ctf_exchange", "approved": true, "details": "USDC approved for CTF Exchange (allowance: unlimited)" },
+    { "token": "usdc", "target": "neg_risk_ctf_exchange", "approved": true, "details": "USDC approved for Neg Risk CTF Exchange (allowance: unlimited)" },
+    { "token": "ctf", "target": "ctf_exchange", "approved": true, "details": "CTF approved for all on CTF Exchange" },
+    { "token": "ctf", "target": "neg_risk_ctf_exchange", "approved": false, "details": "CTF not approved for Neg Risk CTF Exchange" }
+  ]
+}
+```
+</ResponseExample>
+
+## See Also
+
+- [Set Approvals](/api/set-approvals) — Set token approvals for trading
+- [Polymarket Exchange](/exchanges/polymarket) — Polymarket integration guide

@@ -26,7 +26,7 @@ Returns open orders for the authenticated user on the specified exchange.
 <ResponseField name="data" type="Order[]">
   <Expandable title="properties">
     <ResponseField name="id" type="string">
-      Unique order identifier.
+      Order identifier.
     </ResponseField>
     <ResponseField name="market_id" type="string">
       Market the order is on.
@@ -62,11 +62,11 @@ Returns open orders for the authenticated user on the specified exchange.
 ```bash
 # All open orders
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/orders?exchange=polymarket"
+  "https://api.parsecular.com/api/v1/orders?exchange=polymarket"
 
 # Filtered by market
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "http://localhost:3000/api/v1/orders?exchange=polymarket&market_id=0x1234abcd"
+  "https://api.parsecular.com/api/v1/orders?exchange=polymarket&market_id=0x1234abcd"
 ```
 </RequestExample>
 

@@ -1,0 +1,88 @@
+---
+title: "Get Orderbook"
+description: "Fetch orderbook data for a specific market"
+---
+
+`GET /api/v1/orderbook`
+
+Returns the current orderbook (bids and asks) for a market identified by its `parsec_id`.
+
+## Parameters
+
+<ParamField query="parsec_id" type="string" required>
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:0x1234abcd`).
+</ParamField>
+
+<ParamField query="outcome" type="string" default="yes">
+  Outcome to fetch: `yes` or `no`. Required for categorical markets.
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Max price levels per side. Range: 1–100.
+</ParamField>
+
+<ParamField query="depth" type="number" default="50">
+  Alias for `limit` (for REST/WS symmetry). If both are provided, `limit` takes precedence.
+</ParamField>
+
+## Response
+
+<ResponseField name="success" type="boolean">
+  Whether the request succeeded.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="parsec_id" type="string">
+      The requested market identifier.
+    </ResponseField>
+    <ResponseField name="exchange" type="string">
+      Exchange name.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome for this orderbook.
+    </ResponseField>
+    <ResponseField name="token_id" type="string">
+      Exchange-specific token/asset identifier.
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Exchange-specific market identifier.
+    </ResponseField>
+    <ResponseField name="bids" type="array">
+      `[price, size]` pairs, sorted by price descending.
+    </ResponseField>
+    <ResponseField name="asks" type="array">
+      `[price, size]` pairs, sorted by price ascending.
+    </ResponseField>
+    <ResponseField name="timestamp" type="string | null">
+      ISO 8601 timestamp of when the orderbook was fetched.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecular.com/api/v1/orderbook?parsec_id=polymarket:0x1234abcd&outcome=yes&depth=10"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "success": true,
+  "data": {
+    "parsec_id": "polymarket:0x1234abcd",
+    "exchange": "polymarket",
+    "outcome": "yes",
+    "token_id": "21742633143...",
+    "market_id": "0x1234abcd",
+    "bids": [[0.65, 1000.0], [0.64, 2500.0]],
+    "asks": [[0.66, 800.0], [0.67, 1500.0]],
+    "timestamp": "2025-02-04T12:34:56Z"
+  }
+}
+```
+</ResponseExample>
+
+For real-time streaming, use the [WebSocket API](/websocket/overview).

@@ -148,6 +148,45 @@ let testnet = PredictFunConfig::testnet();
 | `api_key` | For production | API key |
 | `private_key` | For trading | Ethereum private key |
 
+## API Server Configuration
+
+When running the Parsec API server (`pc-api`), configure it using these environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PARSEC_HOST` | `0.0.0.0` | Server bind address |
+| `PARSEC_PORT` | `3000` | Server port |
+| `PARSEC_API_KEY` | - | Legacy API key (optional, DynamoDB is primary) |
+| `LOCAL_MODE` | `false` | Bypass relay infrastructure for local development |
+| `SERVER_REGION` | `us-east-2` | Server region identifier |
+| `PARSEC_ENV` | `dev` | Environment: `prod`, `staging`, or `dev` |
+| `CREDENTIAL_SOURCE` | `env` | Where to load credentials from |
+| `METRICS_TOKEN` | - | Token required to access `/metrics` endpoint |
+
+### Quick Start
+
+```bash
+# Minimal local development setup
+export LOCAL_MODE=true
+export PARSEC_PORT=3000
+
+# Add exchange credentials
+export POLYMARKET_PRIVATE_KEY="0x..."
+
+# Start the server
+cargo run --bin pc-api
+```
+
+The server will be available at `http://localhost:3000`.
+
+### Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Health check |
+| `GET /metrics` | Prometheus metrics (requires `METRICS_TOKEN`) |
+| `/api/v1/*` | API routes (requires API key) |
+
 ## Environment Variables
 
 ### Required Variables by Exchange
