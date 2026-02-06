@@ -6,7 +6,7 @@ description: "Real-time orderbook and trade streaming via WebSocket"
 ## Connection
 
 ```
-wss://api.parsecular.com/ws
+wss://api.parsecapi.com/ws
 ```
 
 ## Authentication
@@ -214,7 +214,7 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 ## Example: JavaScript Client
 
 ```javascript
-const ws = new WebSocket('wss://api.parsecular.com/ws');
+const ws = new WebSocket('wss://api.parsecapi.com/ws');
 
 ws.onopen = () => {
   ws.send(JSON.stringify({ type: 'auth', api_key: 'sk_your_api_key' }));

@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "Parsecular",
   "colors": {
-    "primary": "#6366F1",
-    "light": "#818CF8",
-    "dark": "#4F46E5"
+    "primary": "#ff6600",
+    "light": "#ff8c32",
+    "dark": "#cc4400"
   },
   "favicon": "/favicon.svg",
   "navigation": {

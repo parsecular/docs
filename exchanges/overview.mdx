@@ -9,10 +9,10 @@ Parsecular provides a unified API that aggregates markets across all exchanges w
 
 ```bash
 # Fetch from all exchanges
-curl "http://localhost:3000/api/v1/markets"
+curl "https://api.parsecapi.com/api/v1/markets"
 
 # Fetch from specific exchanges
-curl "http://localhost:3000/api/v1/markets?exchanges=kalshi,polymarket"
+curl "https://api.parsecapi.com/api/v1/markets?exchanges=kalshi,polymarket"
 ```
 
 All markets are returned as `UnifiedMarket` objects with:

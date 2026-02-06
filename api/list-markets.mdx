@@ -154,15 +154,15 @@ The endpoint operates in two modes:
 ```bash
 # Browse active Polymarket markets
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecular.com/api/v1/markets?exchanges=polymarket&status=active&limit=10"
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&status=active&limit=10"
 
 # Search across multiple exchanges
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecular.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
 
 # Direct lookup by parsec IDs
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecular.com/api/v1/markets?parsec_ids=polymarket:0x1234,kalshi:KXBTC-25DEC"
+  "https://api.parsecapi.com/api/v1/markets?parsec_ids=polymarket:0x1234,kalshi:KXBTC-25DEC"
 ```
 </RequestExample>
 
