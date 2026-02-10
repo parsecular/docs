@@ -27,11 +27,7 @@ Returns the current orderbook (bids and asks) for a market identified by its `pa
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="parsec_id" type="string">
       The requested market identifier.
@@ -70,17 +66,14 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
-    "parsec_id": "polymarket:0x1234abcd",
-    "exchange": "polymarket",
-    "outcome": "yes",
-    "token_id": "21742633143...",
-    "market_id": "0x1234abcd",
-    "bids": [[0.65, 1000.0], [0.64, 2500.0]],
-    "asks": [[0.66, 800.0], [0.67, 1500.0]],
-    "timestamp": "2025-02-04T12:34:56Z"
-  }
+  "parsec_id": "polymarket:0x1234abcd",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "token_id": "21742633143...",
+  "market_id": "0x1234abcd",
+  "bids": [[0.65, 1000.0], [0.64, 2500.0]],
+  "asks": [[0.66, 800.0], [0.67, 1500.0]],
+  "timestamp": "2025-02-04T12:34:56Z"
 }
 ```
 </ResponseExample>

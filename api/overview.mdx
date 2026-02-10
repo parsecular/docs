@@ -19,22 +19,16 @@ curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?excha
 
 ## Response Format
 
-All endpoints return a consistent JSON structure:
+2xx endpoints return the resource directly (no `{ success, data }` envelope):
 
 ```json
-{
-  "success": true,
-  "data": { ... }
-}
+{ ... }
 ```
 
 On error:
 
 ```json
-{
-  "success": false,
-  "error": "Error message here"
-}
+{ "error": "Error message here" }
 ```
 
 ## Available Endpoints
@@ -65,41 +59,22 @@ On error:
 | `GET` | [`/balance`](/api/get-balance) | Get account balance |
 | `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
 
-## Multi-Exchange Support
+## Multi-Exchange Semantics
 
-Several endpoints support fetching data from multiple exchanges in a single request:
+Some endpoints accept multiple exchanges at once (CSV on the wire):
 
-- `/markets` - Use `exchanges=polymarket,limitless,kalshi` to fetch from multiple exchanges
+- `/markets?exchanges=polymarket,kalshi`
 
-The response groups data by exchange:
-
-```json
-{
-  "success": true,
-  "data": {
-    "polymarket": [...],
-    "limitless": [...],
-    "status": {
-      "polymarket": { "success": true },
-      "limitless": { "success": true }
-    }
-  }
-}
-```
-
-### Unified Response Format
-
-Add `?unify=true` to flatten results into a single array:
+Responses include a `meta` section describing which exchanges were queried and which failed:
 
 ```json
 {
-  "success": true,
-  "data": {
-    "items": [
-      { "exchange": "polymarket", "id": "...", ... },
-      { "exchange": "limitless", "id": "...", ... }
-    ],
-    "status": { ... }
+  "markets": [],
+  "pagination": { "count": 0, "total": 0, "has_more": false },
+  "meta": {
+    "exchanges_queried": ["polymarket", "kalshi"],
+    "exchanges_succeeded": ["polymarket"],
+    "exchanges_failed": { "kalshi": "KALSHI_API_KEY_ID not configured" }
   }
 }
 ```
@@ -109,10 +84,7 @@ Add `?unify=true` to flatten results into a single array:
 The API respects rate limits of underlying exchanges. If rate limited, you'll receive:
 
 ```json
-{
-  "success": false,
-  "error": "rate limited"
-}
+{ "error": "rate limited" }
 ```
 
 ## Pagination
@@ -125,14 +97,14 @@ GET /markets?exchanges=polymarket&limit=100
 
 # Response includes cursor
 {
-  "data": {
-    "polymarket": [...],
-    "pagination": {
-      "count": 100,
-      "has_more": true,
-      "cursor": "eyJwb2x5bWFya2V0IjoiMTAwIn0"
-    }
-  }
+  "markets": [{ "...": "..." }],
+  "pagination": {
+    "count": 100,
+    "total": 12345,
+    "has_more": true,
+    "next_cursor": "eyJwb2x5bWFya2V0IjoiMTAwIn0"
+  },
+  "meta": { "exchanges_queried": ["polymarket"], "exchanges_succeeded": ["polymarket"] }
 }
 
 # Next page

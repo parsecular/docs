@@ -19,11 +19,7 @@ Returns open positions for the authenticated user on the specified exchange.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="Position[]">
+<ResponseField name="(root)" type="Position[]">
   <Expandable title="properties">
     <ResponseField name="market_id" type="string">
       Market the position is on.
@@ -57,24 +53,21 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <ResponseExample>
 ```json
-{
-  "success": true,
-  "data": [
-    {
-      "market_id": "0x1234abcd",
-      "outcome": "Yes",
-      "size": 150.0,
-      "average_price": 0.55,
-      "current_price": 0.65
-    },
-    {
-      "market_id": "0x5678efgh",
-      "outcome": "No",
-      "size": 75.0,
-      "average_price": 0.80,
-      "current_price": 0.72
-    }
-  ]
-}
+[
+  {
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "size": 150.0,
+    "average_price": 0.55,
+    "current_price": 0.65
+  },
+  {
+    "market_id": "0x5678efgh",
+    "outcome": "No",
+    "size": 75.0,
+    "average_price": 0.80,
+    "current_price": 0.72
+  }
+]
 ```
 </ResponseExample>

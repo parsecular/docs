@@ -19,11 +19,7 @@ This endpoint only supports Polymarket.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="array">
+<ResponseField name="(root)" type="array">
   Array of allowance statuses.
   <Expandable title="AllowanceStatus properties">
     <ResponseField name="token" type="string">
@@ -50,15 +46,12 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <ResponseExample>
 ```json
-{
-  "success": true,
-  "data": [
-    { "token": "usdc", "target": "ctf_exchange", "approved": true, "details": "USDC approved for CTF Exchange (allowance: unlimited)" },
-    { "token": "usdc", "target": "neg_risk_ctf_exchange", "approved": true, "details": "USDC approved for Neg Risk CTF Exchange (allowance: unlimited)" },
-    { "token": "ctf", "target": "ctf_exchange", "approved": true, "details": "CTF approved for all on CTF Exchange" },
-    { "token": "ctf", "target": "neg_risk_ctf_exchange", "approved": false, "details": "CTF not approved for Neg Risk CTF Exchange" }
-  ]
-}
+[
+  { "token": "usdc", "target": "ctf_exchange", "approved": true, "details": "USDC approved for CTF Exchange (allowance: unlimited)" },
+  { "token": "usdc", "target": "neg_risk_ctf_exchange", "approved": true, "details": "USDC approved for Neg Risk CTF Exchange (allowance: unlimited)" },
+  { "token": "ctf", "target": "ctf_exchange", "approved": true, "details": "CTF approved for all on CTF Exchange" },
+  { "token": "ctf", "target": "neg_risk_ctf_exchange", "approved": false, "details": "CTF not approved for Neg Risk CTF Exchange" }
+]
 ```
 </ResponseExample>
 

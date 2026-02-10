@@ -50,11 +50,7 @@ The endpoint operates in two modes:
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="markets" type="UnifiedMarket[]">
       Flat array of markets from all queried exchanges.
@@ -169,44 +165,41 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
-    "markets": [
-      {
-        "parsec_id": "polymarket:0x1234abcd",
-        "exchange": "polymarket",
-        "group_id": "group_123",
-        "id": "0x1234abcd",
-        "slug": "will-btc-reach-100k",
-        "title": "Will BTC reach $100k?",
-        "question": "Will BTC reach $100k by end of 2025?",
-        "description": "Resolves Yes if Bitcoin reaches $100,000...",
-        "status": "active",
-        "market_type": "binary",
-        "token_id_yes": "token_yes_123",
-        "token_id_no": "token_no_456",
-        "condition_id": "0xcond123",
-        "volume": 500000,
-        "liquidity": 75000,
-        "close_time": "2025-12-31T23:59:59Z",
-        "open_time": "2025-01-01T00:00:00Z",
-        "outcomes": ["Yes", "No"],
-        "outcome_tokens": [
-          { "outcome": "Yes", "token_id": "token_yes_123" },
-          { "outcome": "No", "token_id": "token_no_456" }
-        ]
-      }
-    ],
-    "pagination": {
-      "count": 1,
-      "total": 150,
-      "has_more": true,
-      "next_cursor": "1"
-    },
-    "meta": {
-      "exchanges_queried": ["polymarket"],
-      "exchanges_succeeded": ["polymarket"]
+  "markets": [
+    {
+      "parsec_id": "polymarket:0x1234abcd",
+      "exchange": "polymarket",
+      "group_id": "group_123",
+      "id": "0x1234abcd",
+      "slug": "will-btc-reach-100k",
+      "title": "Will BTC reach $100k?",
+      "question": "Will BTC reach $100k by end of 2025?",
+      "description": "Resolves Yes if Bitcoin reaches $100,000...",
+      "status": "active",
+      "market_type": "binary",
+      "token_id_yes": "token_yes_123",
+      "token_id_no": "token_no_456",
+      "condition_id": "0xcond123",
+      "volume": 500000,
+      "liquidity": 75000,
+      "close_time": "2025-12-31T23:59:59Z",
+      "open_time": "2025-01-01T00:00:00Z",
+      "outcomes": ["Yes", "No"],
+      "outcome_tokens": [
+        { "outcome": "Yes", "token_id": "token_yes_123" },
+        { "outcome": "No", "token_id": "token_no_456" }
+      ]
     }
+  ],
+  "pagination": {
+    "count": 1,
+    "total": 150,
+    "has_more": true,
+    "next_cursor": "1"
+  },
+  "meta": {
+    "exchanges_queried": ["polymarket"],
+    "exchanges_succeeded": ["polymarket"]
   }
 }
 ```

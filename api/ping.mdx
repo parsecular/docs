@@ -15,11 +15,7 @@ Checks authentication status for one or all registered exchanges.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="PingResult[]">
+<ResponseField name="(root)" type="PingResult[]">
   <Expandable title="properties">
     <ResponseField name="exchange" type="string">
       Exchange identifier.
@@ -47,13 +43,10 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <ResponseExample>
 ```json
-{
-  "success": true,
-  "data": [
-    { "exchange": "polymarket", "authenticated": true, "message": "authenticated" },
-    { "exchange": "kalshi", "authenticated": true, "message": "authenticated" },
-    { "exchange": "limitless", "authenticated": false, "message": "not authenticated" }
-  ]
-}
+[
+  { "exchange": "polymarket", "authenticated": true, "message": "authenticated" },
+  { "exchange": "kalshi", "authenticated": true, "message": "authenticated" },
+  { "exchange": "limitless", "authenticated": false, "message": "not authenticated" }
+]
 ```
 </ResponseExample>

@@ -45,11 +45,7 @@ Submits blockchain transactions on Polygon. Ensure your wallet has sufficient MA
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="results" type="array">
       Array of approval results.
@@ -98,15 +94,12 @@ curl -X POST \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
-    "results": [
-      { "token": "usdc", "target": "ctf_exchange", "tx_hash": "0xabc123...", "success": true },
-      { "token": "usdc", "target": "neg_risk_ctf_exchange", "tx_hash": "0x789ghi...", "success": true },
-      { "token": "ctf", "target": "ctf_exchange", "tx_hash": "0xstu901...", "success": true }
-    ],
-    "all_succeeded": true
-  }
+  "results": [
+    { "token": "usdc", "target": "ctf_exchange", "tx_hash": "0xabc123...", "success": true },
+    { "token": "usdc", "target": "neg_risk_ctf_exchange", "tx_hash": "0x789ghi...", "success": true },
+    { "token": "ctf", "target": "ctf_exchange", "tx_hash": "0xstu901...", "success": true }
+  ],
+  "all_succeeded": true
 }
 ```
 </ResponseExample>

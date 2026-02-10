@@ -19,11 +19,7 @@ Cancels an open order on the specified exchange.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="Order">
+<ResponseField name="(root)" type="Order">
   <Expandable title="properties">
     <ResponseField name="id" type="string">
       Order identifier.
@@ -69,19 +65,16 @@ curl -X DELETE \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "order_abc123",
-    "market_id": "0x1234abcd",
-    "outcome": "Yes",
-    "side": "buy",
-    "price": 0.65,
-    "size": 100.0,
-    "filled": 25.0,
-    "status": "cancelled",
-    "created_at": "2025-01-26T10:00:00Z",
-    "updated_at": "2025-01-26T12:00:00Z"
-  }
+  "id": "order_abc123",
+  "market_id": "0x1234abcd",
+  "outcome": "Yes",
+  "side": "buy",
+  "price": 0.65,
+  "size": 100.0,
+  "filled": 25.0,
+  "status": "cancelled",
+  "created_at": "2025-01-26T10:00:00Z",
+  "updated_at": "2025-01-26T12:00:00Z"
 }
 ```
 </ResponseExample>

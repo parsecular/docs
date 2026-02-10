@@ -1,0 +1,6 @@
+extends: spectral:oas
+
+# Keep the ruleset close to Spectral defaults, only disabling rules that are
+# high-friction for an internal, hand-authored spec.
+rules:
+  info-contact: off

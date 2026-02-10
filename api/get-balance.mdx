@@ -19,11 +19,7 @@ Returns the raw balance response from the specified exchange. Response format va
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="raw" type="object">
       Raw JSON response from the exchange API. Structure varies by exchange.
@@ -45,12 +41,9 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json Polymarket
 {
-  "success": true,
-  "data": {
-    "raw": {
-      "balance": "14328266",
-      "allowance": "115792..."
-    }
+  "raw": {
+    "balance": "14328266",
+    "allowance": "115792..."
   }
 }
 ```
@@ -59,11 +52,8 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json Kalshi
 {
-  "success": true,
-  "data": {
-    "raw": {
-      "balance": 1000
-    }
+  "raw": {
+    "balance": 1000
   }
 }
 ```

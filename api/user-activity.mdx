@@ -23,14 +23,13 @@ Returns raw user activity data from multiple exchanges by wallet address.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
-    <ResponseField name="[exchange_name]" type="object">
+    <ResponseField name="exchanges" type="object">
       Raw response from each queried exchange.
+      <Expandable title="properties">
+        <ResponseField name="[exchange_name]" type="object" />
+      </Expandable>
     </ResponseField>
     <ResponseField name="status" type="object">
       Per-exchange success/error status.
@@ -59,8 +58,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
+  "exchanges": {
     "polymarket": {
       "positions": [],
       "value": {}
@@ -69,12 +67,12 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "positions": [],
       "traded-volume": {}
     },
-    "status": {
-      "polymarket": { "success": true },
-      "opinion": { "success": false, "error": "OPINION_API_KEY not configured" },
-      "limitless": { "success": true },
-      "predictfun": { "success": false, "error": "PREDICTFUN_API_KEY not configured" }
-    }
+  },
+  "status": {
+    "polymarket": { "success": true },
+    "opinion": { "success": false, "error": "OPINION_API_KEY not configured" },
+    "limitless": { "success": true },
+    "predictfun": { "success": false, "error": "PREDICTFUN_API_KEY not configured" }
   }
 }
 ```

@@ -1,0 +1,1315 @@
+openapi: 3.1.0
+info:
+  title: Parsec API
+  version: 0.1.4
+  description: |
+    Parsec REST API.
+
+    Success responses return the resource directly (no envelope).
+    Error responses use HTTP status codes and a JSON body of the form `{ "error": "..." }`.
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://api.parsecapi.com
+    description: Production
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: Exchanges
+  - name: Markets
+  - name: Orderbook
+  - name: WebSocket
+  - name: Orders
+  - name: Positions
+  - name: Account
+  - name: Approvals
+paths:
+  /api/v1/exchanges:
+    get:
+      operationId: listExchanges
+      tags:
+        - Exchanges
+      summary: List exchanges available to the authenticated customer
+      description: Returns the exchange IDs that the current API key can access.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/markets:
+    get:
+      operationId: listUnifiedMarkets
+      tags:
+        - Markets
+      summary: List unified markets with filtering and pagination
+      description: |
+        Provide either `exchanges` (CSV) or `parsec_ids` (CSV).
+        When `parsec_ids` is provided, other filters are not allowed.
+      parameters:
+        - name: exchanges
+          in: query
+          required: false
+          description: |
+            Exchanges to query. In SDKs this is typically an array encoded as CSV on the wire.
+            Required unless `parsec_ids` is provided.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: parsec_ids
+          in: query
+          required: false
+          description: |
+            Parsec market IDs to fetch directly (format: `{exchange}:{native_id}`).
+            In SDKs this is typically an array encoded as CSV on the wire.
+            Required unless `exchanges` is provided.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: status
+          in: query
+          required: false
+          description: Status filter.
+          schema:
+            $ref: "#/components/schemas/MarketStatus"
+        - name: search
+          in: query
+          required: false
+          description: Keyword search in title/description/question (case-insensitive).
+          schema:
+            type: string
+        - name: min_volume
+          in: query
+          required: false
+          description: Minimum volume filter.
+          schema:
+            type: integer
+            format: int64
+        - name: min_liquidity
+          in: query
+          required: false
+          description: Minimum liquidity filter.
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          required: false
+          description: Results per page (default 100).
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            minimum: 1
+        - name: cursor
+          in: query
+          required: false
+          description: Pagination cursor (offset-based).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnifiedMarketsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/orderbook:
+    get:
+      operationId: getOrderbook
+      tags:
+        - Orderbook
+      summary: Get an L2 orderbook snapshot for a unified market
+      description: Returns bids/asks as `[price, size]` tuples.
+      parameters:
+        - name: parsec_id
+          in: query
+          required: true
+          description: Unified market ID in format `{exchange}:{native_id}`.
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          required: false
+          description: |
+            Outcome selector. For binary markets this is typically "yes" or "no" (case-insensitive).
+            For categorical markets, this is required and may be an outcome label or numeric index.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Max depth per side (default 50; server clamps to 1..=100).
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+        - name: depth
+          in: query
+          required: false
+          description: Alias for `limit` (REST/WS symmetry).
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderbookResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/ws/usage:
+    get:
+      operationId: getWsUsage
+      tags:
+        - WebSocket
+      summary: Get WebSocket usage telemetry
+      description: Returns in-memory usage aggregates for the authenticated customer (or globally for admin keys).
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          description: '"self" (default) or "global" (admin only).'
+          schema:
+            type: string
+            default: self
+        - name: limit
+          in: query
+          required: false
+          description: Max number of markets/customers returned (default 20; server clamps to 1..=100).
+          schema:
+            type: integer
+            format: int32
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WsUsageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/orders:
+    post:
+      operationId: createOrder
+      tags:
+        - Orders
+      summary: Create an order
+      description: Creates a new order on the selected exchange.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "402":
+          $ref: "#/components/responses/PaymentRequiredError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+    get:
+      operationId: listOrders
+      tags:
+        - Orders
+      summary: List open orders
+      description: Lists open orders on the selected exchange.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: Optional market ID filter (exchange-native).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/orders/{order_id}:
+    get:
+      operationId: getOrder
+      tags:
+        - Orders
+      summary: Get an order by ID
+      description: Fetches a single order by ID from the selected exchange.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Order ID.
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+    delete:
+      operationId: cancelOrder
+      tags:
+        - Orders
+      summary: Cancel an order by ID
+      description: Cancels an order by ID on the selected exchange.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          description: Order ID.
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/positions:
+    get:
+      operationId: listPositions
+      tags:
+        - Positions
+      summary: List positions
+      description: Lists positions for the authenticated customer on the selected exchange.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: Optional market ID filter (exchange-native).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/balance:
+    get:
+      operationId: getBalance
+      tags:
+        - Account
+      summary: Get raw exchange balance
+      description: Returns the raw balance payload from the exchange (opaque JSON).
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+        - name: refresh
+          in: query
+          required: false
+          description: Refresh balance before returning (default false).
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/ping:
+    get:
+      operationId: ping
+      tags:
+        - Account
+      summary: Ping exchanges (balance check)
+      description: Performs a lightweight balance fetch per exchange to verify connectivity/auth status.
+      parameters:
+        - name: exchange
+          in: query
+          required: false
+          description: Optional exchange ID to ping; if omitted, pings all available exchanges.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PingResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/user-activity:
+    get:
+      operationId: getUserActivity
+      tags:
+        - Account
+      summary: Get user activity (per-exchange)
+      description: Fetches user activity data from each requested exchange and returns a per-exchange status map.
+      parameters:
+        - name: address
+          in: query
+          required: true
+          description: User address (typically an EVM address).
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Max number of items per exchange (default 100).
+          schema:
+            type: integer
+            format: int32
+            default: 100
+            minimum: 1
+        - name: exchanges
+          in: query
+          required: false
+          description: |
+            Exchanges to query (CSV). Defaults to: polymarket, opinion, limitless, predictfun.
+            In SDKs this is typically an array encoded as CSV on the wire.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+            default:
+              - polymarket
+              - opinion
+              - limitless
+              - predictfun
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserActivityResponseData"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/approvals:
+    get:
+      operationId: getApprovals
+      tags:
+        - Approvals
+      summary: Check current token allowances (Polymarket only)
+      description: Polymarket-only helper for checking on-chain allowances required for trading.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Must be "polymarket".
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AllowanceStatus"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+    post:
+      operationId: setApprovals
+      tags:
+        - Approvals
+      summary: Set token approvals (Polymarket only)
+      description: Polymarket-only helper for submitting approval transactions.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Must be "polymarket".
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+
+  /api/v1/credentials:
+    put:
+      operationId: updateCredentials
+      tags:
+        - Account
+      summary: Update exchange credentials for the authenticated API key
+      description: Updates stored credentials for this API key. Returns 204 on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCredentialsRequest"
+      responses:
+        "204":
+          description: No Content
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  responses:
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnauthorizedError:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PaymentRequiredError:
+      description: Payment required / insufficient funds
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFoundError:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    TooManyRequestsError:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotImplementedError:
+      description: Not implemented / not supported
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailableError:
+      description: Service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+
+    MarketStatus:
+      type: string
+      enum:
+        - active
+        - closed
+        - resolved
+
+    OutcomeToken:
+      type: object
+      required:
+        - outcome
+        - token_id
+      properties:
+        outcome:
+          type: string
+        token_id:
+          type: string
+
+    UnifiedMarket:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - id
+        - title
+        - description
+        - status
+        - market_type
+        - volume
+        - outcomes
+        - outcome_tokens
+      properties:
+        parsec_id:
+          type: string
+          description: Primary key in format `{exchange}:{native_id}`.
+        exchange:
+          type: string
+        group_id:
+          type: string
+        id:
+          type: string
+          description: Native exchange market ID.
+        slug:
+          type: string
+        title:
+          type: string
+        question:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/MarketStatus"
+        market_type:
+          type: string
+        token_id_yes:
+          type: string
+        token_id_no:
+          type: string
+        condition_id:
+          type: string
+        volume:
+          type: integer
+          format: int64
+        liquidity:
+          type: integer
+          format: int64
+        close_time:
+          type: string
+          format: date-time
+        open_time:
+          type: string
+          format: date-time
+        outcomes:
+          type: array
+          items:
+            type: string
+        outcome_tokens:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutcomeToken"
+
+    UnifiedPaginationInfo:
+      type: object
+      required:
+        - count
+        - total
+        - has_more
+      properties:
+        count:
+          type: integer
+          format: int32
+        total:
+          type: integer
+          format: int32
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+
+    ResponseMeta:
+      type: object
+      required:
+        - exchanges_queried
+        - exchanges_succeeded
+      properties:
+        exchanges_queried:
+          type: array
+          items:
+            type: string
+        exchanges_succeeded:
+          type: array
+          items:
+            type: string
+        exchanges_failed:
+          type: object
+          additionalProperties:
+            type: string
+
+    UnifiedMarketsResponse:
+      type: object
+      required:
+        - markets
+        - pagination
+        - meta
+      properties:
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnifiedMarket"
+        pagination:
+          $ref: "#/components/schemas/UnifiedPaginationInfo"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+
+    BalanceResponse:
+      type: object
+      required:
+        - raw
+      properties:
+        raw:
+          type: object
+          additionalProperties: true
+
+    PingResponse:
+      type: object
+      required:
+        - exchange
+        - authenticated
+        - message
+      properties:
+        exchange:
+          type: string
+        authenticated:
+          type: boolean
+        message:
+          type: string
+
+    OrderbookLevel:
+      type: array
+      description: "[price, size] tuple"
+      minItems: 2
+      maxItems: 2
+      prefixItems:
+        - type: number
+          description: Price
+        - type: number
+          description: Size
+      items:
+        type: number
+
+    OrderbookResponse:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - outcome
+        - token_id
+        - market_id
+        - bids
+        - asks
+        - timestamp
+      properties:
+        parsec_id:
+          type: string
+        exchange:
+          type: string
+        outcome:
+          type: string
+        token_id:
+          type: string
+        market_id:
+          type: string
+        bids:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderbookLevel"
+        asks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderbookLevel"
+        timestamp:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    WsCustomerUsageResponse:
+      type: object
+      required:
+        - customer_id
+        - active_connections
+        - active_subscriptions
+        - connections_opened_total
+        - connections_closed_total
+        - auth_failures_total
+        - subscribe_requests_total
+        - unsubscribe_requests_total
+        - messages_sent_total
+        - bytes_sent_total
+      properties:
+        customer_id:
+          type: string
+        active_connections:
+          type: integer
+          format: int64
+        active_subscriptions:
+          type: integer
+          format: int64
+        connections_opened_total:
+          type: integer
+          format: int64
+        connections_closed_total:
+          type: integer
+          format: int64
+        auth_failures_total:
+          type: integer
+          format: int64
+        subscribe_requests_total:
+          type: integer
+          format: int64
+        unsubscribe_requests_total:
+          type: integer
+          format: int64
+        messages_sent_total:
+          type: integer
+          format: int64
+        bytes_sent_total:
+          type: integer
+          format: int64
+
+    WsUsageTotalsResponse:
+      type: object
+      required:
+        - active_connections
+        - active_subscriptions
+        - connections_opened_total
+        - connections_closed_total
+        - auth_failures_total
+        - subscribe_requests_total
+        - unsubscribe_requests_total
+        - messages_sent_total
+        - bytes_sent_total
+      properties:
+        active_connections:
+          type: integer
+          format: int64
+        active_subscriptions:
+          type: integer
+          format: int64
+        connections_opened_total:
+          type: integer
+          format: int64
+        connections_closed_total:
+          type: integer
+          format: int64
+        auth_failures_total:
+          type: integer
+          format: int64
+        subscribe_requests_total:
+          type: integer
+          format: int64
+        unsubscribe_requests_total:
+          type: integer
+          format: int64
+        messages_sent_total:
+          type: integer
+          format: int64
+        bytes_sent_total:
+          type: integer
+          format: int64
+
+    WsMarketUsageResponse:
+      type: object
+      required:
+        - parsec_id
+        - subscriptions_total
+      properties:
+        parsec_id:
+          type: string
+        subscriptions_total:
+          type: integer
+          format: int64
+
+    WsUsageResponse:
+      type: object
+      required:
+        - scope
+        - updated_at_ms
+        - totals
+        - top_markets
+      properties:
+        scope:
+          type: string
+        updated_at_ms:
+          type: integer
+          format: int64
+        totals:
+          $ref: "#/components/schemas/WsUsageTotalsResponse"
+        customer:
+          $ref: "#/components/schemas/WsCustomerUsageResponse"
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WsCustomerUsageResponse"
+        top_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WsMarketUsageResponse"
+
+    OrderSide:
+      type: string
+      enum:
+        - buy
+        - sell
+
+    OrderStatus:
+      type: string
+      enum:
+        - pending
+        - open
+        - filled
+        - partially_filled
+        - cancelled
+        - rejected
+
+    Order:
+      type: object
+      required:
+        - id
+        - market_id
+        - outcome
+        - side
+        - price
+        - size
+        - filled
+        - status
+        - created_at
+      properties:
+        id:
+          type: string
+        market_id:
+          type: string
+        outcome:
+          type: string
+        side:
+          $ref: "#/components/schemas/OrderSide"
+        price:
+          type: number
+        size:
+          type: number
+        filled:
+          type: number
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Position:
+      type: object
+      required:
+        - market_id
+        - outcome
+        - size
+        - average_price
+        - current_price
+      properties:
+        market_id:
+          type: string
+        outcome:
+          type: string
+        size:
+          type: number
+        average_price:
+          type: number
+        current_price:
+          type: number
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - market_id
+        - outcome
+        - side
+        - price
+        - size
+      properties:
+        market_id:
+          type: string
+        outcome:
+          type: string
+        side:
+          $ref: "#/components/schemas/OrderSide"
+        price:
+          type: number
+        size:
+          type: number
+        params:
+          type: object
+          additionalProperties:
+            type: string
+          default: {}
+
+    UpdateCredentialsRequest:
+      type: object
+      properties:
+        evm_private_key:
+          type:
+            - string
+            - "null"
+        kalshi_api_key_id:
+          type:
+            - string
+            - "null"
+        kalshi_private_key:
+          type:
+            - string
+            - "null"
+        poly_funder:
+          type:
+            - string
+            - "null"
+        poly_signature_type:
+          type:
+            - string
+            - "null"
+
+    ExchangeStatus:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+        error:
+          type: string
+
+    UserActivityResponseData:
+      type: object
+      required:
+        - exchanges
+        - status
+      properties:
+        exchanges:
+          type: object
+          additionalProperties: true
+        status:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/ExchangeStatus"
+
+    ApprovalTarget:
+      type: string
+      enum:
+        - ctf_exchange
+        - neg_risk_ctf_exchange
+        - neg_risk_adapter
+
+    TokenType:
+      type: string
+      enum:
+        - usdc
+        - ctf
+
+    AllowanceStatus:
+      type: object
+      required:
+        - token
+        - target
+        - approved
+        - details
+      properties:
+        token:
+          $ref: "#/components/schemas/TokenType"
+        target:
+          $ref: "#/components/schemas/ApprovalTarget"
+        approved:
+          type: boolean
+        details:
+          type: string
+
+    ApprovalRequest:
+      type: object
+      properties:
+        all:
+          type: boolean
+          default: false
+        usdc:
+          type: boolean
+          default: false
+        ctf:
+          type: boolean
+          default: false
+        usdc_neg_risk:
+          type: boolean
+          default: false
+        ctf_neg_risk:
+          type: boolean
+          default: false
+
+    ApprovalResult:
+      type: object
+      required:
+        - token
+        - target
+        - tx_hash
+        - success
+      properties:
+        token:
+          $ref: "#/components/schemas/TokenType"
+        target:
+          $ref: "#/components/schemas/ApprovalTarget"
+        tx_hash:
+          type:
+            - string
+            - "null"
+        success:
+          type: boolean
+        error:
+          type: string
+
+    ApprovalResponse:
+      type: object
+      required:
+        - results
+        - all_succeeded
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalResult"
+        all_succeeded:
+          type: boolean

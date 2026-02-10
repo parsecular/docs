@@ -8,6 +8,7 @@
     "dark": "#cc4400"
   },
   "favicon": "/favicon.svg",
+  "openapi": "openapi.yaml",
   "navigation": {
     "tabs": [
       {

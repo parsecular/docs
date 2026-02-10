@@ -19,11 +19,7 @@ Returns WebSocket usage statistics for your account or globally (admin only).
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="object">
+<ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="scope" type="string">
       `self` or `global`.
@@ -80,30 +76,27 @@ curl -H "X-API-Key: YOUR_ADMIN_API_KEY" \
 <ResponseExample>
 ```json
 {
-  "success": true,
-  "data": {
-    "scope": "self",
-    "updated_at_ms": 1707044096000,
-    "totals": {
-      "active_connections": 2,
-      "active_subscriptions": 5,
-      "connections_opened_total": 10,
-      "connections_closed_total": 8,
-      "auth_failures_total": 0,
-      "subscribe_requests_total": 25,
-      "unsubscribe_requests_total": 20,
-      "messages_sent_total": 15000,
-      "bytes_sent_total": 3500000
-    },
-    "customer": {
-      "customer_id": "cust_abc123",
-      "active_connections": 2,
-      "active_subscriptions": 5
-    },
-    "top_markets": [
-      { "parsec_id": "polymarket:0x1234abcd", "subscriptions_total": 3 }
-    ]
-  }
+  "scope": "self",
+  "updated_at_ms": 1707044096000,
+  "totals": {
+    "active_connections": 2,
+    "active_subscriptions": 5,
+    "connections_opened_total": 10,
+    "connections_closed_total": 8,
+    "auth_failures_total": 0,
+    "subscribe_requests_total": 25,
+    "unsubscribe_requests_total": 20,
+    "messages_sent_total": 15000,
+    "bytes_sent_total": 3500000
+  },
+  "customer": {
+    "customer_id": "cust_abc123",
+    "active_connections": 2,
+    "active_subscriptions": 5
+  },
+  "top_markets": [
+    { "parsec_id": "polymarket:0x1234abcd", "subscriptions_total": 3 }
+  ]
 }
 ```
 </ResponseExample>

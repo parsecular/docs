@@ -33,7 +33,7 @@ After authentication, subscribe to markets:
 {
   "type": "subscribe",
   "markets": [
-    { "parsec_id": "polymarket:0x1234abcd", "outcome": "yes", "depth": 10 },
+    { "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes", "depth": 10 },
     { "parsec_id": "kalshi:KXBTC-25DEC-100K" }
   ]
 }
@@ -42,7 +42,7 @@ After authentication, subscribe to markets:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `parsec_id` | string | Yes | Market identifier (`{exchange}:{market_id}`) |
-| `outcome` | string | No | `yes` or `no` (default: `yes`) |
+| `outcome` | string | No | `Yes` or `No` (case-insensitive, default: `Yes`) |
 | `depth` | number | No | Price levels per side, 1–100 (default: 50) |
 
 ## Unsubscribing
@@ -50,7 +50,7 @@ After authentication, subscribe to markets:
 ```json
 {
   "type": "unsubscribe",
-  "markets": [{ "parsec_id": "polymarket:0x1234abcd", "outcome": "yes" }]
+  "markets": [{ "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }]
 }
 ```
 
@@ -59,7 +59,7 @@ After authentication, subscribe to markets:
 Request a fresh snapshot if data becomes stale:
 
 ```json
-{ "type": "resync", "parsec_id": "polymarket:0x1234abcd", "outcome": "yes" }
+{ "type": "resync", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
 
 ## Server Messages
@@ -71,9 +71,10 @@ Request a fresh snapshot if data becomes stale:
   "type": "orderbook",
   "parsec_id": "polymarket:0x1234abcd",
   "exchange": "polymarket",
-  "outcome": "yes",
+  "outcome": "Yes",
   "token_id": "217426...",
   "market_id": "0x1234abcd",
+  "tick_size": 0.001,
   "kind": "snapshot",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
@@ -86,6 +87,34 @@ Request a fresh snapshot if data becomes stale:
 }
 ```
 
+### Orderbook Delta
+
+Incremental orderbook updates are sent as `type: "orderbook_delta"`. Deltas use **absolute replacement** semantics:
+
+- `size > 0`: set that price level to `size`
+- `size == 0`: delete that price level
+
+```json
+{
+  "type": "orderbook_delta",
+  "parsec_id": "polymarket:0x1234abcd",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "token_id": "217426...",
+  "market_id": "0x1234abcd",
+  "changes": [
+    { "side": "bid", "price": 0.65, "size": 900.0 },
+    { "side": "ask", "price": 0.66, "size": 0.0 }
+  ],
+  "server_seq": 1234,
+  "feed_state": "healthy",
+  "book_state": "fresh",
+  "stale_after_ms": 5000,
+  "exchange_ts_ms": 1707044096100,
+  "ingest_ts_ms": 1707044096105
+}
+```
+
 ### Activity (Trades & Fills)
 
 Trades and fills are sent as `type: "activity"` with a `kind` field:
@@ -95,7 +124,7 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "type": "activity",
   "parsec_id": "polymarket:0x1234abcd",
   "exchange": "polymarket",
-  "outcome": "yes",
+  "outcome": "Yes",
   "token_id": "217426...",
   "market_id": "0x1234abcd",
   "kind": "trade",
@@ -117,7 +146,7 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "type": "activity",
   "parsec_id": "kalshi:KXBTC-25DEC-100K",
   "exchange": "kalshi",
-  "outcome": "yes",
+  "outcome": "Yes",
   "token_id": "",
   "market_id": "KXBTC-25DEC-100K",
   "kind": "fill",
@@ -151,7 +180,7 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
 Sent when you've fallen behind on updates:
 
 ```json
-{ "type": "resync_required", "parsec_id": "polymarket:0x1234abcd", "outcome": "yes" }
+{ "type": "resync_required", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
 
 ### Slow Reader
@@ -159,7 +188,7 @@ Sent when you've fallen behind on updates:
 Warning that you're consuming messages too slowly:
 
 ```json
-{ "type": "slow_reader", "parsec_id": "polymarket:0x1234abcd", "outcome": "yes" }
+{ "type": "slow_reader", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
 
 ## Book State

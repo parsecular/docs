@@ -13,11 +13,7 @@ No parameters required.
 
 ## Response
 
-<ResponseField name="success" type="boolean">
-  Whether the request succeeded.
-</ResponseField>
-
-<ResponseField name="data" type="string[]">
+<ResponseField name="(root)" type="string[]">
   Array of exchange identifiers.
 </ResponseField>
 
@@ -30,9 +26,6 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <ResponseExample>
 ```json
-{
-  "success": true,
-  "data": ["polymarket", "kalshi", "limitless", "opinion", "predictfun"]
-}
+["polymarket", "kalshi", "limitless", "opinion", "predictfun"]
 ```
 </ResponseExample>

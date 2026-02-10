@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=https://app.stainless.com/config.schema.json
+edition: 2026-01-30
+
+organization:
+  # Used to determine the generated client name + README headings.
+  name: Parsec API
+  docs: https://docs.parsecapi.com
+  contact: support@parsecapi.com
+
+targets:
+  python:
+    edition: python.2025-11-20
+    package_name: parsec_api
+    production_repo: parsecular/sdk-python
+    publish:
+      pypi: false
+  typescript:
+    edition: typescript.2025-10-10
+    package_name: parsec-api
+    production_repo: parsecular/sdk-typescript
+    publish:
+      npm: false
+
+environments:
+  production: https://api.parsecapi.com
+  local: http://localhost:3000
+
+resources:
+  exchanges:
+    methods:
+      list: get /api/v1/exchanges
+
+  markets:
+    methods:
+      list: get /api/v1/markets
+
+  orderbook:
+    methods:
+      retrieve: get /api/v1/orderbook
+
+  websocket:
+    methods:
+      usage: get /api/v1/ws/usage
+
+  orders:
+    models:
+      order: "#/components/schemas/Order"
+    methods:
+      create: post /api/v1/orders
+      list: get /api/v1/orders
+      retrieve: get /api/v1/orders/{order_id}
+      cancel: delete /api/v1/orders/{order_id}
+
+  positions:
+    methods:
+      list: get /api/v1/positions
+
+  account:
+    methods:
+      balance: get /api/v1/balance
+      ping: get /api/v1/ping
+      user_activity: get /api/v1/user-activity
+      update_credentials: put /api/v1/credentials
+
+  approvals:
+    methods:
+      list: get /api/v1/approvals
+      set: post /api/v1/approvals
+
+settings:
+  disable_mock_tests: true
+  license: Apache-2.0
+
+client_settings:
+  opts:
+    api_key:
+      type: string
+      auth:
+        security_scheme: ApiKeyAuth
+      read_env: PARSEC_API_KEY
+
+query_settings:
+  nested_format: brackets
+  array_format: comma
+
+readme:
+  example_requests:
+    default:
+      type: request
+      endpoint: get /api/v1/exchanges
+      params: {}
+    headline:
+      type: request
+      endpoint: get /api/v1/markets
+      params:
+        exchanges:
+          - kalshi
+        limit: 1
