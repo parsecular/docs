@@ -38,6 +38,11 @@ resources:
     methods:
       retrieve: get /api/v1/orderbook
 
+  price_history:
+    methods:
+      retrieve: get /api/v1/price-history
+
+
   websocket:
     methods:
       usage: get /api/v1/ws/usage

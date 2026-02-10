@@ -2,6 +2,12 @@
 
 How to regenerate, update, and maintain the Parsec API SDKs.
 
+This guide is written assuming you are working from the **main monorepo root**
+(`parsecular-1/`) where the docs repo is checked out at `pc-documentation/`.
+
+If you are working from the **docs repo directly** (`parsecular/docs`), drop the
+`pc-documentation/` prefix in file paths.
+
 ## Overview
 
 | Component | Location | Purpose |
@@ -49,13 +55,13 @@ of codegen**, and must be re-applied after every regeneration.
 2. `src/resources/index.ts` — Re-export `OrderbookLevel`
 3. `tests/contract.test.ts`, `tests/schema-validation.test.ts` — Live contract/schema validation tests (opt-in)
 4. `package.json`, `pnpm-lock.yaml` — `test:contract` script + dev deps (`ajv`, `ajv-formats`, `@apidevtools/swagger-parser`)
-5. `package.json`, `README.md`, `CONTRIBUTING.md` — Repo links should point at `parsecular/sdk-typescript`
+5. `package.json`, `README.md` — Repo links should point at `parsecular/sdk-typescript`
 
 ### Python (`stainless-sdks/sdk-python`)
 
 1. `src/parsec_api/types/orderbook_retrieve_response.py` — Add `OrderbookLevel` tuple type, update `bids`/`asks` typing
 2. `src/parsec_api/types/__init__.py` — Re-export `OrderbookLevel`
-3. `pyproject.toml`, `README.md`, `CONTRIBUTING.md` — Repo links should point at `parsecular/sdk-python`
+3. `pyproject.toml`, `README.md` — Repo links should point at `parsecular/sdk-python`
 4. `src/parsec_api/resources/*.py` — Docstring links should point at `parsecular/sdk-python`
 
 ### How to re-apply

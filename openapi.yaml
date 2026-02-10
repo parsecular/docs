@@ -18,6 +18,7 @@ tags:
   - name: Exchanges
   - name: Markets
   - name: Orderbook
+  - name: Price History
   - name: WebSocket
   - name: Orders
   - name: Positions
@@ -201,6 +202,79 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
 
+
+  /api/v1/price-history:
+    get:
+      operationId: getPriceHistory
+      tags:
+        - Price History
+      summary: Get historical OHLCV candlesticks for a unified market
+      description: Returns an array of candlesticks with timestamps at period start (UTC).
+      parameters:
+        - name: parsec_id
+          in: query
+          required: true
+          description: Unified market ID in format `{exchange}:{native_id}`.
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          required: false
+          description: |
+            Outcome selector. For binary markets this is typically "yes" or "no" (case-insensitive).
+            For categorical markets, this is required and may be an outcome label or numeric index.
+          schema:
+            type: string
+        - name: interval
+          in: query
+          required: true
+          description: Price history interval.
+          schema:
+            type: string
+            enum:
+              - "1m"
+              - "1h"
+              - "6h"
+              - "1d"
+              - "1w"
+              - "max"
+        - name: start_ts
+          in: query
+          required: false
+          description: Unix seconds start timestamp (inclusive). If omitted, the server selects a default range based on `interval`.
+          schema:
+            type: integer
+            format: int64
+        - name: end_ts
+          in: query
+          required: false
+          description: Unix seconds end timestamp (inclusive). Defaults to now.
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceHistoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
   /api/v1/ws/usage:
     get:
       operationId: getWsUsage
@@ -963,6 +1037,65 @@ components:
             - "null"
           format: date-time
 
+
+    Candlestick:
+      type: object
+      required:
+        - timestamp
+        - open
+        - high
+        - low
+        - close
+        - volume
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Period start timestamp (UTC).
+        open:
+          type: number
+          description: Open price (normalized 0.0-1.0).
+        high:
+          type: number
+          description: High price (normalized 0.0-1.0).
+        low:
+          type: number
+          description: Low price (normalized 0.0-1.0).
+        close:
+          type: number
+          description: Close price (normalized 0.0-1.0).
+        volume:
+          type: number
+          description: Trade volume in contracts.
+
+    PriceHistoryResponse:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - outcome
+        - interval
+        - candles
+      properties:
+        parsec_id:
+          type: string
+        exchange:
+          type: string
+        outcome:
+          type: string
+        interval:
+          type: string
+          enum:
+            - "1m"
+            - "1h"
+            - "6h"
+            - "1d"
+            - "1w"
+            - "max"
+        candles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Candlestick"
     WsCustomerUsageResponse:
       type: object
       required:

@@ -1,0 +1,103 @@
+---
+title: "Get Price History"
+description: "Fetch historical OHLCV candlesticks for a market"
+---
+
+`GET /api/v1/price-history`
+
+Returns historical candlesticks (OHLCV) for a market identified by its `parsec_id`.
+
+- Timestamps are **period start** in UTC (RFC3339).
+- Prices are **normalized decimals** in the range `[0.0, 1.0]`.
+
+## Parameters
+
+<ParamField query="parsec_id" type="string" required>
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `kalshi:KXPRESNOMD-28-JOSS`).
+</ParamField>
+
+<ParamField query="outcome" type="string" default="yes">
+  Outcome to fetch: `yes` or `no`. Required for categorical markets.
+</ParamField>
+
+<ParamField query="interval" type="string" required>
+  Candle interval. Supported values: `1m`, `1h`, `6h`, `1d`, `1w`, `max`.
+</ParamField>
+
+<ParamField query="start_ts" type="number">
+  Unix seconds start timestamp (inclusive). If omitted, the server selects a default range based on `interval`.
+</ParamField>
+
+<ParamField query="end_ts" type="number">
+  Unix seconds end timestamp (inclusive). Defaults to now.
+</ParamField>
+
+## Response
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="parsec_id" type="string">
+      The requested market identifier.
+    </ResponseField>
+    <ResponseField name="exchange" type="string">
+      Exchange identifier.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      Resolved outcome for this series.
+    </ResponseField>
+    <ResponseField name="interval" type="string">
+      The candle interval.
+    </ResponseField>
+    <ResponseField name="candles" type="array">
+      Array of OHLCV candles.
+      <Expandable title="Candlestick properties">
+        <ResponseField name="timestamp" type="string">
+          Period start timestamp (UTC, RFC3339).
+        </ResponseField>
+        <ResponseField name="open" type="number">
+          Open price (normalized 0.0-1.0).
+        </ResponseField>
+        <ResponseField name="high" type="number">
+          High price (normalized 0.0-1.0).
+        </ResponseField>
+        <ResponseField name="low" type="number">
+          Low price (normalized 0.0-1.0).
+        </ResponseField>
+        <ResponseField name="close" type="number">
+          Close price (normalized 0.0-1.0).
+        </ResponseField>
+        <ResponseField name="volume" type="number">
+          Trade volume in contracts (0 if not provided by the exchange).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price-history?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "parsec_id": "kalshi:KXPRESNOMD-28-JOSS",
+  "exchange": "kalshi",
+  "outcome": "Yes",
+  "interval": "1h",
+  "candles": [
+    {
+      "timestamp": "2026-02-10T18:00:00Z",
+      "open": 0.51,
+      "high": 0.54,
+      "low": 0.49,
+      "close": 0.52,
+      "volume": 1234.0
+    }
+  ]
+}
+```
+</ResponseExample>

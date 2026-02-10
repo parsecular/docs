@@ -23,6 +23,7 @@
           "api/list-exchanges",
           "api/list-markets",
           "api/get-orderbook",
+          "api/get-price-history",
           "api/user-activity",
           "api/ws-usage"
         ]
