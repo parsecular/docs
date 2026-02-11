@@ -46,6 +46,7 @@
               "api/ping",
               "api/list-positions",
               "api/get-balance",
+              "api/update-credentials",
               "api/get-approvals",
               "api/set-approvals"
             ]

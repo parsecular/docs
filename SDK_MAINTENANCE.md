@@ -15,89 +15,126 @@ If you are working from the **docs repo directly** (`parsecular/docs`), drop the
 | OpenAPI spec | `pc-documentation/openapi.yaml` | Source of truth for REST contract |
 | Stainless config | `pc-documentation/stainless.yml` | Controls SDK generation (resources, naming, settings) |
 | Spectral config | `pc-documentation/.spectral.yaml` | OpenAPI linting rules |
-| TypeScript SDK | `parsecular/sdk-typescript` (GitHub) | Published to npm as `parsec-api` |
-| Python SDK | `parsecular/sdk-python` (GitHub) | Published to PyPI as `parsec_api` |
-| Local clones | `stainless-sdks/sdk-typescript`, `stainless-sdks/sdk-python` | Gitignored in main repo |
+| TypeScript SDK (staging) | `stainless-sdks/parsec-api-typescript` | Stainless-managed staging repo |
+| TypeScript SDK (production) | `parsecular/sdk-typescript` (GitHub) | Published to npm as `parsec-api` |
+| Python SDK (staging) | `stainless-sdks/parsec-api-python` | Stainless-managed staging repo |
+| Python SDK (production) | `parsecular/sdk-python` (GitHub) | Published to PyPI as `parsec_api` |
+| Local clones | `stainless-sdks/sdk-typescript`, `stainless-sdks/sdk-python` | Production repo clones (gitignored) |
+
+## How Stainless Branches Work
+
+Stainless manages several branches in each SDK repo:
+
+| Branch | Purpose | Who manages it |
+|--------|---------|----------------|
+| `generated` | Pure codegen output, no custom code | Stainless only (never touch) |
+| `next` | Generated code + your custom patches merged | Stainless + you |
+| `main` | Release branch | You (merge `next` when ready) |
+
+**Key concept:** Stainless uses a semantic three-way merge. When you commit custom
+code to `next`, Stainless re-applies your changes on top of each new codegen run
+automatically. Your patches persist across regenerations — no cherry-picking needed.
+
+**Never commit to:** `generated`, `codegen/**`, or `integrated/**` branches.
 
 ## Regenerating SDKs
 
 After changing `openapi.yaml` or `stainless.yml`:
 
 ```bash
-# Lint the spec first (Spectral config lives in pc-documentation/.spectral.yaml)
-cd pc-documentation && npx @stoplight/spectral-cli lint openapi.yaml
-cd -
+# 1. Lint the spec
+cd pc-documentation && npx @stoplight/spectral-cli lint openapi.yaml && cd -
 
-# Regenerate TypeScript
+# 2. Regenerate TypeScript
 stl builds create --project parsec-api \
   --openapi-spec pc-documentation/openapi.yaml \
   --stainless-config pc-documentation/stainless.yml \
-  --target typescript --wait
+  --target typescript --branch main
 
-# Regenerate Python
+# 3. Regenerate Python
 stl builds create --project parsec-api \
   --openapi-spec pc-documentation/openapi.yaml \
   --stainless-config pc-documentation/stainless.yml \
-  --target python --wait
+  --target python --branch main
 
-# If you see: "No changes to commit", rerun with:
-#   --allow-empty
+# If "No changes to commit", rerun with: --allow-empty
+# Builds run async. Check status:
+#   stl builds retrieve --build-id <id>
 ```
 
-## Custom Patches (Must Re-apply After Every Regen)
+Stainless pushes to `next` on the staging repo. Your custom patches on `next`
+are preserved automatically.
 
-Stainless updates the generated SDK repos. The following patches are **manual changes on top
-of codegen**, and must be re-applied after every regeneration.
+## Custom Patches (Persist Automatically)
 
-### TypeScript (`stainless-sdks/sdk-typescript`)
+Custom patches live as commits on `next` of the **staging** repo. Stainless
+preserves them through regenerations via semantic three-way merge.
 
-1. `src/resources/orderbook.ts` — Add `OrderbookLevel` tuple type, update `bids`/`asks` typing
+If a merge conflict occurs, Stainless opens a PR on the staging repo. Resolve
+it in GitHub — Stainless applies your resolution to future builds.
+
+### TypeScript patches (`stainless-sdks/parsec-api-typescript`, branch `next`)
+
+1. `src/resources/orderbook.ts` — `OrderbookLevel` tuple type, `bids`/`asks` typing
 2. `src/resources/index.ts` — Re-export `OrderbookLevel`
-3. `tests/contract.test.ts`, `tests/schema-validation.test.ts` — Live contract/schema validation tests (opt-in)
-4. `package.json`, `pnpm-lock.yaml` — `test:contract` script + dev deps (`ajv`, `ajv-formats`, `@apidevtools/swagger-parser`)
-5. `package.json`, `README.md` — Repo links should point at `parsecular/sdk-typescript`
+3. `tests/contract.test.ts`, `tests/schema-validation.test.ts` — Live validation tests
+4. `package.json` — `test:contract` script, dev deps, repo links to `parsecular/sdk-typescript`
 
-### Python (`stainless-sdks/sdk-python`)
+### Python patches (`stainless-sdks/parsec-api-python`, branch `next`)
 
-1. `src/parsec_api/types/orderbook_retrieve_response.py` — Add `OrderbookLevel` tuple type, update `bids`/`asks` typing
+1. `src/parsec_api/types/orderbook_retrieve_response.py` — `OrderbookLevel` tuple type
 2. `src/parsec_api/types/__init__.py` — Re-export `OrderbookLevel`
-3. `pyproject.toml`, `README.md` — Repo links should point at `parsecular/sdk-python`
-4. `src/parsec_api/resources/*.py` — Docstring links should point at `parsecular/sdk-python`
+3. `pyproject.toml`, `README.md` — Repo links to `parsecular/sdk-python`
 
-### How to re-apply
-
-Keep the patches as separate commits on `main`. After regen:
+### Adding a new custom patch
 
 ```bash
-cd stainless-sdks/sdk-typescript
-git log --oneline  # find the patch commit hash
-git cherry-pick <hash>  # or manually re-apply if conflicts
+cd stainless-sdks/parsec-api-typescript
+git checkout next && git pull origin next
+# Make changes...
+git add -A && git commit -m "fix(orderbook): add OrderbookLevel tuple type"
+git push origin next
 ```
 
-TODO: Once the API stabilizes, replace manual patching with a post-gen script for deterministic regen.
+Your commit persists through all future regenerations.
+
+## Releasing to Production
+
+After verifying `next` looks correct:
+
+```bash
+cd stainless-sdks/parsec-api-typescript
+git checkout main && git pull origin main
+git merge origin/next
+git push origin main
+```
+
+Stainless syncs the staging `main` to the production repo (`parsecular/sdk-typescript`)
+and creates release PRs there.
 
 ## Adding a New REST Endpoint
 
 1. Implement the handler in `pc-api/src/handlers/`
-2. Add the endpoint to `pc-documentation/openapi.yaml`
-3. Add the resource/method mapping to `pc-documentation/stainless.yml`
-4. Lint: `npx @stoplight/spectral-cli lint pc-documentation/openapi.yaml`
-5. Regenerate both SDKs (see above)
-6. Re-apply custom patches
-7. Commit and push all three repos (docs, ts sdk, python sdk)
+2. Add the route in `pc-api/src/routes.rs`
+3. Add the endpoint to `pc-documentation/openapi.yaml`
+4. Add a Mintlify doc page in `pc-documentation/api/`
+5. Add the page to `pc-documentation/docs.json` navigation
+6. Add the resource/method mapping to `pc-documentation/stainless.yml`
+7. Lint: `npx @stoplight/spectral-cli lint pc-documentation/openapi.yaml`
+8. Regenerate both SDKs (see above)
+9. Verify `next` branch has the new resource file
+10. Merge `next` → `main` when ready to release
 
 ## Running Contract Tests
 
 Contract tests validate SDK responses against the OpenAPI spec using a live server.
-They are opt-in and disabled by default.
 
 ```bash
-# TypeScript
 cd stainless-sdks/sdk-typescript
 PARSEC_API_KEY=pk_... pnpm test:contract
 
 # Requires: running local server at localhost:3000 (or set PARSEC_BASE_URL)
-# Optional: validate against local OpenAPI file instead of the build artifact:
+# Optional: validate against local OpenAPI file:
 #   PARSEC_OPENAPI_SPEC=/absolute/path/to/openapi.yaml
 ```
 

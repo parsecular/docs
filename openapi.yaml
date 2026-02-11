@@ -878,7 +878,9 @@ components:
         title:
           type: string
         question:
-          type: string
+          type:
+            - string
+            - "null"
         description:
           type: string
         status:
@@ -895,7 +897,9 @@ components:
           type: integer
           format: int64
         liquidity:
-          type: integer
+          type:
+            - integer
+            - "null"
           format: int64
         close_time:
           type: string
@@ -1268,7 +1272,9 @@ components:
           type: string
           format: date-time
         updated_at:
-          type: string
+          type:
+            - string
+            - "null"
           format: date-time
 
     Position:
