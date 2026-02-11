@@ -1,30 +1,107 @@
 ---
 title: "Getting Started"
-description: "Set up your account and start trading across prediction markets"
+description: "Integrate once, trade across every prediction market."
 ---
 
-## Setup
+## 1. Get your Parsec API key
 
-<Steps>
-  <Step title="Create a wallet">
-    Create a [MetaMask](https://metamask.io) wallet and fund your account. This wallet will be used for on-chain trading on supported exchanges.
-  </Step>
-  <Step title="Get exchange API keys">
-    Obtain API keys from each prediction market exchange you want to trade on:
-    - [Polymarket](https://polymarket.com)
-    - [Kalshi](https://kalshi.com)
-    - [Limitless](https://limitless.exchange)
-    - [Opinion](https://opinion.trade)
-    - [Predict.fun](https://predict.fun)
-  </Step>
-  <Step title="Enter your credentials">
-    Log in to your account and go to the **Settings** page. Fill in your exchange credentials and press **Save**.
-  </Step>
-  <Step title="Get your Parsec API key">
-    Reveal your Parsec API key at the top of the Settings page and integrate it into your trading system.
-  </Step>
-</Steps>
+Sign up at [parsecapi.com](https://parsecapi.com) and grab your API key from the **Settings** page.
 
-<Note>
-Your Parsec API key will only work if your prediction market exchange credentials were entered correctly.
-</Note>
+Your API key works immediately — no exchange credentials needed for market data.
+
+```bash
+curl -H "X-API-Key: pk_YOUR_KEY" \
+  https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&limit=3
+```
+
+```bash
+curl -H "X-API-Key: pk_YOUR_KEY" \
+  https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:YOUR_MARKET_ID
+```
+
+<Info>
+Markets, orderbooks, price history, and real-time WebSocket streaming all work with just your API key — no exchange accounts required.
+</Info>
+
+## 2. Link your exchanges (for trading)
+
+Connect your exchange credentials once and trade through a single API forever.
+
+Go to **Settings** in your Parsec dashboard and enter the credentials for each exchange you want to trade on.
+
+<AccordionGroup>
+  <Accordion title="Polymarket">
+    **What you need:** Your EVM wallet private key.
+
+    This is the same private key you'd export from MetaMask, Rabby, or any EVM wallet. Polymarket doesn't have separate API keys — your wallet key is used to sign orders on-chain.
+
+    In your Parsec Settings, paste your key into the **EVM Private Key** field.
+
+    If you use a Gnosis Safe or proxy wallet, also fill in the **Funder Address** field with your Safe address.
+  </Accordion>
+  <Accordion title="Kalshi">
+    **What you need:** Kalshi API Key ID + RSA Private Key.
+
+    1. Log in to [kalshi.com](https://kalshi.com) and go to your API settings
+    2. Generate a new API key pair — you'll get a **Key ID** and download a **private key file** (`.pem`)
+    3. In your Parsec Settings, paste both values into the **Kalshi API Key ID** and **Kalshi Private Key** fields
+  </Accordion>
+</AccordionGroup>
+
+## 3. Start building
+
+Install the SDK and start trading in a few lines of code.
+
+```bash
+npm install parsec-api
+```
+
+**Fetch markets:**
+
+```typescript
+import ParsecAPI from 'parsec-api';
+
+const client = new ParsecAPI();
+
+const markets = await client.markets.list({ exchanges: ['polymarket'], limit: 5 });
+console.log(markets.markets);
+```
+
+**Place an order:**
+
+```typescript
+const order = await client.orders.create({
+  exchange: 'polymarket',
+  market_id: '0x...',
+  outcome: 'yes',
+  side: 'buy',
+  price: 0.55,
+  size: 100,
+});
+console.log(order.id, order.status);
+```
+
+**Stream real-time orderbooks:**
+
+```typescript
+const ws = client.ws();
+
+ws.on('orderbook', (book) => {
+  console.log(`${book.parsec_id}: best bid ${book.bids[0]?.[0]}`);
+});
+
+await ws.connect();
+ws.subscribe({ parsecId: 'polymarket:0x...', outcome: 'Yes' });
+```
+
+<CardGroup cols={3}>
+  <Card title="API Reference" icon="code" href="/api/list-exchanges">
+    Browse all REST endpoints.
+  </Card>
+  <Card title="Order Router" icon="arrow-right-arrow-left" href="/api/create-order">
+    Place, cancel, and manage orders.
+  </Card>
+  <Card title="WebSocket" icon="signal" href="/websocket/overview">
+    Stream real-time orderbooks and trades.
+  </Card>
+</CardGroup>

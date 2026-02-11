@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Parsecular",
+  "name": "Parsec",
   "colors": {
-    "primary": "#ff6600",
-    "light": "#ff8c32",
-    "dark": "#cc4400"
+    "primary": "#4488FF",
+    "light": "#66AAFF",
+    "dark": "#2266DD"
   },
   "favicon": "/favicon.svg",
   "openapi": "openapi.yaml",
