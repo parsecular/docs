@@ -23,6 +23,12 @@ On success:
 { "type": "auth_ok", "customer_id": "cust_abc123" }
 ```
 
+On failure:
+
+```json
+{ "type": "auth_error", "code": 1002, "message": "invalid api key" }
+```
+
 Authentication must complete within **15 seconds** or the connection is closed.
 
 ## Subscribing
@@ -259,6 +265,10 @@ ws.onmessage = (event) => {
         type: 'subscribe',
         markets: [{ parsec_id: 'polymarket:0x1234', outcome: 'yes', depth: 10 }]
       }));
+      break;
+
+    case 'auth_error':
+      console.error(`Auth failed (${msg.code}): ${msg.message}`);
       break;
 
     case 'orderbook':
