@@ -48,6 +48,8 @@ resources:
 
 
   websocket:
+    models:
+      customer_usage: "#/components/schemas/WsCustomerUsageResponse"
     methods:
       usage: get /api/v1/ws/usage
 

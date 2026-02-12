@@ -10,6 +10,11 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
 - Timestamps are **period start** in UTC (RFC3339).
 - Prices are **normalized decimals** in the range `[0.0, 1.0]`.
 
+## Error Semantics
+
+- `403` means your API key is not authorized for the request.
+- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
+
 ## Parameters
 
 <ParamField query="parsec_id" type="string" required>

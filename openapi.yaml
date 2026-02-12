@@ -870,7 +870,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     ForbiddenError:
-      description: Forbidden
+      description: Forbidden (credentials/authorization issue)
       content:
         application/json:
           schema:
@@ -900,7 +900,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     ServiceUnavailableError:
-      description: Service unavailable
+      description: Service unavailable (upstream exchange/network issue)
       content:
         application/json:
           schema:

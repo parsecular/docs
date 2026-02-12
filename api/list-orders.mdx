@@ -7,6 +7,11 @@ description: "Get open orders for an exchange"
 
 Returns open orders for the authenticated user on the specified exchange.
 
+## Error Semantics
+
+- `403` means credentials/authorization are missing or invalid for private exchange access.
+- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
+
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
