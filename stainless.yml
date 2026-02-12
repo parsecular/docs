@@ -13,13 +13,13 @@ targets:
     package_name: parsec_api
     production_repo: parsecular/sdk-python
     publish:
-      pypi: false
+      pypi: true
   typescript:
     edition: typescript.2025-10-10
     package_name: parsec-api
     production_repo: parsecular/sdk-typescript
     publish:
-      npm: false
+      npm: true
 
 environments:
   production: https://api.parsecapi.com
@@ -43,7 +43,6 @@ resources:
       retrieve: get /api/v1/price-history
 
   trades:
-    # TODO: Run `stl builds create` (TS + Python) so the generated REST SDKs include this resource.
     methods:
       list: get /api/v1/trades
 

@@ -33,7 +33,11 @@ The endpoint operates in two modes:
 </ParamField>
 
 <ParamField query="group_id" type="string">
-  Filter by group/event ID (exact match).
+  Filter by source-native exchange event/group ID (exact match).
+</ParamField>
+
+<ParamField query="event_id" type="string">
+  Filter by canonical Parsec event ID (exact match). Prefer this for cross-exchange event queries.
 </ParamField>
 
 <ParamField query="min_volume" type="number">
@@ -66,7 +70,10 @@ The endpoint operates in two modes:
           Exchange identifier.
         </ResponseField>
         <ResponseField name="group_id" type="string | null">
-          Group/event ID for related markets.
+          Source-native exchange event/group ID.
+        </ResponseField>
+        <ResponseField name="event_id" type="string | null">
+          Canonical Parsec event ID used for cross-exchange grouping.
         </ResponseField>
         <ResponseField name="id" type="string">
           Native exchange market ID.
@@ -160,6 +167,10 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
 
+# Canonical event query (cross-exchange abstraction)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&event_id=ev:us-pres-election-winner-2028"
+
 # Direct lookup by parsec IDs
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/markets?parsec_ids=polymarket:0x1234,kalshi:KXBTC-25DEC"
@@ -174,6 +185,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "parsec_id": "polymarket:0x1234abcd",
       "exchange": "polymarket",
       "group_id": "group_123",
+      "event_id": "ev:polymarket:group_123",
       "id": "0x1234abcd",
       "slug": "will-btc-reach-100k",
       "title": "Will BTC reach $100k?",

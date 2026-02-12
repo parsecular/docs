@@ -97,7 +97,13 @@ paths:
         - name: group_id
           in: query
           required: false
-          description: Group/event ID filter (exact match).
+          description: Source-native exchange event/group ID filter (exact match).
+          schema:
+            type: string
+        - name: event_id
+          in: query
+          required: false
+          description: Canonical Parsec event ID filter (exact match).
           schema:
             type: string
         - name: min_volume
@@ -946,7 +952,15 @@ components:
         exchange:
           type: string
         group_id:
-          type: string
+          type:
+            - string
+            - "null"
+          description: Source-native exchange event/group ID.
+        event_id:
+          type:
+            - string
+            - "null"
+          description: Canonical Parsec event ID for cross-exchange grouping.
         id:
           type: string
           description: Native exchange market ID.
