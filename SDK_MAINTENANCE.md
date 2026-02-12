@@ -370,6 +370,38 @@ Stainless syncs the staging `main` to the production repo (`parsecular/sdk-types
 
 ---
 
+## REST ↔ WebSocket Parity
+
+The REST API and WebSocket should provide **equivalent data** where both cover the same
+domain. A developer should be able to switch between REST polling and WS streaming without
+losing fields or getting different shapes.
+
+### What should match
+
+| Data | REST | WebSocket | Rule |
+|------|------|-----------|------|
+| Orderbook | `GET /orderbook` → `OrderbookResponse` | `orderbook` → `OrderbookMessage` | Same fields, same `[price, size]` format |
+| Trades | `GET /user-activity` | `activity` (kind=trade) → `ActivityMessage` | Same fields |
+| Fills | `GET /user-activity` | `activity` (kind=fill) → `ActivityMessage` | Same fields |
+
+### What's intentionally different
+
+- **Orderbook deltas** (`orderbook_delta`) — WS-only. No REST equivalent (deltas only make sense in a streaming context).
+- **Markets, orders, positions, price history, balance** — REST-only. These are request/response operations, not streaming data.
+- **WS metadata fields** (`server_seq`, `feed_state`, `book_state`, `stale_after_ms`) — WS-only. These support the streaming protocol (sequence tracking, staleness detection) and don't apply to one-shot REST calls.
+
+### When modifying shared data
+
+If you change a field on either side, update the other:
+
+- Adding a field to `OrderbookResponse` (REST) → also add it to `OrderbookMessage` (WS)
+- Adding a field to `OrderbookMessage` (WS) → consider adding it to `OrderbookResponse` (REST)
+- Changing field types or formats → change both sides
+
+The `/sync-docs` skill (Step 6) automatically checks for parity gaps and reports mismatches.
+
+---
+
 ## Adding a New REST Endpoint
 
 1. Implement the handler in `pc-api/src/handlers/`
