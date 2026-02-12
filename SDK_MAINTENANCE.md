@@ -29,9 +29,23 @@ If you are working from the **docs repo directly** (`parsecular/docs`), drop the
 There are **two sets of repos** per SDK, which is confusing but necessary for the Stainless workflow:
 
 - **`parsec-api-*`** (staging) — Stainless owns these. This is where codegen output lands and where your custom patches persist. You commit here to make changes survive regeneration.
-- **`sdk-*`** (production clones) — These are local clones of the real `parsecular/sdk-*` GitHub repos. You develop and test here for convenience, then copy changes to the staging repos when ready.
+- **`sdk-*`** (production clones) — Local clones of the real `parsecular/sdk-*` GitHub repos. You develop and test here for convenience, then copy changes to the staging repos when ready.
 
-The flow is: **develop in `sdk-*` → copy to `parsec-api-*` staging `next` → merge to staging `main` → Stainless syncs to production**.
+> **⚠ NEVER push directly to the production repos (`parsecular/sdk-*`).** Stainless is the
+> sole publisher to production. If you push directly, your changes will conflict with or be
+> overwritten by the next Stainless sync. All changes flow through staging.
+
+The flow is:
+
+```
+1. Develop & test in production clone (sdk-*)
+2. Copy changed files to staging repo (parsec-api-*) on `next` branch
+3. Push staging `next`
+4. Merge staging `next` → staging `main`, push
+5. Stainless auto-syncs staging `main` → production and opens a release PR
+6. Merge the release PR on GitHub
+7. Pull latest into your local production clone (sdk-*) to stay in sync
+```
 
 ---
 
@@ -169,14 +183,60 @@ git push origin next
 ### 3. Release to production
 
 ```bash
+# Merge next → main on staging (both languages)
 cd stainless-sdks/parsec-api-typescript
+git checkout main && git pull origin main
+git merge origin/next
+git push origin main
+
+cd stainless-sdks/parsec-api-python
 git checkout main && git pull origin main
 git merge origin/next
 git push origin main
 ```
 
-Stainless syncs the staging `main` to the production repo (`parsecular/sdk-typescript`)
-and creates release PRs there. Repeat for Python.
+Stainless automatically syncs staging `main` → production and opens release PRs
+on `parsecular/sdk-typescript` and `parsecular/sdk-python`. This usually happens
+within a few minutes.
+
+### 4. Wait for Stainless release PRs and check CI
+
+```bash
+# Check for release PRs (wait ~5 min after pushing staging main)
+gh pr list --repo parsecular/sdk-typescript
+gh pr list --repo parsecular/sdk-python
+```
+
+Once the PRs appear, **check their CI status before merging**:
+
+```bash
+gh pr checks <PR_NUMBER> --repo parsecular/sdk-typescript
+gh pr checks <PR_NUMBER> --repo parsecular/sdk-python
+```
+
+If CI fails (common causes below), fix in staging `next`, push, merge to staging
+`main` — Stainless will re-sync and update the release PRs automatically.
+
+| Failure | Cause | Fix |
+|---------|-------|-----|
+| `prettier/prettier` | Indentation or formatting | `npx prettier --write <file>` in staging |
+| `unused-imports/no-unused-imports` | Unused import | Remove it in staging |
+| `ruff I001` | Python import sorting | `ruff check --fix <file>` in staging |
+| `tsc` type errors | Type mismatch | Fix manually in staging |
+| `pyright` type errors | Strict mode violation | Use `cast()` or fix types in staging |
+| `release doctor` | Missing `PYPI_TOKEN` / `NPM_TOKEN` secret | Set in repo Settings → Secrets (even a placeholder if publishing is disabled) |
+
+### 5. Merge release PRs and sync local clones
+
+1. Go to GitHub and merge the release PRs (all CI checks must pass)
+2. Pull latest into your local production clones:
+
+```bash
+cd stainless-sdks/sdk-typescript && git pull origin main
+cd stainless-sdks/sdk-python && git pull origin main
+```
+
+This keeps your local dev environment in sync with what's published.
 
 ---
 
@@ -240,21 +300,22 @@ it in GitHub — Stainless applies your resolution to future builds.
 6. `src/client.ts` — `ws()` method + `#deriveWsUrl()` on `ParsecAPI` class
 7. `src/index.ts` — Re-export streaming types
 8. `package.json` — `isomorphic-ws`, `ws`, `@types/ws` dependencies
-9. `tests/streaming.test.ts` — WS client tests with mock server (17 tests)
+9. `tests/streaming.test.ts` — WS client tests with mock server (21 tests)
 
 ### Python patches (`stainless-sdks/parsec-api-python`, branch `next`)
 
 **REST patches:**
 1. `src/parsec_api/types/orderbook_retrieve_response.py` — `OrderbookLevel` tuple type
 2. `src/parsec_api/types/__init__.py` — Re-export `OrderbookLevel`
-3. `pyproject.toml`, `README.md` — Repo links to `parsecular/sdk-python`
+3. `tests/test_contract.py` — Live contract validation tests
+4. `pyproject.toml`, `README.md` — Repo links to `parsecular/sdk-python`
 
 **WebSocket patches:**
-4. `src/parsec_api/streaming.py` — Full WS client (new file, low conflict risk)
-5. `src/parsec_api/_client.py` — `ws()` method + `_derive_ws_url()` on both `ParsecAPI` and `AsyncParsecAPI`
-6. `src/parsec_api/__init__.py` — Import/export streaming types
-7. `pyproject.toml` — `websockets>=12.0, <15` dependency
-8. `tests/test_ws_streaming.py` — WS client tests with mock server (16 tests)
+5. `src/parsec_api/streaming.py` — Full WS client (new file, low conflict risk)
+6. `src/parsec_api/_client.py` — `ws()` method + `_derive_ws_url()` on both `ParsecAPI` and `AsyncParsecAPI`
+7. `src/parsec_api/__init__.py` — Import/export streaming types
+8. `pyproject.toml` — `websockets>=12.0, <15` dependency
+9. `tests/test_ws_streaming.py` — WS client tests with mock server (20 tests)
 
 ### Adding a new custom patch
 
@@ -300,6 +361,10 @@ cd stainless-sdks/sdk-python
 
 # Streaming tests only
 /path/to/.venv/bin/python -m pytest tests/test_ws_streaming.py -v -o "addopts="
+
+# Contract tests (requires running server + API key)
+PARSEC_CONTRACT_TESTS=1 PARSEC_API_KEY=pk_... \
+  /path/to/.venv/bin/python -m pytest tests/test_contract.py -v -o "addopts="
 
 # If using the monorepo venv, install the SDK in editable mode first:
 /path/to/.venv/bin/pip install -e stainless-sdks/sdk-python
@@ -352,21 +417,33 @@ Common gotchas:
 After verifying `next` looks correct:
 
 ```bash
-# TypeScript
+# 1. Merge next → main on STAGING repos (both languages)
 cd stainless-sdks/parsec-api-typescript
 git checkout main && git pull origin main
-git merge origin/next
-git push origin main
+git merge origin/next && git push origin main
 
-# Python
 cd stainless-sdks/parsec-api-python
 git checkout main && git pull origin main
-git merge origin/next
-git push origin main
+git merge origin/next && git push origin main
+
+# 2. Wait ~5 min, then check for Stainless release PRs
+gh pr list --repo parsecular/sdk-typescript
+gh pr list --repo parsecular/sdk-python
+
+# 3. Check CI on the release PRs — ALL checks must pass
+gh pr checks <PR_NUMBER> --repo parsecular/sdk-typescript
+gh pr checks <PR_NUMBER> --repo parsecular/sdk-python
+# If CI fails: fix in staging next, push, merge to main, Stainless re-syncs
+
+# 4. Merge the release PRs on GitHub (only after CI passes)
+
+# 5. Sync local production clones
+cd stainless-sdks/sdk-typescript && git pull origin main
+cd stainless-sdks/sdk-python && git pull origin main
 ```
 
-Stainless syncs the staging `main` to the production repo (`parsecular/sdk-typescript`,
-`parsecular/sdk-python`) and creates release PRs there.
+> **⚠ Do NOT push directly to `parsecular/sdk-*`.** Stainless is the sole publisher.
+> All changes must flow through the staging repos.
 
 ---
 
@@ -381,8 +458,8 @@ losing fields or getting different shapes.
 | Data | REST | WebSocket | Rule |
 |------|------|-----------|------|
 | Orderbook | `GET /orderbook` → `OrderbookResponse` | `orderbook` → `OrderbookMessage` | Same fields, same `[price, size]` format |
-| Trades | `GET /user-activity` | `activity` (kind=trade) → `ActivityMessage` | Same fields |
-| Fills | `GET /user-activity` | `activity` (kind=fill) → `ActivityMessage` | Same fields |
+| Trades | `GET /trades` → `TradesResponse` | `activity` (kind=trade) → `ActivityMessage` | Same normalized fields |
+| Fills | *(WS-only today)* | `activity` (kind=fill) → `ActivityMessage` | No REST equivalent yet |
 
 ### What's intentionally different
 
@@ -398,7 +475,7 @@ If you change a field on either side, update the other:
 - Adding a field to `OrderbookMessage` (WS) → consider adding it to `OrderbookResponse` (REST)
 - Changing field types or formats → change both sides
 
-The `/sync-docs` skill (Step 6) automatically checks for parity gaps and reports mismatches.
+The `/sync-docs` skill (Step 7) automatically checks for parity gaps and reports mismatches.
 
 ---
 
@@ -418,15 +495,20 @@ The `/sync-docs` skill (Step 6) automatically checks for parity gaps and reports
 ## Modifying the WebSocket Protocol
 
 1. Update `pc-api/src/ws.rs` (server)
-2. Update SDK WS clients:
+2. Update SDK WS clients in **production clones** (local dev):
    - TypeScript: `stainless-sdks/sdk-typescript/src/streaming.ts`
    - Python: `stainless-sdks/sdk-python/src/parsec_api/streaming.py`
-3. Update tests:
+3. Update tests in production clones:
    - TypeScript: `stainless-sdks/sdk-typescript/tests/streaming.test.ts`
    - Python: `stainless-sdks/sdk-python/tests/test_ws_streaming.py`
-4. Update `pc-documentation/websocket/overview.mdx`
-5. Copy changes to staging `next` and push (see "Developing & Testing" above)
-6. Bump SDK version appropriately
+4. Run tests locally in production clones to verify
+5. Update `pc-documentation/websocket/overview.mdx`
+6. Copy changed files to staging repos on `next` (see "Developing & Testing" above)
+7. Push staging `next`, merge to staging `main`, push
+8. Wait for Stainless release PRs (~5 min), check CI passes
+9. If CI fails: fix in staging `next`, push, merge to `main` — Stainless re-syncs
+10. Merge release PRs on GitHub (only after CI passes)
+11. Pull latest into production clones (`git pull origin main`)
 
 ---
 
@@ -444,21 +526,41 @@ Here's the complete flow from making a change to having it published:
 
 ```
 1. Develop & test in production clone (sdk-*)
+   - Edit hand-written files (streaming.ts, tests, etc.)
+   - Run tests locally to verify
    ↓
 2. Copy changed files to staging repo (parsec-api-*)
+   - git checkout next && git pull origin next
+   - New files: safe to copy wholesale
+   - Generated+patched files: diff and patch, don't overwrite
    ↓
 3. Commit on staging `next` branch, push
    ↓
-4. (If REST change) Regenerate via `stl builds create`
+4. (If REST/OpenAPI change) Regenerate via `stl builds create`
    → Stainless merges your patches on top of new codegen
-   → Verify no merge conflicts
+   → Pull latest `next`, verify patches survived
    ↓
 5. Merge staging `next` → staging `main`, push
    ↓
-6. Stainless syncs staging `main` → production repo (parsecular/sdk-*)
-   → Creates a release PR on GitHub
+6. Stainless auto-syncs staging `main` → production repo (parsecular/sdk-*)
+   → Creates a release PR on GitHub with CI checks (usually < 5 min)
    ↓
-7. Review and merge the release PR
+7. Check CI on the release PR (~5-10 min after PR appears)
+   - gh pr checks <N> --repo parsecular/sdk-typescript
+   - If CI fails: fix in staging `next`, push, merge to `main` — Stainless re-syncs
+   - Common failures: prettier formatting, unused imports, ruff sorting, type errors
    ↓
-8. Published to npm / PyPI (if publish is enabled in stainless.yml)
+8. Merge the release PR on GitHub (only after all CI checks pass)
+   ↓
+9. Pull latest into local production clone (sdk-*) to stay in sync
+   - cd stainless-sdks/sdk-typescript && git pull origin main
+   - cd stainless-sdks/sdk-python && git pull origin main
+   ↓
+10. Published to npm / PyPI (if publish is enabled in stainless.yml)
 ```
+
+> **⚠ Never skip step 7.** CI catches formatting, linting, and type errors that staging
+> doesn't run locally. If you merge a PR with failing CI, the published SDK may have issues.
+>
+> **⚠ Never skip step 9.** If your local production clone falls behind, you'll develop
+> against stale code and create unnecessary merge conflicts when copying back to staging.

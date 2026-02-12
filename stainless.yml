@@ -42,6 +42,11 @@ resources:
     methods:
       retrieve: get /api/v1/price-history
 
+  trades:
+    # TODO: Run `stl builds create` (TS + Python) so the generated REST SDKs include this resource.
+    methods:
+      list: get /api/v1/trades
+
 
   websocket:
     methods:

@@ -1,0 +1,87 @@
+---
+title: "Get Trades"
+description: "Fetch recent public trades for a specific market outcome"
+---
+
+`GET /api/v1/trades`
+
+Returns recent public trades ("tape") for a market identified by its `parsec_id`.
+
+## Parameters
+
+<ParamField query="parsec_id" type="string" required>
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `kalshi:KXPRESPERSON-28-GNEWS`).
+</ParamField>
+
+<ParamField query="outcome" type="string" default="yes">
+  Outcome selector. For binary markets this is typically `yes` or `no` (case-insensitive). Required for categorical markets.
+</ParamField>
+
+<ParamField query="limit" type="number" default="200">
+  Max number of trades to return. Range: 1–500.
+</ParamField>
+
+<ParamField query="start_ts" type="number">
+  Unix seconds start timestamp (inclusive).
+</ParamField>
+
+<ParamField query="end_ts" type="number">
+  Unix seconds end timestamp (inclusive).
+</ParamField>
+
+## Response
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="parsec_id" type="string">
+      The requested market identifier.
+    </ResponseField>
+    <ResponseField name="exchange" type="string">
+      Exchange name.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome for this tape.
+    </ResponseField>
+    <ResponseField name="token_id" type="string">
+      Exchange-specific token/asset identifier for the requested outcome (when available).
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Exchange-specific market identifier.
+    </ResponseField>
+    <ResponseField name="trades" type="array">
+      Array of recent trades, newest-first. Prices are normalized to 0.0–1.0.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?parsec_id=kalshi:KXPRESPERSON-28-GNEWS&outcome=yes&limit=5"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS",
+  "exchange": "kalshi",
+  "outcome": "Yes",
+  "token_id": "KXPRESPERSON-28-GNEWS",
+  "market_id": "KXPRESPERSON-28-GNEWS",
+  "trades": [
+    {
+      "trade_id": "02025da9-d3e3-58ea-a865-351e8b8ea012",
+      "price": 0.21,
+      "size": 112.0,
+      "aggressor_side": "buy",
+      "timestamp": "2026-02-12T07:18:18.845367Z",
+      "source_channel": "kalshi_rest_trade"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+For real-time streaming, use the [WebSocket API](/websocket/overview).
+

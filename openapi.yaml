@@ -19,6 +19,7 @@ tags:
   - name: Markets
   - name: Orderbook
   - name: Price History
+  - name: Trades
   - name: WebSocket
   - name: Orders
   - name: Positions
@@ -91,6 +92,12 @@ paths:
           in: query
           required: false
           description: Keyword search in title/description/question (case-insensitive).
+          schema:
+            type: string
+        - name: group_id
+          in: query
+          required: false
+          description: Group/event ID filter (exact match).
           schema:
             type: string
         - name: min_volume
@@ -259,6 +266,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PriceHistoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /api/v1/trades:
+    get:
+      operationId: getTrades
+      tags:
+        - Trades
+      summary: Get recent public trades ("tape") for a unified market outcome
+      description: Returns an array of recent trades for the requested market+outcome (normalized prices 0.0-1.0).
+      parameters:
+        - name: parsec_id
+          in: query
+          required: true
+          description: Unified market ID in format `{exchange}:{native_id}`.
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          required: false
+          description: |
+            Outcome selector. For binary markets this is typically "yes" or "no" (case-insensitive).
+            For categorical markets, this is required and may be an outcome label or numeric index.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Max number of trades (default 200; server clamps to 1..=500).
+          schema:
+            type: integer
+            format: int32
+            default: 200
+            minimum: 1
+            maximum: 500
+        - name: start_ts
+          in: query
+          required: false
+          description: Unix seconds start timestamp (inclusive).
+          schema:
+            type: integer
+            format: int64
+        - name: end_ts
+          in: query
+          required: false
+          description: Unix seconds end timestamp (inclusive).
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradesResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -1100,6 +1177,59 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Candlestick"
+
+    MarketTrade:
+      type: object
+      required:
+        - price
+        - size
+        - timestamp
+        - source_channel
+      properties:
+        trade_id:
+          type: string
+        price:
+          type: number
+          description: Trade price (normalized 0.0-1.0).
+        size:
+          type: number
+          description: Trade size in contracts.
+        side:
+          type: string
+          description: Trade side (typically "buy" or "sell").
+        aggressor_side:
+          type: string
+          description: Aggressor side (typically "buy" or "sell").
+        timestamp:
+          type: string
+          format: date-time
+        source_channel:
+          type: string
+
+    TradesResponse:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - outcome
+        - token_id
+        - market_id
+        - trades
+      properties:
+        parsec_id:
+          type: string
+        exchange:
+          type: string
+        outcome:
+          type: string
+        token_id:
+          type: string
+        market_id:
+          type: string
+        trades:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarketTrade"
     WsCustomerUsageResponse:
       type: object
       required:
