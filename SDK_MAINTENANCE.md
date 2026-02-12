@@ -371,6 +371,34 @@ PARSEC_CONTRACT_TESTS=1 PARSEC_API_KEY=pk_... \
 /path/to/.venv/bin/pip install pytest pytest-asyncio websockets
 ```
 
+### Post-publish smoke tests (published packages)
+
+After publishing to npm/PyPI, verify the released artifacts work end-to-end:
+
+```bash
+# Both SDKs — installs from registries in temp dirs, validates against live API
+PARSEC_API_KEY=pk_... ./scripts/smoke-test-sdk.sh both
+
+# TypeScript only
+PARSEC_API_KEY=pk_... ./scripts/smoke-test-sdk.sh typescript
+
+# Python only
+PARSEC_API_KEY=pk_... ./scripts/smoke-test-sdk.sh python
+```
+
+The smoke test validates: exchanges, markets, orderbook, price history, WS usage (REST),
+and WebSocket connect + subscribe + snapshot receipt. It installs the published package
+from the public registry in an isolated temp directory — not from local source.
+
+### Testing checklist (before and after release)
+
+| When | What | Command |
+|------|------|---------|
+| During development | Unit + streaming tests (mock server) | `pnpm test` / `pytest tests/` |
+| Before merging to staging | Contract tests (live API) | `PARSEC_CONTRACT_TESTS=1 ...` |
+| Before merging release PR | CI checks (lint, build, test, release doctor) | `gh pr checks <N>` |
+| After publish | Smoke tests (published packages) | `./scripts/smoke-test-sdk.sh both` |
+
 ---
 
 ## CI / Linting Requirements
