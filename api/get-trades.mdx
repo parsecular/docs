@@ -48,8 +48,31 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
     <ResponseField name="market_id" type="string">
       Exchange-specific market identifier.
     </ResponseField>
-    <ResponseField name="trades" type="array">
+    <ResponseField name="trades" type="MarketTrade[]">
       Array of recent trades, newest-first. Prices are normalized to 0.0–1.0.
+      <Expandable title="properties">
+        <ResponseField name="trade_id" type="string | null">
+          Exchange-specific trade identifier (when available).
+        </ResponseField>
+        <ResponseField name="price" type="number">
+          Trade price, normalized to 0.0–1.0.
+        </ResponseField>
+        <ResponseField name="size" type="number">
+          Trade size in contracts.
+        </ResponseField>
+        <ResponseField name="side" type="string | null">
+          Trade side: `buy` or `sell` (when available).
+        </ResponseField>
+        <ResponseField name="aggressor_side" type="string | null">
+          Aggressor side: `buy` or `sell` (when available).
+        </ResponseField>
+        <ResponseField name="timestamp" type="string">
+          Trade timestamp (ISO 8601 / RFC 3339).
+        </ResponseField>
+        <ResponseField name="source_channel" type="string">
+          Data source channel identifier.
+        </ResponseField>
+      </Expandable>
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -74,6 +97,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "trade_id": "02025da9-d3e3-58ea-a865-351e8b8ea012",
       "price": 0.21,
       "size": 112.0,
+      "side": "buy",
       "aggressor_side": "buy",
       "timestamp": "2026-02-12T07:18:18.845367Z",
       "source_channel": "kalshi_rest_trade"

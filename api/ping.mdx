@@ -20,6 +20,9 @@ Checks authentication status for one or all registered exchanges.
     <ResponseField name="exchange" type="string">
       Exchange identifier.
     </ResponseField>
+    <ResponseField name="has_credentials" type="boolean">
+      Whether credentials are configured for this exchange.
+    </ResponseField>
     <ResponseField name="authenticated" type="boolean">
       Whether the exchange is authenticated and ready.
     </ResponseField>
@@ -44,9 +47,9 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 <ResponseExample>
 ```json
 [
-  { "exchange": "polymarket", "authenticated": true, "message": "authenticated" },
-  { "exchange": "kalshi", "authenticated": true, "message": "authenticated" },
-  { "exchange": "limitless", "authenticated": false, "message": "not authenticated" }
+  { "exchange": "polymarket", "has_credentials": true, "authenticated": true, "message": "authenticated" },
+  { "exchange": "kalshi", "has_credentials": true, "authenticated": true, "message": "authenticated" },
+  { "exchange": "limitless", "has_credentials": false, "authenticated": false, "message": "not authenticated" }
 ]
 ```
 </ResponseExample>

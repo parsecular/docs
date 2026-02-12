@@ -1073,11 +1073,14 @@ components:
       type: object
       required:
         - exchange
+        - has_credentials
         - authenticated
         - message
       properties:
         exchange:
           type: string
+        has_credentials:
+          type: boolean
         authenticated:
           type: boolean
         message:
