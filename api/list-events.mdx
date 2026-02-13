@@ -1,0 +1,138 @@
+---
+title: "List Events"
+description: "List events (market groups) with filtering and pagination"
+---
+
+`GET /api/v1/events`
+
+Aggregates markets by event ID from the Silver cache. Returns event summaries sorted by total volume (descending). Markets without an `event_id` are excluded.
+
+## Error Semantics
+
+- `503` means the Silver cache is not yet populated (retry after startup completes).
+
+## Parameters
+
+<ParamField query="exchanges" type="string">
+  Comma-separated exchange IDs to include (e.g., `kalshi,polymarket`). Defaults to all exchanges in the cache.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Keyword search in event title (case-insensitive).
+</ParamField>
+
+<ParamField query="status" type="string">
+  Status filter: `active`, `closed`, or `resolved`.
+</ParamField>
+
+<ParamField query="min_volume" type="number">
+  Minimum total volume across all markets in event.
+</ParamField>
+
+<ParamField query="include_markets" type="boolean" default="false">
+  Include constituent markets in the response.
+</ParamField>
+
+<ParamField query="limit" type="number" default="50">
+  Results per page. Range: 1-100.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor (offset-based). Use `next_cursor` from the previous response.
+</ParamField>
+
+## Response
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="events" type="EventSummary[]">
+      Array of event summaries, sorted by total volume descending.
+      <Expandable title="properties">
+        <ResponseField name="event_id" type="string">
+          Canonical Parsec event ID.
+        </ResponseField>
+        <ResponseField name="title" type="string">
+          Event title (derived from shortest constituent market title).
+        </ResponseField>
+        <ResponseField name="market_count" type="number">
+          Number of markets in this event.
+        </ResponseField>
+        <ResponseField name="total_volume" type="number">
+          Sum of volume across all markets in this event.
+        </ResponseField>
+        <ResponseField name="exchanges" type="string[]">
+          Deduplicated list of exchanges with markets in this event.
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Derived status: `active` if any market is active, else `closed` if any closed, else `resolved`.
+        </ResponseField>
+        <ResponseField name="close_time" type="string | null">
+          Earliest close time across constituent markets (ISO 8601).
+        </ResponseField>
+        <ResponseField name="markets" type="UnifiedMarket[] | null">
+          Constituent markets (only included when `include_markets=true`).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="pagination" type="object">
+      <Expandable title="properties">
+        <ResponseField name="count" type="number">
+          Number of events in this page.
+        </ResponseField>
+        <ResponseField name="total" type="number">
+          Total number of matching events.
+        </ResponseField>
+        <ResponseField name="has_more" type="boolean">
+          Whether more pages are available.
+        </ResponseField>
+        <ResponseField name="next_cursor" type="string | null">
+          Cursor for the next page (pass as `cursor` query parameter).
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="meta" type="object">
+      <Expandable title="properties">
+        <ResponseField name="exchanges_queried" type="string[]">
+          Exchanges that were queried.
+        </ResponseField>
+        <ResponseField name="exchanges_succeeded" type="string[]">
+          Exchanges that returned data successfully.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/events?search=super+bowl&include_markets=true&limit=5"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "events": [
+    {
+      "event_id": "kalshi:KXSB-26",
+      "title": "Super Bowl LX",
+      "market_count": 12,
+      "total_volume": 4500000,
+      "exchanges": ["kalshi"],
+      "status": "active",
+      "close_time": "2026-02-09T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "total": 1,
+    "has_more": false
+  },
+  "meta": {
+    "exchanges_queried": ["kalshi", "polymarket"],
+    "exchanges_succeeded": ["kalshi", "polymarket"]
+  }
+}
+```
+</ResponseExample>

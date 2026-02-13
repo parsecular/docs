@@ -20,6 +20,7 @@ tags:
   - name: Orderbook
   - name: Price History
   - name: Trades
+  - name: Events
   - name: WebSocket
   - name: Orders
   - name: Positions
@@ -358,6 +359,84 @@ paths:
           $ref: "#/components/responses/NotImplementedError"
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
+  /api/v1/events:
+    get:
+      operationId: listEvents
+      tags:
+        - Events
+      summary: List events (market groups) with filtering and pagination
+      description: |
+        Aggregates markets by event ID from the Silver cache.
+        Returns event summaries sorted by total volume (descending).
+        Markets without an event_id are excluded.
+      parameters:
+        - name: exchanges
+          in: query
+          required: false
+          description: |
+            Exchanges to include (CSV). Defaults to all exchanges in the cache.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: search
+          in: query
+          required: false
+          description: Keyword search in event title (case-insensitive).
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: Status filter.
+          schema:
+            $ref: "#/components/schemas/MarketStatus"
+        - name: min_volume
+          in: query
+          required: false
+          description: Minimum total volume across all markets in event.
+          schema:
+            type: integer
+            format: int64
+        - name: include_markets
+          in: query
+          required: false
+          description: Include constituent markets in the response (default false).
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          required: false
+          description: Results per page (default 50, max 100).
+          schema:
+            type: integer
+            format: int32
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: cursor
+          in: query
+          required: false
+          description: Pagination cursor (offset-based).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
   /api/v1/ws/usage:
     get:
       operationId: getWsUsage
@@ -1006,6 +1085,34 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OutcomeToken"
+        outcome_prices:
+          type: object
+          additionalProperties:
+            type: number
+          description: 'Outcome prices from REST API (e.g., {"Yes": 0.65, "No": 0.35}).'
+        volume_24h:
+          type:
+            - integer
+            - "null"
+          format: int64
+          description: 24-hour trading volume (USDC).
+        volume_1wk:
+          type:
+            - integer
+            - "null"
+          format: int64
+          description: 7-day rolling trading volume (USDC).
+        volume_1mo:
+          type:
+            - integer
+            - "null"
+          format: int64
+          description: 30-day rolling trading volume (USDC).
+        open_interest:
+          type:
+            - number
+            - "null"
+          description: Current open interest (contracts/pairs).
 
     UnifiedPaginationInfo:
       type: object
@@ -1043,6 +1150,62 @@ components:
           type: object
           additionalProperties:
             type: string
+
+    EventSummary:
+      type: object
+      required:
+        - event_id
+        - title
+        - market_count
+        - total_volume
+        - exchanges
+        - status
+      properties:
+        event_id:
+          type: string
+          description: Canonical Parsec event ID.
+        title:
+          type: string
+          description: Event title (derived from shortest constituent market title).
+        market_count:
+          type: integer
+          description: Number of markets in this event.
+        total_volume:
+          type: integer
+          format: int64
+          description: Sum of volume across all markets in this event.
+        exchanges:
+          type: array
+          items:
+            type: string
+          description: Deduplicated list of exchanges with markets in this event.
+        status:
+          $ref: "#/components/schemas/MarketStatus"
+        close_time:
+          type: string
+          format: date-time
+          description: Earliest close time across constituent markets.
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnifiedMarket"
+          description: Constituent markets (only included when `include_markets=true`).
+
+    EventsResponse:
+      type: object
+      required:
+        - events
+        - pagination
+        - meta
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventSummary"
+        pagination:
+          $ref: "#/components/schemas/UnifiedPaginationInfo"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
 
     UnifiedMarketsResponse:
       type: object
@@ -1165,6 +1328,9 @@ components:
         volume:
           type: number
           description: Trade volume in contracts.
+        open_interest:
+          type: number
+          description: Open interest at this candle's close.
 
     PriceHistoryResponse:
       type: object

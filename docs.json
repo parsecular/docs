@@ -25,6 +25,7 @@
           "api/get-orderbook",
           "api/get-price-history",
           "api/get-trades",
+          "api/list-events",
           "api/user-activity",
           "api/ws-usage"
         ]

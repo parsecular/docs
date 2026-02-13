@@ -46,6 +46,9 @@ resources:
     methods:
       list: get /api/v1/trades
 
+  events:
+    methods:
+      list: get /api/v1/events
 
   websocket:
     models:

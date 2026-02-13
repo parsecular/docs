@@ -80,6 +80,9 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
         <ResponseField name="volume" type="number">
           Trade volume in contracts (0 if not provided by the exchange).
         </ResponseField>
+        <ResponseField name="open_interest" type="number | null">
+          Open interest at this candle's close.
+        </ResponseField>
       </Expandable>
     </ResponseField>
   </Expandable>

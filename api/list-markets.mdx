@@ -123,6 +123,21 @@ The endpoint operates in two modes:
         <ResponseField name="outcome_tokens" type="array">
           Outcome-to-token mapping for orderbook subscriptions.
         </ResponseField>
+        <ResponseField name="outcome_prices" type="object">
+          Outcome prices from REST API (e.g., `{"Yes": 0.65, "No": 0.35}`). Omitted when empty.
+        </ResponseField>
+        <ResponseField name="volume_24h" type="number | null">
+          24-hour trading volume (USDC). Available when the exchange provides it.
+        </ResponseField>
+        <ResponseField name="volume_1wk" type="number | null">
+          7-day rolling trading volume (USDC). Available when the exchange provides it.
+        </ResponseField>
+        <ResponseField name="volume_1mo" type="number | null">
+          30-day rolling trading volume (USDC). Available when the exchange provides it.
+        </ResponseField>
+        <ResponseField name="open_interest" type="number | null">
+          Current open interest in contracts/pairs.
+        </ResponseField>
       </Expandable>
     </ResponseField>
     <ResponseField name="pagination" type="object">
