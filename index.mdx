@@ -52,13 +52,19 @@ Go to **Settings** in your Parsec dashboard and enter the credentials for each e
 
 Install the SDK and start trading in a few lines of code.
 
-```bash
+<CodeGroup>
+```bash npm
 npm install parsec-api
 ```
+```bash pip
+pip install parsec_api
+```
+</CodeGroup>
 
 **Fetch markets:**
 
-```typescript
+<CodeGroup>
+```typescript TypeScript
 import ParsecAPI from 'parsec-api';
 
 const client = new ParsecAPI();
@@ -66,10 +72,20 @@ const client = new ParsecAPI();
 const markets = await client.markets.list({ exchanges: ['polymarket'], limit: 5 });
 console.log(markets.markets);
 ```
+```python Python
+from parsec_api import ParsecAPI
+
+client = ParsecAPI()
+
+markets = client.markets.list(exchanges=["polymarket"], limit=5)
+print(markets.markets)
+```
+</CodeGroup>
 
 **Place an order:**
 
-```typescript
+<CodeGroup>
+```typescript TypeScript
 const order = await client.orders.create({
   exchange: 'polymarket',
   market_id: '0x...',
@@ -80,19 +96,51 @@ const order = await client.orders.create({
 });
 console.log(order.id, order.status);
 ```
+```python Python
+order = client.orders.create(
+    exchange="polymarket",
+    market_id="0x...",
+    outcome="yes",
+    side="buy",
+    price=0.55,
+    size=100,
+)
+print(order.id, order.status)
+```
+</CodeGroup>
 
 **Stream real-time orderbooks:**
 
-```typescript
+<CodeGroup>
+```typescript TypeScript
 const ws = client.ws();
 
 ws.on('orderbook', (book) => {
-  console.log(`${book.parsec_id}: best bid ${book.bids[0]?.[0]}`);
+  console.log(`${book.parsecId}: best bid ${book.bids[0]?.[0]}`);
 });
 
 await ws.connect();
 ws.subscribe({ parsecId: 'polymarket:0x...', outcome: 'Yes' });
 ```
+```python Python
+import asyncio
+from parsec_api import ParsecAPI
+
+client = ParsecAPI()
+ws = client.ws()
+
+@ws.on("orderbook")
+async def on_book(book):
+    print(f"{book.parsec_id}: best bid {book.bids[0][0] if book.bids else 'N/A'}")
+
+async def main():
+    await ws.connect()
+    ws.subscribe(parsec_id="polymarket:0x...", outcome="Yes")
+    await ws.run_forever()
+
+asyncio.run(main())
+```
+</CodeGroup>
 
 <CardGroup cols={3}>
   <Card title="API Reference" icon="code" href="/api/list-exchanges">

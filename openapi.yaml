@@ -86,13 +86,13 @@ paths:
         - name: status
           in: query
           required: false
-          description: Status filter.
+          description: "Status filter (e.g., active, closed, resolved, archived)."
           schema:
-            $ref: "#/components/schemas/MarketStatus"
+            type: string
         - name: search
           in: query
           required: false
-          description: Keyword search in title/description/question (case-insensitive).
+          description: Keyword search in question/description (case-insensitive).
           schema:
             type: string
         - name: group_id
@@ -112,15 +112,15 @@ paths:
           required: false
           description: Minimum volume filter.
           schema:
-            type: integer
-            format: int64
+            type: number
+            format: double
         - name: min_liquidity
           in: query
           required: false
           description: Minimum liquidity filter.
           schema:
-            type: integer
-            format: int64
+            type: number
+            format: double
         - name: limit
           in: query
           required: false
@@ -142,7 +142,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnifiedMarketsResponse"
+                $ref: "#/components/schemas/MarketsResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -390,16 +390,16 @@ paths:
         - name: status
           in: query
           required: false
-          description: Status filter.
+          description: "Status filter (e.g., active, closed, resolved, archived)."
           schema:
-            $ref: "#/components/schemas/MarketStatus"
+            type: string
         - name: min_volume
           in: query
           required: false
           description: Minimum total volume across all markets in event.
           schema:
-            type: integer
-            format: int64
+            type: number
+            format: double
         - name: include_markets
           in: query
           required: false
@@ -993,128 +993,138 @@ components:
         error:
           type: string
 
-    MarketStatus:
-      type: string
-      enum:
-        - active
-        - closed
-        - resolved
-
-    OutcomeToken:
+    Outcome:
       type: object
       required:
-        - outcome
-        - token_id
+        - name
       properties:
-        outcome:
+        name:
           type: string
+          description: Outcome label (e.g., "Yes", "No", or a categorical name).
+        price:
+          type: number
+          description: Last known price for this outcome (normalized 0.0-1.0).
         token_id:
           type: string
+          description: Exchange-native token ID for this outcome.
 
-    UnifiedMarket:
+    Market:
       type: object
       required:
         - parsec_id
+        - parsec_group_id
         - exchange
-        - id
-        - title
-        - description
+        - exchange_market_id
+        - exchange_group_id
+        - question
+        - group_title
         - status
         - market_type
-        - volume
         - outcomes
-        - outcome_tokens
+        - volume_total
       properties:
         parsec_id:
           type: string
           description: Primary key in format `{exchange}:{native_id}`.
+        parsec_group_id:
+          type: string
+          description: Parsec group ID for cross-exchange event grouping.
         exchange:
           type: string
-        group_id:
-          type:
-            - string
-            - "null"
-          description: Source-native exchange event/group ID.
-        event_id:
-          type:
-            - string
-            - "null"
-          description: Canonical Parsec event ID for cross-exchange grouping.
-        id:
+        exchange_market_id:
           type: string
           description: Native exchange market ID.
+        exchange_group_id:
+          type: string
+          description: Source-native exchange event/group ID.
         slug:
           type: string
-        title:
+        url:
           type: string
+          description: Direct URL to the market on the exchange.
         question:
-          type:
-            - string
-            - "null"
+          type: string
+          description: Market question text.
         description:
           type: string
+          description: Detailed market description.
+        rules:
+          type: string
+          description: Market resolution rules.
+        group_title:
+          type: string
+          description: Title of the group/event this market belongs to.
         status:
-          $ref: "#/components/schemas/MarketStatus"
+          type: string
+          description: "Market status. Common values: active, closed, resolved, archived."
         market_type:
           type: string
-        token_id_yes:
-          type: string
-        token_id_no:
-          type: string
-        condition_id:
-          type: string
-        volume:
+          description: "Market type (e.g., binary, categorical)."
+        outcome_count:
           type: integer
-          format: int64
-        liquidity:
-          type:
-            - integer
-            - "null"
-          format: int64
-        close_time:
-          type: string
-          format: date-time
-        open_time:
-          type: string
-          format: date-time
+          format: int32
+          description: Number of outcomes in this market.
         outcomes:
           type: array
           items:
-            type: string
-        outcome_tokens:
-          type: array
-          items:
-            $ref: "#/components/schemas/OutcomeToken"
-        outcome_prices:
-          type: object
-          additionalProperties:
-            type: number
-          description: 'Outcome prices from REST API (e.g., {"Yes": 0.65, "No": 0.35}).'
+            $ref: "#/components/schemas/Outcome"
+          description: Market outcomes with optional price and token ID.
+        best_bid:
+          type: number
+          description: Best bid price (normalized 0.0-1.0).
+        best_ask:
+          type: number
+          description: Best ask price (normalized 0.0-1.0).
+        last_price:
+          type: number
+          description: Last traded price (normalized 0.0-1.0).
+        volume_total:
+          type: number
+          format: double
+          description: Total trading volume (USDC).
         volume_24h:
-          type:
-            - integer
-            - "null"
-          format: int64
+          type: number
+          format: double
           description: 24-hour trading volume (USDC).
-        volume_1wk:
-          type:
-            - integer
-            - "null"
-          format: int64
-          description: 7-day rolling trading volume (USDC).
-        volume_1mo:
-          type:
-            - integer
-            - "null"
-          format: int64
-          description: 30-day rolling trading volume (USDC).
+        liquidity:
+          type: number
+          format: double
+          description: Current liquidity (USDC).
         open_interest:
-          type:
-            - number
-            - "null"
+          type: number
+          format: double
           description: Current open interest (contracts/pairs).
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+          description: Market end/close date.
+        event_start_time:
+          type: string
+          format: date-time
+          description: Event start time.
+        condition_id:
+          type: string
+          description: Exchange-native condition ID.
+        xref:
+          type: object
+          additionalProperties: true
+          description: Cross-reference data (exchange-specific metadata).
+        collection_date:
+          type: string
+          format: date-time
+          description: Date when this market was first collected.
+        last_collected:
+          type: string
+          format: date-time
+          description: Date of last data collection.
 
-    UnifiedPaginationInfo:
+    PaginationInfo:
       type: object
       required:
         - count
@@ -1124,32 +1134,17 @@ components:
         count:
           type: integer
           format: int32
+          description: Number of items in this response.
         total:
           type: integer
           format: int32
+          description: Total number of items matching the filters (before pagination).
         has_more:
           type: boolean
+          description: True if there are more results.
         next_cursor:
           type: string
-
-    ResponseMeta:
-      type: object
-      required:
-        - exchanges_queried
-        - exchanges_succeeded
-      properties:
-        exchanges_queried:
-          type: array
-          items:
-            type: string
-        exchanges_succeeded:
-          type: array
-          items:
-            type: string
-        exchanges_failed:
-          type: object
-          additionalProperties:
-            type: string
+          description: Cursor for the next page (offset-based).
 
     EventSummary:
       type: object
@@ -1171,8 +1166,8 @@ components:
           type: integer
           description: Number of markets in this event.
         total_volume:
-          type: integer
-          format: int64
+          type: number
+          format: double
           description: Sum of volume across all markets in this event.
         exchanges:
           type: array
@@ -1180,7 +1175,8 @@ components:
             type: string
           description: Deduplicated list of exchanges with markets in this event.
         status:
-          $ref: "#/components/schemas/MarketStatus"
+          type: string
+          description: "Event status. Common values: active, closed, resolved, archived."
         close_time:
           type: string
           format: date-time
@@ -1188,7 +1184,7 @@ components:
         markets:
           type: array
           items:
-            $ref: "#/components/schemas/UnifiedMarket"
+            $ref: "#/components/schemas/Market"
           description: Constituent markets (only included when `include_markets=true`).
 
     EventsResponse:
@@ -1196,32 +1192,26 @@ components:
       required:
         - events
         - pagination
-        - meta
       properties:
         events:
           type: array
           items:
             $ref: "#/components/schemas/EventSummary"
         pagination:
-          $ref: "#/components/schemas/UnifiedPaginationInfo"
-        meta:
-          $ref: "#/components/schemas/ResponseMeta"
+          $ref: "#/components/schemas/PaginationInfo"
 
-    UnifiedMarketsResponse:
+    MarketsResponse:
       type: object
       required:
         - markets
         - pagination
-        - meta
       properties:
         markets:
           type: array
           items:
-            $ref: "#/components/schemas/UnifiedMarket"
+            $ref: "#/components/schemas/Market"
         pagination:
-          $ref: "#/components/schemas/UnifiedPaginationInfo"
-        meta:
-          $ref: "#/components/schemas/ResponseMeta"
+          $ref: "#/components/schemas/PaginationInfo"
 
     BalanceResponse:
       type: object

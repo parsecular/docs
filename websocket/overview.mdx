@@ -246,7 +246,52 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 | Opinion | No | No | No |
 | Predict.fun | No | No | No |
 
-## Example: JavaScript Client
+## SDK Usage
+
+The Parsec SDK handles authentication, reconnection, and message parsing automatically. This is the recommended way to consume the WebSocket API.
+
+<CodeGroup>
+```typescript TypeScript
+import ParsecAPI from 'parsec-api';
+
+const client = new ParsecAPI({ apiKey: 'pk_...' });
+const ws = client.ws();
+
+ws.on('orderbook', (book) => {
+  console.log(`${book.parsecId} mid=${book.midPrice}`);
+});
+
+ws.on('activity', (trade) => {
+  console.log(`Trade: ${trade.price} x ${trade.size}`);
+});
+
+ws.subscribe({ parsecId: 'polymarket:1234', outcome: 'yes' });
+await ws.connect();
+```
+
+```python Python
+from parsec_api import ParsecAPI
+import asyncio
+
+client = ParsecAPI(api_key="pk_...")
+ws = client.ws()
+
+@ws.on("orderbook")
+async def on_book(book):
+    print(f"{book.parsec_id} mid={book.mid_price}")
+
+@ws.on("activity")
+async def on_trade(trade):
+    print(f"Trade: {trade.price} x {trade.size}")
+
+ws.subscribe(parsec_id="polymarket:1234", outcome="yes")
+asyncio.run(ws.connect())
+```
+</CodeGroup>
+
+## Example: Raw JavaScript Client
+
+If you need lower-level control, you can use the WebSocket API directly:
 
 ```javascript
 const ws = new WebSocket('wss://api.parsecapi.com/ws');
