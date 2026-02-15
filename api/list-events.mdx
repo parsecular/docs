@@ -69,7 +69,7 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
         <ResponseField name="close_time" type="string | null">
           Earliest close time across constituent markets (ISO 8601).
         </ResponseField>
-        <ResponseField name="markets" type="UnifiedMarket[] | null">
+        <ResponseField name="markets" type="Market[] | null">
           Constituent markets (only included when `include_markets=true`).
         </ResponseField>
       </Expandable>
@@ -87,16 +87,6 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
         </ResponseField>
         <ResponseField name="next_cursor" type="string | null">
           Cursor for the next page (pass as `cursor` query parameter).
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-    <ResponseField name="meta" type="object">
-      <Expandable title="properties">
-        <ResponseField name="exchanges_queried" type="string[]">
-          Exchanges that were queried.
-        </ResponseField>
-        <ResponseField name="exchanges_succeeded" type="string[]">
-          Exchanges that returned data successfully.
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -128,10 +118,6 @@ curl -H "X-API-Key: YOUR_API_KEY" \
     "count": 1,
     "total": 1,
     "has_more": false
-  },
-  "meta": {
-    "exchanges_queried": ["kalshi", "polymarket"],
-    "exchanges_succeeded": ["kalshi", "polymarket"]
   }
 }
 ```

@@ -5,7 +5,7 @@ description: "Get available markets from one or more exchanges"
 
 `GET /api/v1/markets`
 
-Returns a flat array of `UnifiedMarket` objects from the specified exchanges with filtering and pagination.
+Returns a paginated array of markets from the Silver cache (ClickHouse) with filtering and pagination.
 
 ## Modes
 
@@ -60,83 +60,109 @@ The endpoint operates in two modes:
 
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
-    <ResponseField name="markets" type="UnifiedMarket[]">
-      Flat array of markets from all queried exchanges.
-      <Expandable title="UnifiedMarket properties">
+    <ResponseField name="markets" type="Market[]">
+      Array of markets matching the query.
+      <Expandable title="Market properties">
         <ResponseField name="parsec_id" type="string">
           Primary key: `{exchange}:{native_id}`.
+        </ResponseField>
+        <ResponseField name="parsec_group_id" type="string">
+          Canonical Parsec event ID for cross-exchange grouping.
         </ResponseField>
         <ResponseField name="exchange" type="string">
           Exchange identifier.
         </ResponseField>
-        <ResponseField name="group_id" type="string | null">
-          Source-native exchange event/group ID.
-        </ResponseField>
-        <ResponseField name="event_id" type="string | null">
-          Canonical Parsec event ID used for cross-exchange grouping.
-        </ResponseField>
-        <ResponseField name="id" type="string">
+        <ResponseField name="exchange_market_id" type="string">
           Native exchange market ID.
+        </ResponseField>
+        <ResponseField name="exchange_group_id" type="string">
+          Source-native exchange event/group ID.
         </ResponseField>
         <ResponseField name="slug" type="string | null">
           URL-friendly identifier.
         </ResponseField>
-        <ResponseField name="title" type="string">
-          Market title.
+        <ResponseField name="url" type="string | null">
+          Direct link to the market on the exchange.
         </ResponseField>
-        <ResponseField name="question" type="string | null">
-          Market question (may differ from title).
+        <ResponseField name="question" type="string">
+          Market question.
         </ResponseField>
-        <ResponseField name="description" type="string">
-          Full description/rules.
+        <ResponseField name="description" type="string | null">
+          Full description.
+        </ResponseField>
+        <ResponseField name="rules" type="string | null">
+          Resolution rules.
+        </ResponseField>
+        <ResponseField name="group_title" type="string">
+          Title of the parent event/group.
         </ResponseField>
         <ResponseField name="status" type="string">
-          `active`, `closed`, or `resolved`.
+          Market status (e.g., `active`, `closed`, `resolved`).
         </ResponseField>
         <ResponseField name="market_type" type="string">
           Market type (e.g., `binary`, `categorical`).
         </ResponseField>
-        <ResponseField name="token_id_yes" type="string | null">
-          Yes outcome token ID.
+        <ResponseField name="outcome_count" type="number | null">
+          Number of outcomes.
         </ResponseField>
-        <ResponseField name="token_id_no" type="string | null">
-          No outcome token ID.
+        <ResponseField name="outcomes" type="Outcome[]">
+          Array of outcome objects.
+          <Expandable title="Outcome properties">
+            <ResponseField name="name" type="string">
+              Outcome label (e.g., `"Yes"`, `"No"`).
+            </ResponseField>
+            <ResponseField name="price" type="number | null">
+              Last known price for this outcome.
+            </ResponseField>
+            <ResponseField name="token_id" type="string | null">
+              Token ID for orderbook subscriptions.
+            </ResponseField>
+          </Expandable>
         </ResponseField>
-        <ResponseField name="condition_id" type="string | null">
-          Condition ID for CTF markets.
+        <ResponseField name="best_bid" type="number | null">
+          Best bid price.
         </ResponseField>
-        <ResponseField name="volume" type="number">
-          Total volume (integer).
+        <ResponseField name="best_ask" type="number | null">
+          Best ask price.
+        </ResponseField>
+        <ResponseField name="last_price" type="number | null">
+          Last traded price.
+        </ResponseField>
+        <ResponseField name="volume_total" type="number">
+          Total lifetime volume.
+        </ResponseField>
+        <ResponseField name="volume_24h" type="number | null">
+          24-hour trading volume.
         </ResponseField>
         <ResponseField name="liquidity" type="number | null">
           Current liquidity.
         </ResponseField>
-        <ResponseField name="close_time" type="string | null">
-          ISO 8601 close time.
-        </ResponseField>
-        <ResponseField name="open_time" type="string | null">
-          ISO 8601 open time.
-        </ResponseField>
-        <ResponseField name="outcomes" type="string[]">
-          Outcome labels (e.g., `["Yes", "No"]`).
-        </ResponseField>
-        <ResponseField name="outcome_tokens" type="array">
-          Outcome-to-token mapping for orderbook subscriptions.
-        </ResponseField>
-        <ResponseField name="outcome_prices" type="object">
-          Outcome prices from REST API (e.g., `{"Yes": 0.65, "No": 0.35}`). Omitted when empty.
-        </ResponseField>
-        <ResponseField name="volume_24h" type="number | null">
-          24-hour trading volume (USDC). Available when the exchange provides it.
-        </ResponseField>
-        <ResponseField name="volume_1wk" type="number | null">
-          7-day rolling trading volume (USDC). Available when the exchange provides it.
-        </ResponseField>
-        <ResponseField name="volume_1mo" type="number | null">
-          30-day rolling trading volume (USDC). Available when the exchange provides it.
-        </ResponseField>
         <ResponseField name="open_interest" type="number | null">
-          Current open interest in contracts/pairs.
+          Current open interest.
+        </ResponseField>
+        <ResponseField name="created_at" type="string | null">
+          ISO 8601 creation time.
+        </ResponseField>
+        <ResponseField name="updated_at" type="string | null">
+          ISO 8601 last update time.
+        </ResponseField>
+        <ResponseField name="end_date" type="string | null">
+          ISO 8601 market close/end time.
+        </ResponseField>
+        <ResponseField name="event_start_time" type="string | null">
+          ISO 8601 event start time.
+        </ResponseField>
+        <ResponseField name="condition_id" type="string | null">
+          Condition ID for CTF markets.
+        </ResponseField>
+        <ResponseField name="xref" type="object | null">
+          Cross-reference data (exchange-specific metadata).
+        </ResponseField>
+        <ResponseField name="collection_date" type="string | null">
+          ISO 8601 date when this record was collected.
+        </ResponseField>
+        <ResponseField name="last_collected" type="string | null">
+          ISO 8601 timestamp of last data collection.
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -153,19 +179,6 @@ The endpoint operates in two modes:
         </ResponseField>
         <ResponseField name="next_cursor" type="string | null">
           Cursor for the next page.
-        </ResponseField>
-      </Expandable>
-    </ResponseField>
-    <ResponseField name="meta" type="object">
-      <Expandable title="properties">
-        <ResponseField name="exchanges_queried" type="string[]">
-          Exchanges that were queried.
-        </ResponseField>
-        <ResponseField name="exchanges_succeeded" type="string[]">
-          Exchanges that returned data.
-        </ResponseField>
-        <ResponseField name="exchanges_failed" type="object">
-          Map of exchange ID to error message (omitted when empty).
         </ResponseField>
       </Expandable>
     </ResponseField>
@@ -198,28 +211,34 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "markets": [
     {
       "parsec_id": "polymarket:0x1234abcd",
+      "parsec_group_id": "polymarket:group_123",
       "exchange": "polymarket",
-      "group_id": "group_123",
-      "event_id": "ev:polymarket:group_123",
-      "id": "0x1234abcd",
+      "exchange_market_id": "0x1234abcd",
+      "exchange_group_id": "group_123",
       "slug": "will-btc-reach-100k",
-      "title": "Will BTC reach $100k?",
+      "url": "https://polymarket.com/event/will-btc-reach-100k",
       "question": "Will BTC reach $100k by end of 2025?",
       "description": "Resolves Yes if Bitcoin reaches $100,000...",
+      "rules": "Market resolves Yes if...",
+      "group_title": "Bitcoin Price Milestones",
       "status": "active",
       "market_type": "binary",
-      "token_id_yes": "token_yes_123",
-      "token_id_no": "token_no_456",
-      "condition_id": "0xcond123",
-      "volume": 500000,
-      "liquidity": 75000,
-      "close_time": "2025-12-31T23:59:59Z",
-      "open_time": "2025-01-01T00:00:00Z",
-      "outcomes": ["Yes", "No"],
-      "outcome_tokens": [
-        { "outcome": "Yes", "token_id": "token_yes_123" },
-        { "outcome": "No", "token_id": "token_no_456" }
-      ]
+      "outcome_count": 2,
+      "outcomes": [
+        { "name": "Yes", "price": 0.65, "token_id": "token_yes_123" },
+        { "name": "No", "price": 0.35, "token_id": "token_no_456" }
+      ],
+      "best_bid": 0.64,
+      "best_ask": 0.66,
+      "last_price": 0.65,
+      "volume_total": 500000.0,
+      "volume_24h": 12500.0,
+      "liquidity": 75000.0,
+      "open_interest": 30000.0,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-06-15T12:00:00Z",
+      "end_date": "2025-12-31T23:59:59Z",
+      "condition_id": "0xcond123"
     }
   ],
   "pagination": {
@@ -227,10 +246,6 @@ curl -H "X-API-Key: YOUR_API_KEY" \
     "total": 150,
     "has_more": true,
     "next_cursor": "1"
-  },
-  "meta": {
-    "exchanges_queried": ["polymarket"],
-    "exchanges_succeeded": ["polymarket"]
   }
 }
 ```
