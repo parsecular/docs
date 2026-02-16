@@ -961,7 +961,12 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     TooManyRequestsError:
-      description: Too many requests
+      description: "Rate limit exceeded. Includes a Retry-After header (seconds). Free tier: 2 req/sec, Pro tier: 60 req/sec (120 burst)."
+      headers:
+        Retry-After:
+          description: Seconds until the next request is allowed
+          schema:
+            type: integer
       content:
         application/json:
           schema:
@@ -1262,7 +1267,6 @@ components:
         - market_id
         - bids
         - asks
-        - timestamp
       properties:
         parsec_id:
           type: string
@@ -1506,6 +1510,7 @@ components:
         - scope
         - updated_at_ms
         - totals
+        - customers
         - top_markets
       properties:
         scope:
@@ -1741,7 +1746,9 @@ components:
         success:
           type: boolean
         error:
-          type: string
+          type:
+            - string
+            - "null"
 
     ApprovalResponse:
       type: object

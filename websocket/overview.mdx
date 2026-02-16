@@ -49,7 +49,7 @@ After authentication, subscribe to markets:
 |-------|------|----------|-------------|
 | `parsec_id` | string | Yes | Market identifier (`{exchange}:{market_id}`) |
 | `outcome` | string | No | `Yes` or `No` (case-insensitive, default: `Yes`) |
-| `depth` | number | No | Price levels per side, 1–100 (default: 50) |
+| `depth` | number | No | Price levels per side (default: 50, max depends on tier: Free=10, Pro=100) |
 
 ## Unsubscribing
 
@@ -178,8 +178,10 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
 ### Error
 
 ```json
-{ "type": "error", "code": 2001, "message": "invalid message" }
+{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:0x1234abcd" }
 ```
+
+`parsec_id` is included when the error relates to a specific market subscription. It is omitted for connection-level errors (e.g., authentication failures).
 
 ### Resync Required
 
@@ -232,9 +234,17 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 
 ## Limits
 
-- Max 100 subscriptions per connection
-- Subscribe rate limit: **3 requests per second**
-- Authentication timeout: **15 seconds**
+Limits depend on your API key tier:
+
+| Limit | Free | Pro |
+|-------|------|-----|
+| Max subscriptions (total across connections) | 20 | 500 |
+| Max orderbook depth (levels/side) | 10 | 100 |
+| Subscribe rate limit | 3 req/sec | 3 req/sec |
+| Authentication timeout | 15 sec | 15 sec |
+
+When you exceed the subscription limit, the server responds with error code `3002`.
+When you exceed the subscribe rate limit, the server responds with error code `3001`.
 
 ## Supported Exchanges
 
@@ -243,8 +253,8 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 | Polymarket | Yes | Yes | Yes |
 | Limitless | Yes | Yes | No |
 | Kalshi | Yes | Yes | Yes |
-| Opinion | No | No | No |
-| Predict.fun | No | No | No |
+| Opinion | Polling | No | No |
+| Predict.fun | Polling | No | No |
 
 ## SDK Usage
 

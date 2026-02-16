@@ -9,7 +9,9 @@ Parsecular uses a structured error hierarchy that helps you handle different typ
 
 ## HTTP Status Semantics (API)
 
+- `401 Unauthorized`: missing or invalid API key.
 - `403 Forbidden`: credentials/authorization issue (fix credentials or permissions before retrying).
+- `429 Too Many Requests`: rate limit exceeded. Includes a `Retry-After` header indicating seconds to wait. The SDKs retry automatically with exponential backoff.
 - `503 Service Unavailable`: upstream exchange/network issue (retry with backoff).
 
 ## Error Hierarchy

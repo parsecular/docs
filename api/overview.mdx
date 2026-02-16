@@ -65,27 +65,26 @@ Some endpoints accept multiple exchanges at once (CSV on the wire):
 
 - `/markets?exchanges=polymarket,kalshi`
 
-Responses include a `meta` section describing which exchanges were queried and which failed:
-
-```json
-{
-  "markets": [],
-  "pagination": { "count": 0, "total": 0, "has_more": false },
-  "meta": {
-    "exchanges_queried": ["polymarket", "kalshi"],
-    "exchanges_succeeded": ["polymarket"],
-    "exchanges_failed": { "kalshi": "KALSHI_API_KEY_ID not configured" }
-  }
-}
-```
-
 ## Rate Limiting
 
-The API respects rate limits of underlying exchanges. If rate limited, you'll receive:
+All API requests are rate limited per API key using a token bucket algorithm. Limits depend on your tier:
 
-```json
-{ "error": "rate limited" }
+| Tier | Sustained (req/sec) | Burst |
+|------|---------------------|-------|
+| Free | 2 | 2 (no burst) |
+| Pro | 60 | 120 |
+
+When rate limited, you'll receive a `429 Too Many Requests` response with a `Retry-After` header:
+
 ```
+HTTP/1.1 429 Too Many Requests
+Retry-After: 1
+Content-Type: application/json
+
+{ "error": "rate limit exceeded" }
+```
+
+The SDKs handle 429 responses automatically with 2 retries and exponential backoff.
 
 ## Pagination
 
@@ -103,8 +102,7 @@ GET /markets?exchanges=polymarket&limit=100
     "total": 12345,
     "has_more": true,
     "next_cursor": "eyJwb2x5bWFya2V0IjoiMTAwIn0"
-  },
-  "meta": { "exchanges_queried": ["polymarket"], "exchanges_succeeded": ["polymarket"] }
+  }
 }
 
 # Next page
