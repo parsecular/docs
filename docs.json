@@ -14,7 +14,9 @@
       {
         "tab": "Getting Started",
         "pages": [
-          "index"
+          "index",
+          "api/overview",
+          "errors/overview"
         ]
       },
       {

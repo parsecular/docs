@@ -116,7 +116,7 @@ print(order.id, order.status)
 const ws = client.ws();
 
 ws.on('orderbook', (book) => {
-  console.log(`${book.parsecId}: best bid ${book.bids[0]?.[0]}`);
+  console.log(`${book.parsecId}: best bid ${book.bids[0]?.price}`);
 });
 
 await ws.connect();
@@ -131,7 +131,7 @@ ws = client.ws()
 
 @ws.on("orderbook")
 async def on_book(book):
-    print(f"{book.parsec_id}: best bid {book.bids[0][0] if book.bids else 'N/A'}")
+    print(f"{book.parsec_id}: best bid {book.bids[0].price if book.bids else 'N/A'}")
 
 async def main():
     await ws.connect()

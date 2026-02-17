@@ -19,10 +19,13 @@ curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?excha
 
 ## Response Format
 
-2xx endpoints return the resource directly (no `{ success, data }` envelope):
+Single-resource endpoints return the object directly. List endpoints return a wrapper with pagination:
 
 ```json
-{ ... }
+{
+  "markets": [{ ... }],
+  "pagination": { "count": 100, "total": 12345, "has_more": true, "next_cursor": "100" }
+}
 ```
 
 On error:
@@ -33,31 +36,39 @@ On error:
 
 ## Available Endpoints
 
-### Exchange Info
+### Market Data
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | [`/exchanges`](/api/list-exchanges) | List available exchanges |
-| `GET` | [`/ping`](/api/ping) | Check exchange connectivity |
-
-### Markets
-| Method | Endpoint | Description |
-|--------|----------|-------------|
 | `GET` | [`/markets`](/api/list-markets) | List markets from one or more exchanges |
+| `GET` | [`/orderbook`](/api/get-orderbook) | Get L2 orderbook for a market |
+| `GET` | [`/price-history`](/api/get-price-history) | Get OHLCV candlestick data |
+| `GET` | [`/trades`](/api/get-trades) | Get recent trades |
+| `GET` | [`/events`](/api/list-events) | List events (market groups) |
 
 ### Orders
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | [`/orders`](/api/list-orders) | List open orders |
 | `POST` | [`/orders`](/api/create-order) | Create a new order |
+| `GET` | [`/orders`](/api/list-orders) | List open orders |
 | `GET` | [`/orders/:id`](/api/get-order) | Get order details |
 | `DELETE` | [`/orders/:id`](/api/cancel-order) | Cancel an order |
 
-### Portfolio
+### Account
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `GET` | [`/ping`](/api/ping) | Check exchange connectivity |
 | `GET` | [`/positions`](/api/list-positions) | List positions |
 | `GET` | [`/balance`](/api/get-balance) | Get account balance |
 | `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
+| `PUT` | [`/credentials`](/api/update-credentials) | Update exchange credentials |
+| `GET` | [`/approvals`](/api/get-approvals) | Check token approvals |
+| `POST` | [`/approvals`](/api/set-approvals) | Set token approvals |
+
+### WebSocket
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/ws/usage`](/api/ws-usage) | Get WebSocket usage stats |
 
 ## Multi-Exchange Semantics
 
@@ -101,12 +112,12 @@ GET /markets?exchanges=polymarket&limit=100
     "count": 100,
     "total": 12345,
     "has_more": true,
-    "next_cursor": "eyJwb2x5bWFya2V0IjoiMTAwIn0"
+    "next_cursor": "100"
   }
 }
 
 # Next page
-GET /markets?exchanges=polymarket&limit=100&cursor=eyJwb2x5bWFya2V0IjoiMTAwIn0
+GET /markets?exchanges=polymarket&limit=100&cursor=100
 ```
 
 ## Next Steps
@@ -121,7 +132,7 @@ GET /markets?exchanges=polymarket&limit=100&cursor=eyJwb2x5bWFya2V0IjoiMTAwIn0
   <Card title="User Activity" icon="user" href="/api/user-activity">
     Get portfolio data across all exchanges.
   </Card>
-  <Card title="Configuration" icon="gear" href="/configuration/overview">
-    Server and exchange configuration.
+  <Card title="Error Handling" icon="triangle-exclamation" href="/errors/overview">
+    HTTP status codes and error responses.
   </Card>
 </CardGroup>

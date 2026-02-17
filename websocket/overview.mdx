@@ -294,8 +294,12 @@ async def on_book(book):
 async def on_trade(trade):
     print(f"Trade: {trade.price} x {trade.size}")
 
-ws.subscribe(parsec_id="polymarket:1234", outcome="yes")
-asyncio.run(ws.connect())
+async def main():
+    ws.subscribe(parsec_id="polymarket:1234", outcome="yes")
+    await ws.connect()
+    await ws.run_forever()
+
+asyncio.run(main())
 ```
 </CodeGroup>
 
@@ -352,8 +356,8 @@ ws.onmessage = (event) => {
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Orderbook Model" icon="book" href="/models/orderbook">
-    Learn about the Orderbook data structure.
+  <Card title="Get Orderbook" icon="book" href="/api/get-orderbook">
+    Fetch orderbook snapshots via REST.
   </Card>
   <Card title="WebSocket Usage API" icon="chart-bar" href="/api/ws-usage">
     Monitor your WebSocket usage statistics.
