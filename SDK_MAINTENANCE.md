@@ -398,6 +398,7 @@ from the public registry in an isolated temp directory — not from local source
 | Before merging to staging | Contract tests (live API) | `PARSEC_CONTRACT_TESTS=1 ...` |
 | Before merging release PR | CI checks (lint, build, test, release doctor) | `gh pr checks <N>` |
 | After publish | Smoke tests (published packages) | `./scripts/smoke-test-sdk.sh both` |
+| After backend deploy | Production contract check (`/exchanges` capability objects + `/execution-price` availability) | `curl -H "X-API-Key: ..."` checks |
 
 ---
 
@@ -465,7 +466,12 @@ gh pr checks <PR_NUMBER> --repo parsecular/sdk-python
 
 # 4. Merge the release PRs on GitHub (only after CI passes)
 
-# 5. Sync local production clones
+# 5. Post-deploy production contract checks (must pass before closing release)
+curl -sS -H "X-API-Key: $PARSEC_API_KEY" https://api.parsecapi.com/api/v1/exchanges
+curl -sS -H "X-API-Key: $PARSEC_API_KEY" "https://api.parsecapi.com/api/v1/execution-price?exchange=kalshi&parsec_id=<PARSEC_ID>&outcome=<OUTCOME>&side=buy&amount=1"
+PARSEC_API_KEY=pk_... ./scripts/smoke-test-sdk.sh both
+
+# 6. Sync local production clones
 cd stainless-sdks/sdk-typescript && git pull origin main
 cd stainless-sdks/sdk-python && git pull origin main
 ```
