@@ -34,6 +34,10 @@ resources:
     methods:
       list: get /api/v1/markets
 
+  execution_price:
+    methods:
+      retrieve: get /api/v1/execution-price
+
   orderbook:
     methods:
       retrieve: get /api/v1/orderbook

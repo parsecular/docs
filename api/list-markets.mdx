@@ -78,19 +78,19 @@ The endpoint operates in two modes:
         <ResponseField name="exchange_group_id" type="string">
           Source-native exchange event/group ID.
         </ResponseField>
-        <ResponseField name="slug" type="string | null">
+        <ResponseField name="slug" type="string">
           URL-friendly identifier.
         </ResponseField>
-        <ResponseField name="url" type="string | null">
+        <ResponseField name="url" type="string">
           Direct link to the market on the exchange.
         </ResponseField>
         <ResponseField name="question" type="string">
           Market question.
         </ResponseField>
-        <ResponseField name="description" type="string | null">
+        <ResponseField name="description" type="string">
           Full description.
         </ResponseField>
-        <ResponseField name="rules" type="string | null">
+        <ResponseField name="rules" type="string">
           Resolution rules.
         </ResponseField>
         <ResponseField name="group_title" type="string">
@@ -102,7 +102,7 @@ The endpoint operates in two modes:
         <ResponseField name="market_type" type="string">
           Market type (e.g., `binary`, `categorical`).
         </ResponseField>
-        <ResponseField name="outcome_count" type="number | null">
+        <ResponseField name="outcome_count" type="number">
           Number of outcomes.
         </ResponseField>
         <ResponseField name="outcomes" type="Outcome[]">
@@ -111,57 +111,57 @@ The endpoint operates in two modes:
             <ResponseField name="name" type="string">
               Outcome label (e.g., `"Yes"`, `"No"`).
             </ResponseField>
-            <ResponseField name="price" type="number | null">
+            <ResponseField name="price" type="number">
               Last known price for this outcome.
             </ResponseField>
-            <ResponseField name="token_id" type="string | null">
+            <ResponseField name="token_id" type="string">
               Token ID for orderbook subscriptions.
             </ResponseField>
           </Expandable>
         </ResponseField>
-        <ResponseField name="best_bid" type="number | null">
+        <ResponseField name="best_bid" type="number">
           Best bid price.
         </ResponseField>
-        <ResponseField name="best_ask" type="number | null">
+        <ResponseField name="best_ask" type="number">
           Best ask price.
         </ResponseField>
-        <ResponseField name="last_price" type="number | null">
+        <ResponseField name="last_price" type="number">
           Last traded price.
         </ResponseField>
         <ResponseField name="volume_total" type="number">
           Total lifetime volume.
         </ResponseField>
-        <ResponseField name="volume_24h" type="number | null">
+        <ResponseField name="volume_24h" type="number">
           24-hour trading volume.
         </ResponseField>
-        <ResponseField name="liquidity" type="number | null">
+        <ResponseField name="liquidity" type="number">
           Current liquidity.
         </ResponseField>
-        <ResponseField name="open_interest" type="number | null">
+        <ResponseField name="open_interest" type="number">
           Current open interest.
         </ResponseField>
-        <ResponseField name="created_at" type="string | null">
+        <ResponseField name="created_at" type="string">
           ISO 8601 creation time.
         </ResponseField>
-        <ResponseField name="updated_at" type="string | null">
+        <ResponseField name="updated_at" type="string">
           ISO 8601 last update time.
         </ResponseField>
-        <ResponseField name="end_date" type="string | null">
+        <ResponseField name="end_date" type="string">
           ISO 8601 market close/end time.
         </ResponseField>
-        <ResponseField name="event_start_time" type="string | null">
+        <ResponseField name="event_start_time" type="string">
           ISO 8601 event start time.
         </ResponseField>
-        <ResponseField name="condition_id" type="string | null">
+        <ResponseField name="condition_id" type="string">
           Condition ID for CTF markets.
         </ResponseField>
-        <ResponseField name="xref" type="object | null">
+        <ResponseField name="xref" type="object">
           Cross-reference data (exchange-specific metadata).
         </ResponseField>
-        <ResponseField name="collection_date" type="string | null">
+        <ResponseField name="collection_date" type="string">
           ISO 8601 date when this record was collected.
         </ResponseField>
-        <ResponseField name="last_collected" type="string | null">
+        <ResponseField name="last_collected" type="string">
           ISO 8601 timestamp of last data collection.
         </ResponseField>
       </Expandable>
@@ -177,7 +177,7 @@ The endpoint operates in two modes:
         <ResponseField name="has_more" type="boolean">
           Whether more results are available.
         </ResponseField>
-        <ResponseField name="next_cursor" type="string | null">
+        <ResponseField name="next_cursor" type="string">
           Cursor for the next page.
         </ResponseField>
       </Expandable>

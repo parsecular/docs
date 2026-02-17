@@ -56,7 +56,7 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
     <ResponseField name="trades" type="MarketTrade[]">
       Array of recent trades, newest-first. Prices are normalized to 0.0–1.0.
       <Expandable title="properties">
-        <ResponseField name="trade_id" type="string | null">
+        <ResponseField name="trade_id" type="string">
           Exchange-specific trade identifier (when available).
         </ResponseField>
         <ResponseField name="price" type="number">
@@ -65,10 +65,10 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
         <ResponseField name="size" type="number">
           Trade size in contracts.
         </ResponseField>
-        <ResponseField name="side" type="string | null">
+        <ResponseField name="side" type="string">
           Trade side: `buy` or `sell` (when available).
         </ResponseField>
-        <ResponseField name="aggressor_side" type="string | null">
+        <ResponseField name="aggressor_side" type="string">
           Aggressor side: `buy` or `sell` (when available).
         </ResponseField>
         <ResponseField name="timestamp" type="string">

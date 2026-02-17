@@ -66,10 +66,10 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
         <ResponseField name="status" type="string">
           Derived status: `active` if any market is active, else `closed` if any closed, else `resolved`.
         </ResponseField>
-        <ResponseField name="close_time" type="string | null">
+        <ResponseField name="close_time" type="string">
           Earliest close time across constituent markets (ISO 8601).
         </ResponseField>
-        <ResponseField name="markets" type="Market[] | null">
+        <ResponseField name="markets" type="Market[]">
           Constituent markets (only included when `include_markets=true`).
         </ResponseField>
       </Expandable>
@@ -85,7 +85,7 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
         <ResponseField name="has_more" type="boolean">
           Whether more pages are available.
         </ResponseField>
-        <ResponseField name="next_cursor" type="string | null">
+        <ResponseField name="next_cursor" type="string">
           Cursor for the next page (pass as `cursor` query parameter).
         </ResponseField>
       </Expandable>

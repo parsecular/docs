@@ -5,7 +5,7 @@ description: "Get available exchanges"
 
 `GET /api/v1/exchanges`
 
-Returns exchanges available to the authenticated user.
+Returns exchange capabilities available to the authenticated user.
 
 ## Parameters
 
@@ -13,8 +13,8 @@ No parameters required.
 
 ## Response
 
-<ResponseField name="(root)" type="string[]">
-  Array of exchange identifiers.
+<ResponseField name="(root)" type="ExchangeCapability[]">
+  Array of capability objects with per-exchange support flags.
 </ResponseField>
 
 <RequestExample>
@@ -26,6 +26,25 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <ResponseExample>
 ```json
-["polymarket", "kalshi", "limitless", "opinion", "predictfun"]
+[
+  {
+    "id": "polymarket",
+    "name": "Polymarket",
+    "has": {
+      "fetch_markets": true,
+      "create_order": true,
+      "websocket": true
+    }
+  },
+  {
+    "id": "opinion",
+    "name": "Opinion",
+    "has": {
+      "fetch_markets": true,
+      "create_order": false,
+      "websocket": false
+    }
+  }
+]
 ```
 </ResponseExample>

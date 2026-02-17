@@ -40,7 +40,7 @@ Places a new order on the specified exchange.
 
   | Key | Values | Description |
   |-----|--------|-------------|
-  | `order_type` | `limit` (default), `ioc` | Order type. `ioc` (Immediate-or-Cancel) fills what it can and cancels the rest. |
+  | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type. Unsupported combinations return `501` per exchange. |
 </ParamField>
 
 ## Response

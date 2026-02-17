@@ -11,10 +11,14 @@ wss://api.parsecapi.com/ws
 
 ## Authentication
 
-Send an auth message immediately after connecting:
+Send an auth message immediately after connecting using either an API key or a terminal token:
 
 ```json
 { "type": "auth", "api_key": "sk_your_api_key" }
+```
+
+```json
+{ "type": "auth_terminal", "token": "your_terminal_token" }
 ```
 
 On success:
@@ -81,17 +85,18 @@ Request a fresh snapshot if data becomes stale:
   "token_id": "217426...",
   "market_id": "0x1234abcd",
   "tick_size": 0.001,
+  "title": "Will ETH reach $5000?",
   "kind": "snapshot",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
   "book_state": "fresh",
   "server_seq": 1234,
   "feed_state": "healthy",
-  "stale_after_ms": 5000,
-  "exchange_ts_ms": 1707044096000,
-  "ingest_ts_ms": 1707044096005
+  "stale_after_ms": 5000
 }
 ```
+
+`exchange_ts_ms` and `ingest_ts_ms` are included when available and provide epoch-millisecond timestamps for the exchange event time and server ingest time respectively.
 
 ### Orderbook Delta
 
@@ -115,9 +120,7 @@ Incremental orderbook updates are sent as `type: "orderbook_delta"`. Deltas use 
   "server_seq": 1234,
   "feed_state": "healthy",
   "book_state": "fresh",
-  "stale_after_ms": 5000,
-  "exchange_ts_ms": 1707044096100,
-  "ingest_ts_ms": 1707044096105
+  "stale_after_ms": 5000
 }
 ```
 
@@ -141,8 +144,6 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "aggressor_side": "buy",
   "server_seq": 1235,
   "feed_state": "healthy",
-  "exchange_ts_ms": 1707044096100,
-  "ingest_ts_ms": 1707044096105,
   "source_channel": "trades"
 }
 ```
@@ -163,11 +164,11 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "side": "buy",
   "server_seq": 1236,
   "feed_state": "healthy",
-  "exchange_ts_ms": 1707044096200,
-  "ingest_ts_ms": 1707044096205,
   "source_channel": "user"
 }
 ```
+
+Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` fields when available.
 
 ### Heartbeat
 
@@ -224,7 +225,8 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 | Code | Type | Description |
 |------|------|-------------|
 | 1001 | `auth_required` | Authentication required |
-| 1002 | `auth_invalid` | Invalid API key |
+| 1001 | `already_authenticated` | Already authenticated (duplicate auth message) |
+| 1002 | `auth_invalid` | Invalid API key or terminal token |
 | 2001 | `invalid_market` | Invalid message format or market ID |
 | 2002 | `market_not_found` | Market does not exist |
 | 2003 | `exchange_unavailable` | Exchange is unavailable |
@@ -251,7 +253,7 @@ When you exceed the subscribe rate limit, the server responds with error code `3
 | Exchange | Orderbook | Trades | Fills |
 |----------|-----------|--------|-------|
 | Polymarket | Yes | Yes | Yes |
-| Limitless | Yes | Yes | No |
+| Limitless | Yes | No | No |
 | Kalshi | Yes | Yes | Yes |
 | Opinion | Polling | No | No |
 | Predict.fun | Polling | No | No |
