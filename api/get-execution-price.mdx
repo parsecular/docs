@@ -47,6 +47,15 @@ Walks the orderbook to estimate the volume-weighted average price (VWAP) for a h
     <ResponseField name="levels_consumed" type="integer">
       Number of orderbook levels consumed.
     </ResponseField>
+    <ResponseField name="worst_price" type="number | null">
+      Price of the last consumed orderbook level (worst fill price). Null if no liquidity.
+    </ResponseField>
+    <ResponseField name="fee_estimate" type="number | null">
+      Estimated exchange fee. Null when fee rate is unknown.
+    </ResponseField>
+    <ResponseField name="net_cost" type="number | null">
+      Total cost including fees (`total_cost + fee_estimate`). Null when fee rate is unknown.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -65,7 +74,10 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "filled_amount": 100.0,
   "fully_filled": true,
   "slippage": 0.002,
-  "levels_consumed": 3
+  "levels_consumed": 3,
+  "worst_price": 0.654,
+  "fee_estimate": null,
+  "net_cost": null
 }
 ```
 </ResponseExample>

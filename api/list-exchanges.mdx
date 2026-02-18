@@ -33,6 +33,16 @@ curl -H "X-API-Key: YOUR_API_KEY" \
     "has": {
       "fetch_markets": true,
       "create_order": true,
+      "cancel_order": true,
+      "fetch_positions": true,
+      "fetch_balance": true,
+      "fetch_orderbook": true,
+      "fetch_price_history": true,
+      "fetch_trades": true,
+      "fetch_events": true,
+      "fetch_user_activity": true,
+      "approvals": true,
+      "refresh_balance": true,
       "websocket": true
     }
   },
@@ -42,6 +52,16 @@ curl -H "X-API-Key: YOUR_API_KEY" \
     "has": {
       "fetch_markets": true,
       "create_order": false,
+      "cancel_order": false,
+      "fetch_positions": true,
+      "fetch_balance": true,
+      "fetch_orderbook": false,
+      "fetch_price_history": false,
+      "fetch_trades": false,
+      "fetch_events": false,
+      "fetch_user_activity": true,
+      "approvals": false,
+      "refresh_balance": false,
       "websocket": false
     }
   }

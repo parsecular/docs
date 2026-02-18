@@ -56,7 +56,7 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
     <ResponseField name="trades" type="MarketTrade[]">
       Array of recent trades, newest-first. Prices are normalized to 0.0–1.0.
       <Expandable title="properties">
-        <ResponseField name="trade_id" type="string">
+        <ResponseField name="id" type="string">
           Exchange-specific trade identifier (when available).
         </ResponseField>
         <ResponseField name="price" type="number">
@@ -99,7 +99,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "market_id": "KXPRESPERSON-28-GNEWS",
   "trades": [
     {
-      "trade_id": "02025da9-d3e3-58ea-a865-351e8b8ea012",
+      "id": "02025da9-d3e3-58ea-a865-351e8b8ea012",
       "price": 0.21,
       "size": 112.0,
       "side": "buy",

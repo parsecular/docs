@@ -53,6 +53,12 @@ Returns the current orderbook (bids and asks) for a market identified by its `pa
     <ResponseField name="timestamp" type="string | null">
       ISO 8601 timestamp of when the orderbook was fetched.
     </ResponseField>
+    <ResponseField name="tick_size" type="number">
+      Minimum price increment for orders on this market.
+    </ResponseField>
+    <ResponseField name="min_order_size" type="number">
+      Minimum order size in contracts.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -73,7 +79,9 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "market_id": "0x1234abcd",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
-  "timestamp": "2025-02-04T12:34:56Z"
+  "timestamp": "2025-02-04T12:34:56Z",
+  "tick_size": 0.01,
+  "min_order_size": 15.0
 }
 ```
 </ResponseExample>

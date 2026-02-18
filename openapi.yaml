@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parsec API
-  version: 0.6.0
+  version: 0.8.0
   description: |
     Parsec REST API.
 
@@ -1208,6 +1208,10 @@ components:
           type: number
           format: double
           description: Minimum order size in contracts. Varies per market on Polymarket (e.g. 5, 15); typically 1 on Kalshi.
+        tick_size:
+          type: number
+          format: double
+          description: Minimum price increment for orders on this market.
         created_at:
           type: string
           format: date-time
@@ -1400,7 +1404,14 @@ components:
             - string
             - "null"
           format: date-time
-
+        tick_size:
+          type: number
+          format: double
+          description: Minimum price increment for orders on this market.
+        min_order_size:
+          type: number
+          format: double
+          description: Minimum order size in contracts.
 
     Candlestick:
       type: object
@@ -1472,7 +1483,7 @@ components:
         - timestamp
         - source_channel
       properties:
-        trade_id:
+        id:
           type: string
         price:
           type: number
@@ -1888,11 +1899,41 @@ components:
       required:
         - fetch_markets
         - create_order
+        - cancel_order
+        - fetch_positions
+        - fetch_balance
+        - fetch_orderbook
+        - fetch_price_history
+        - fetch_trades
+        - fetch_events
+        - fetch_user_activity
+        - approvals
+        - refresh_balance
         - websocket
       properties:
         fetch_markets:
           type: boolean
         create_order:
+          type: boolean
+        cancel_order:
+          type: boolean
+        fetch_positions:
+          type: boolean
+        fetch_balance:
+          type: boolean
+        fetch_orderbook:
+          type: boolean
+        fetch_price_history:
+          type: boolean
+        fetch_trades:
+          type: boolean
+        fetch_events:
+          type: boolean
+        fetch_user_activity:
+          type: boolean
+        approvals:
+          type: boolean
+        refresh_balance:
           type: boolean
         websocket:
           type: boolean
@@ -1961,3 +2002,18 @@ components:
           type: integer
           format: int32
           description: Number of orderbook levels consumed.
+        worst_price:
+          type:
+            - number
+            - "null"
+          description: Price of the last consumed orderbook level (worst fill price). Null if no liquidity.
+        fee_estimate:
+          type:
+            - number
+            - "null"
+          description: Estimated exchange fee (null when fee rate is unknown).
+        net_cost:
+          type:
+            - number
+            - "null"
+          description: Total cost including fees (total_cost + fee_estimate). Null when fee rate is unknown.

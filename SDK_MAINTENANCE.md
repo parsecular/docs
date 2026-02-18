@@ -23,6 +23,11 @@ If you are working from the **docs repo directly** (`parsecular/docs`), drop the
 | Python SDK production | `parsecular/sdk-python` (GitHub) | Published to PyPI as `parsec_api` |
 | TS local clone | `stainless-sdks/sdk-typescript` | Clone of production repo (dev/test here, gitignored) |
 | Python local clone | `stainless-sdks/sdk-python` | Clone of production repo (dev/test here, gitignored) |
+| Version parity guard | `scripts/check-sdk-version-parity.py` | Fails fast if OpenAPI + TS + Python versions drift |
+| OpenAPI mirror guard | `scripts/check-openapi-mirror-parity.py` | Fails if source OpenAPI and SDK mirror OpenAPI are not identical |
+| Custom patch scope guard | `scripts/check-sdk-custom-patch-scope.py` | Fails if disallowed generated files are manually edited in staging repos |
+| Contract coverage guard | `scripts/check-public-endpoint-contract-coverage.py` | Fails if any public OpenAPI endpoint is missing from live contract suites |
+| SDK contract parity guard | `scripts/check-sdk-contract-test-parity.py` | Fails if staging/prod SDK contract suites diverge |
 
 ### Repo Naming Clarification
 
@@ -274,8 +279,20 @@ are preserved automatically.
 2. Verify your custom patches are still present (check `streaming.ts` / `streaming.py` exist)
 3. If Stainless opened a `main--merge-conflict` branch, resolve it on GitHub
 4. Pull latest into your production clone (`sdk-*`) to pick up any generated changes
-5. Run tests in the production clone to verify nothing broke
-6. If all good: merge `next` → `main` on staging to release
+5. Run the parity gate from monorepo root:
+
+```bash
+./scripts/check-sdk-version-parity.py
+```
+
+6. Run the public endpoint contract coverage gate:
+
+```bash
+./scripts/check-public-endpoint-contract-coverage.py
+```
+
+7. Run tests in the production clone to verify nothing broke
+8. If all good: merge `next` → `main` on staging to release
 
 ---
 
@@ -287,35 +304,34 @@ preserves them through regenerations via semantic three-way merge.
 If a merge conflict occurs, Stainless opens a PR on the staging repo. Resolve
 it in GitHub — Stainless applies your resolution to future builds.
 
-### TypeScript patches (`stainless-sdks/parsec-api-typescript`, branch `next`)
+### Policy (Long-Term)
 
-**REST patches:**
-1. `src/resources/orderbook.ts` — `OrderbookLevel` tuple type, `bids`/`asks` typing
-2. `src/resources/index.ts` — Re-export `OrderbookLevel`
-3. `tests/contract.test.ts`, `tests/schema-validation.test.ts` — Live validation tests
-4. `package.json` — `test:contract` script, dev deps, repo links to `parsecular/sdk-typescript`
+1. Treat generated REST files as read-only outputs from Stainless.
+2. Do not manually patch generated resources/types for contract changes.
+3. Contract changes must be made in `openapi.yaml` / `stainless.yml`, then regenerated.
+4. Keep hand-written patches focused on WebSocket support and test scaffolding.
+5. Exception-only rule: patch generated REST files only for confirmed Stainless limitations.
 
-**WebSocket patches:**
-5. `src/streaming.ts` — Full WS client (new file, low conflict risk)
-6. `src/client.ts` — `ws()` method + `#deriveWsUrl()` on `ParsecAPI` class
-7. `src/index.ts` — Re-export streaming types
-8. `package.json` — `isomorphic-ws`, `ws`, `@types/ws` dependencies
-9. `tests/streaming.test.ts` — WS client tests with mock server (21 tests)
+### Allowed Patch Areas
 
-### Python patches (`stainless-sdks/parsec-api-python`, branch `next`)
+**TypeScript (`stainless-sdks/parsec-api-typescript`, branch `next`):**
+1. `src/streaming.ts` (hand-written WS client)
+2. `src/client.ts` (`ws()` + WS URL derivation)
+3. `src/index.ts` (streaming exports)
+4. `tests/streaming.test.ts` (WS tests)
+5. `tests/contract.test.ts`, `tests/schema-validation.test.ts` (contract tests)
+6. `package.json` (WS deps + test scripts + repo metadata)
+7. `src/resources/orderbook.ts` and `src/resources/index.ts` only for fixed-length tuple typing (`OrderbookLevel`) while Stainless emits `number[]`
 
-**REST patches:**
-1. `src/parsec_api/types/orderbook_retrieve_response.py` — `OrderbookLevel` tuple type
-2. `src/parsec_api/types/__init__.py` — Re-export `OrderbookLevel`
-3. `tests/test_contract.py` — Live contract validation tests
-4. `pyproject.toml`, `README.md` — Repo links to `parsecular/sdk-python`
+**Python (`stainless-sdks/parsec-api-python`, branch `next`):**
+1. `src/parsec_api/streaming.py` (hand-written WS client)
+2. `src/parsec_api/_client.py` (`ws()` + WS URL derivation)
+3. `src/parsec_api/__init__.py` (streaming exports)
+4. `tests/test_ws_streaming.py` (WS tests)
+5. `tests/test_contract.py` (contract tests)
+6. `pyproject.toml`, `README.md` (WS deps + metadata)
 
-**WebSocket patches:**
-5. `src/parsec_api/streaming.py` — Full WS client (new file, low conflict risk)
-6. `src/parsec_api/_client.py` — `ws()` method + `_derive_ws_url()` on both `ParsecAPI` and `AsyncParsecAPI`
-7. `src/parsec_api/__init__.py` — Import/export streaming types
-8. `pyproject.toml` — `websockets>=12.0, <15` dependency
-9. `tests/test_ws_streaming.py` — WS client tests with mock server (20 tests)
+Any new non-WS patch to generated REST resources/types requires explicit justification and should be temporary until Stainless/config can handle it.
 
 ### Adding a new custom patch
 
@@ -396,6 +412,8 @@ from the public registry in an isolated temp directory — not from local source
 |------|------|---------|
 | During development | Unit + streaming tests (mock server) | `pnpm test` / `pytest tests/` |
 | Before merging to staging | Contract tests (live API) | `PARSEC_CONTRACT_TESTS=1 ...` |
+| Before releasing | Version parity gate | `./scripts/check-sdk-version-parity.py` |
+| Before releasing | Public endpoint coverage gate | `./scripts/check-public-endpoint-contract-coverage.py` |
 | Before merging release PR | CI checks (lint, build, test, release doctor) | `gh pr checks <N>` |
 | After publish | Smoke tests (published packages) | `./scripts/smoke-test-sdk.sh both` |
 | After backend deploy | Production contract check (`/exchanges` capability objects + `/execution-price` availability) | `curl -H "X-API-Key: ..."` checks |
