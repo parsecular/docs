@@ -6,7 +6,7 @@ info:
     Parsec REST API.
 
     Success responses return the resource directly (no envelope).
-    Error responses use HTTP status codes and a JSON body of the form `{ "error": "..." }`.
+    Error responses use HTTP status codes and a JSON body of the form `{ "error": "...", "code": "...", "retryable": true|false }`.
 servers:
   - url: http://localhost:3000
     description: Local development
@@ -987,6 +987,23 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/v1/session/capabilities:
+    get:
+      operationId: getSessionCapabilities
+      tags:
+        - Account
+      summary: Get session capabilities for the authenticated API key
+      description: Returns the customer's tier and list of linked exchanges.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionCapabilitiesResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1891,6 +1908,21 @@ components:
           description: Human-readable exchange name.
         has:
           $ref: "#/components/schemas/CapabilityMap"
+
+    SessionCapabilitiesResponse:
+      type: object
+      required:
+        - linked_exchanges
+        - tier
+      properties:
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: Exchange IDs the customer has credentials linked for.
+        tier:
+          type: string
+          description: Customer tier (e.g., "free", "pro", "admin").
 
     ExecutionEstimateResponse:
       type: object
