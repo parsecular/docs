@@ -1,0 +1,37 @@
+---
+title: "Get Capabilities"
+description: "Get session capabilities for the authenticated API key"
+---
+
+`GET /api/v1/session/capabilities`
+
+Returns the customer's tier and list of linked exchanges.
+
+## Response
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="linked_exchanges" type="string[]">
+      Exchange IDs the customer has credentials linked for.
+    </ResponseField>
+    <ResponseField name="tier" type="string">
+      Customer tier (e.g., `free`, `pro`, `admin`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/session/capabilities"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "linked_exchanges": ["polymarket", "kalshi"],
+  "tier": "pro"
+}
+```
+</ResponseExample>

@@ -1,0 +1,71 @@
+---
+title: "Get Execution Price"
+description: "Estimate VWAP and slippage for a hypothetical order"
+---
+
+`GET /api/v1/execution-price`
+
+Walks the orderbook to estimate the volume-weighted average price (VWAP) for a hypothetical order of the given size. Does not place an order.
+
+## Parameters
+
+<ParamField query="parsec_id" type="string" required>
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:0x1234abcd`).
+</ParamField>
+
+<ParamField query="outcome" type="string" default="yes">
+  Outcome selector. For binary markets this is typically `yes` or `no`. Required for categorical markets.
+</ParamField>
+
+<ParamField query="side" type="string" required>
+  Order side: `buy` or `sell`.
+</ParamField>
+
+<ParamField query="amount" type="number" required>
+  Order size in contracts.
+</ParamField>
+
+## Response
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="avg_price" type="number | null">
+      Volume-weighted average execution price. Null if no liquidity.
+    </ResponseField>
+    <ResponseField name="total_cost" type="number">
+      Total cost of the filled portion.
+    </ResponseField>
+    <ResponseField name="filled_amount" type="number">
+      Number of contracts that would be filled.
+    </ResponseField>
+    <ResponseField name="fully_filled" type="boolean">
+      True if the entire requested amount can be filled.
+    </ResponseField>
+    <ResponseField name="slippage" type="number | null">
+      Price impact vs best price. Null if no liquidity.
+    </ResponseField>
+    <ResponseField name="levels_consumed" type="integer">
+      Number of orderbook levels consumed.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/execution-price?parsec_id=polymarket:0x1234abcd&outcome=yes&side=buy&amount=100"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "avg_price": 0.652,
+  "total_cost": 65.2,
+  "filled_amount": 100.0,
+  "fully_filled": true,
+  "slippage": 0.002,
+  "levels_consumed": 3
+}
+```
+</ResponseExample>

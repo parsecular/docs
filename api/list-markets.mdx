@@ -140,6 +140,9 @@ The endpoint operates in two modes:
         <ResponseField name="open_interest" type="number">
           Current open interest.
         </ResponseField>
+        <ResponseField name="min_order_size" type="number">
+          Minimum order size in contracts. Varies per market on Polymarket (e.g. 5, 15); typically 1 on Kalshi.
+        </ResponseField>
         <ResponseField name="created_at" type="string">
           ISO 8601 creation time.
         </ResponseField>
@@ -235,6 +238,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "volume_24h": 12500.0,
       "liquidity": 75000.0,
       "open_interest": 30000.0,
+      "min_order_size": 15.0,
       "created_at": "2025-01-01T00:00:00Z",
       "updated_at": "2025-06-15T12:00:00Z",
       "end_date": "2025-12-31T23:59:59Z",

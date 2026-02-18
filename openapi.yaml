@@ -1204,6 +1204,10 @@ components:
           type: number
           format: double
           description: Current open interest (contracts/pairs).
+        min_order_size:
+          type: number
+          format: double
+          description: Minimum order size in contracts. Varies per market on Polymarket (e.g. 5, 15); typically 1 on Kalshi.
         created_at:
           type: string
           format: date-time

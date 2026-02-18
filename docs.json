@@ -25,6 +25,7 @@
           "api/list-exchanges",
           "api/list-markets",
           "api/get-orderbook",
+          "api/get-execution-price",
           "api/get-price-history",
           "api/get-trades",
           "api/list-events",
@@ -52,7 +53,8 @@
               "api/get-balance",
               "api/update-credentials",
               "api/get-approvals",
-              "api/set-approvals"
+              "api/set-approvals",
+              "api/get-capabilities"
             ]
           }
         ]
