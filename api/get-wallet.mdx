@@ -1,0 +1,96 @@
+---
+title: "Get Wallet"
+description: "Get wallet state, session signer, and linked exchanges"
+---
+
+`GET /api/v1/wallet`
+
+Returns the current state of your Parsec-managed wallet, including the session signer status and linked exchanges.
+
+## Parameters
+
+No parameters required.
+
+## Response
+
+<ResponseField name="wallet" type="object">
+  Wallet details (null if no wallet registered).
+  <Expandable title="properties">
+    <ResponseField name="eoa_address" type="string">
+      The EVM wallet address on Polygon.
+    </ResponseField>
+    <ResponseField name="privy_wallet_id" type="string">
+      The Privy wallet identifier.
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 creation timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="session_signer" type="object">
+  Session signer status (null if no signer active).
+  <Expandable title="properties">
+    <ResponseField name="active" type="boolean">
+      Whether the session signer is currently active.
+    </ResponseField>
+    <ResponseField name="expires_at" type="string">
+      ISO 8601 expiration timestamp.
+    </ResponseField>
+    <ResponseField name="signer_id" type="string">
+      The session signer identifier.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="linked_exchanges" type="array">
+  List of exchanges linked to this wallet.
+  <Expandable title="properties">
+    <ResponseField name="exchange" type="string">
+      Exchange identifier (e.g., `"polymarket"`).
+    </ResponseField>
+    <ResponseField name="has_credentials" type="boolean">
+      Whether credentials are stored for this exchange.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/wallet" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+```typescript TypeScript
+const state = await client.wallet.get();
+console.log(state.wallet?.eoa_address);
+console.log(state.linked_exchanges);
+```
+```python Python
+state = client.wallet.get()
+print(state.wallet.eoa_address if state.wallet else "No wallet")
+print(state.linked_exchanges)
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "wallet": {
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+    "privy_wallet_id": "wallet_abc123",
+    "created_at": "2026-01-15T12:00:00Z"
+  },
+  "session_signer": {
+    "active": true,
+    "expires_at": "2026-02-15T12:00:00Z",
+    "signer_id": "signer_xyz"
+  },
+  "linked_exchanges": [
+    {
+      "exchange": "polymarket",
+      "has_credentials": true
+    }
+  ]
+}
+```
+</ResponseExample>

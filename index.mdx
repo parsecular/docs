@@ -1,56 +1,34 @@
 ---
 title: "Getting Started"
-description: "Integrate once, trade across every prediction market."
+description: "One API, every prediction market."
 ---
 
-## 1. Get your Parsec API key
+## What is Parsec?
 
-Sign up at [parsecapi.com](https://parsecapi.com) and grab your API key from the **Settings** page.
+One API, every prediction market. Parsec gives you a unified REST API and
+WebSocket feed across Polymarket, Kalshi, Limitless, Opinion, and Predict.fun.
 
-Your API key works immediately — no exchange credentials needed for market data.
+## Choose your path
 
-```bash
-curl -H "X-API-Key: pk_YOUR_KEY" \
-  https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&limit=3
-```
+<CardGroup cols={3}>
+  <Card title="Read Market Data" icon="chart-line" href="/api/overview">
+    Fetch markets, orderbooks, prices, and trades — no exchange account needed.
+  </Card>
+  <Card title="Direct Trader" icon="key" href="/getting-started/direct-trader">
+    Bring your own exchange credentials and trade via API/SDK.
+  </Card>
+  <Card title="Managed Wallet" icon="wallet" href="/getting-started/managed-wallet">
+    We create and manage a wallet for you — link exchanges in one click.
+  </Card>
+</CardGroup>
 
-```bash
-curl -H "X-API-Key: pk_YOUR_KEY" \
-  https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:YOUR_MARKET_ID
-```
+<Card title="Pro: Per-Request Credentials" icon="shield" href="/getting-started/per-request-credentials">
+  Pass credentials per-request without storing them on our servers.
+</Card>
 
-<Info>
-Markets, orderbooks, price history, and real-time WebSocket streaming all work with just your API key — no exchange accounts required.
-</Info>
+## Quick start
 
-## 2. Link your exchanges (for trading)
-
-Connect your exchange credentials once and trade through a single API forever.
-
-Go to **Settings** in your Parsec dashboard and enter the credentials for each exchange you want to trade on.
-
-<AccordionGroup>
-  <Accordion title="Polymarket">
-    **What you need:** Your EVM wallet private key.
-
-    This is the same private key you'd export from MetaMask, Rabby, or any EVM wallet. Polymarket doesn't have separate API keys — your wallet key is used to sign orders on-chain.
-
-    In your Parsec Settings, paste your key into the **EVM Private Key** field.
-
-    If you use a Gnosis Safe or proxy wallet, also fill in the **Funder Address** field with your Safe address.
-  </Accordion>
-  <Accordion title="Kalshi">
-    **What you need:** Kalshi API Key ID + RSA Private Key.
-
-    1. Log in to [kalshi.com](https://kalshi.com) and go to your API settings
-    2. Generate a new API key pair — you'll get a **Key ID** and download a **private key file** (`.pem`)
-    3. In your Parsec Settings, paste both values into the **Kalshi API Key ID** and **Kalshi Private Key** fields
-  </Accordion>
-</AccordionGroup>
-
-## 3. Start building
-
-Install the SDK and start trading in a few lines of code.
+Install the SDK and fetch markets in 3 lines.
 
 <CodeGroup>
 ```bash npm
@@ -146,7 +124,7 @@ asyncio.run(main())
   <Card title="API Reference" icon="code" href="/api/list-exchanges">
     Browse all REST endpoints.
   </Card>
-  <Card title="Order Router" icon="arrow-right-arrow-left" href="/api/create-order">
+  <Card title="Order Router" icon="arrow-right-arrow-left" href="/order-router/overview">
     Place, cancel, and manage orders.
   </Card>
   <Card title="WebSocket" icon="signal" href="/websocket/overview">

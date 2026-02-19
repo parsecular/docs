@@ -1,0 +1,50 @@
+---
+title: "Register Wallet"
+description: "Create a Parsec-managed wallet via Privy"
+---
+
+`POST /api/v1/wallet`
+
+Creates a server-side wallet managed by Parsec. The wallet is an EVM wallet on Polygon, created via Privy.
+
+<Info>
+Idempotent — calling this endpoint again returns your existing wallet without creating a new one.
+</Info>
+
+## Parameters
+
+No request body required.
+
+## Response
+
+<ResponseField name="eoa_address" type="string">
+  The EVM wallet address on Polygon.
+</ResponseField>
+
+<ResponseField name="privy_wallet_id" type="string">
+  The Privy wallet identifier.
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/wallet" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+```typescript TypeScript
+const wallet = await client.wallet.register();
+console.log(wallet.eoa_address);
+```
+```python Python
+wallet = client.wallet.register()
+print(wallet.eoa_address)
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "privy_wallet_id": "wallet_abc123"
+}
+```
+</ResponseExample>

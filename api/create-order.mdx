@@ -43,6 +43,16 @@ Places a new order on the specified exchange.
   | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type. Unsupported combinations return `501` per exchange. |
 </ParamField>
 
+<ParamField body="credentials" type="object">
+  Optional per-request exchange credentials ([Mode B](/getting-started/per-request-credentials)). When provided, Parsec
+  creates a transient exchange session instead of using stored credentials.
+  Body credentials take precedence over the `X-Exchange-Credentials` header.
+
+  **Kalshi:** `{ "api_key_id": "...", "private_key": "..." }`
+
+  **Polymarket:** `{ "clob_api_key": "...", "clob_api_secret": "...", "clob_api_passphrase": "..." }`
+</ParamField>
+
 ## Response
 
 <ResponseField name="(root)" type="Order">

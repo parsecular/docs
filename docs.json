@@ -13,10 +13,23 @@
     "tabs": [
       {
         "tab": "Getting Started",
-        "pages": [
-          "index",
-          "api/overview",
-          "errors/overview"
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "index",
+              "api/overview",
+              "errors/overview"
+            ]
+          },
+          {
+            "group": "Setup Guides",
+            "pages": [
+              "getting-started/direct-trader",
+              "getting-started/managed-wallet",
+              "getting-started/per-request-credentials"
+            ]
+          }
         ]
       },
       {
@@ -36,6 +49,20 @@
       {
         "tab": "Order Router",
         "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "order-router/overview"
+            ]
+          },
+          {
+            "group": "Wallet",
+            "pages": [
+              "api/register-wallet",
+              "api/get-wallet",
+              "api/link-exchange"
+            ]
+          },
           {
             "group": "Orders",
             "pages": [

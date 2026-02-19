@@ -1,0 +1,161 @@
+---
+title: "Direct Trader Setup"
+description: "Store your exchange credentials and trade through a single API."
+---
+
+## Overview
+
+Direct traders store exchange credentials once on Parsec's servers. All
+subsequent API calls use these stored credentials — no per-request auth needed
+beyond your Parsec API key.
+
+## Step 1: Get your API key
+
+Sign up at [parsecapi.com](https://parsecapi.com) → **Settings** → copy your API key (`pk_live_...`).
+
+## Step 2: Store your exchange credentials
+
+Use `PUT /api/v1/credentials` to save your exchange credentials. Only include the fields for the exchange you want to configure.
+
+### Kalshi
+
+**Where to get these:**
+1. Log in to [kalshi.com](https://kalshi.com) → API settings → Generate new key pair
+2. Copy the **Key ID** and download the **private key file** (`.pem`)
+
+<CodeGroup>
+```bash curl
+curl -X PUT "https://api.parsecapi.com/api/v1/credentials" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key_id": "your-kalshi-key-id",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE..."
+  }'
+```
+```typescript TypeScript
+import ParsecAPI from 'parsec-api';
+
+const client = new ParsecAPI({ apiKey: 'pk_live_YOUR_KEY' });
+
+await client.credentials.update({
+  api_key_id: 'your-kalshi-key-id',
+  private_key: '-----BEGIN RSA PRIVATE KEY-----\nMIIE...',
+});
+```
+```python Python
+from parsec_api import ParsecAPI
+
+client = ParsecAPI(api_key="pk_live_YOUR_KEY")
+
+client.credentials.update(
+    api_key_id="your-kalshi-key-id",
+    private_key="-----BEGIN RSA PRIVATE KEY-----\nMIIE...",
+)
+```
+</CodeGroup>
+
+### Polymarket
+
+**Where to get these:**
+- Derive CLOB API credentials from your wallet at [clob.polymarket.com](https://clob.polymarket.com)
+- Or use the Polymarket CLOB auth flow with your EVM wallet
+
+<CodeGroup>
+```bash curl
+curl -X PUT "https://api.parsecapi.com/api/v1/credentials" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clob_api_key": "your-clob-api-key",
+    "clob_api_secret": "your-clob-api-secret",
+    "clob_api_passphrase": "your-clob-passphrase"
+  }'
+```
+```typescript TypeScript
+await client.credentials.update({
+  clob_api_key: 'your-clob-api-key',
+  clob_api_secret: 'your-clob-api-secret',
+  clob_api_passphrase: 'your-clob-passphrase',
+});
+```
+```python Python
+client.credentials.update(
+    clob_api_key="your-clob-api-key",
+    clob_api_secret="your-clob-api-secret",
+    clob_api_passphrase="your-clob-passphrase",
+)
+```
+</CodeGroup>
+
+## Step 3: Verify connectivity
+
+Ping the exchange to confirm your credentials are working.
+
+<CodeGroup>
+```bash curl
+curl -H "X-API-Key: pk_live_YOUR_KEY" \
+  "https://api.parsecapi.com/api/v1/ping?exchange=kalshi"
+```
+```typescript TypeScript
+const result = await client.ping.list({ exchange: 'kalshi' });
+console.log(result); // [{ exchange: "kalshi", authenticated: true, ... }]
+```
+```python Python
+result = client.ping.list(exchange="kalshi")
+print(result)  # [PingResponse(exchange="kalshi", authenticated=True, ...)]
+```
+</CodeGroup>
+
+## Step 4: Place your first order
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=kalshi" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "KXBTC-26FEB18",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 10
+  }'
+```
+```typescript TypeScript
+const order = await client.orders.create({
+  exchange: 'kalshi',
+  market_id: 'KXBTC-26FEB18',
+  outcome: 'Yes',
+  side: 'buy',
+  price: 0.65,
+  size: 10,
+});
+console.log(order.id, order.status);
+```
+```python Python
+order = client.orders.create(
+    exchange="kalshi",
+    market_id="KXBTC-26FEB18",
+    outcome="Yes",
+    side="buy",
+    price=0.65,
+    size=10,
+)
+print(order.id, order.status)
+```
+</CodeGroup>
+
+## What's next?
+
+<CardGroup cols={3}>
+  <Card title="Order Router" icon="arrow-right-arrow-left" href="/order-router/overview">
+    Learn how Parsec routes orders across exchanges.
+  </Card>
+  <Card title="Positions" icon="chart-pie" href="/api/list-positions">
+    Check your open positions.
+  </Card>
+  <Card title="WebSocket" icon="signal" href="/websocket/overview">
+    Stream real-time orderbooks and trades.
+  </Card>
+</CardGroup>

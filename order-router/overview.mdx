@@ -1,0 +1,72 @@
+---
+title: "Order Router"
+description: "How Parsec routes orders across prediction markets."
+---
+
+## How it works
+
+The order router is a unified interface for placing, managing, and tracking
+orders across every supported exchange. You specify the exchange as a query
+parameter — Parsec handles authentication, signing, and protocol differences.
+
+## Authentication modes
+
+| Mode | How credentials work | Best for |
+|------|---------------------|----------|
+| Stored (Mode A) | `PUT /credentials` once, trade forever | Most users |
+| Managed wallet | `POST /wallet` + `POST /link`, we handle keys | UI traders |
+| Per-request (Mode B) | Pass creds per-request via header/body | Pro traders, builders |
+
+<CardGroup cols={3}>
+  <Card title="Direct Trader" icon="key" href="/getting-started/direct-trader">
+    Store credentials and trade via API.
+  </Card>
+  <Card title="Managed Wallet" icon="wallet" href="/getting-started/managed-wallet">
+    We create and manage a wallet for you.
+  </Card>
+  <Card title="Per-Request" icon="shield" href="/getting-started/per-request-credentials">
+    Pass credentials with each request.
+  </Card>
+</CardGroup>
+
+## Order lifecycle
+
+```
+1. POST   /orders?exchange=X     → Create order (returns Order with status)
+2. GET    /orders?exchange=X     → List open orders
+3. GET    /orders/:id?exchange=X → Poll order status
+4. DELETE /orders/:id?exchange=X → Cancel order
+```
+
+## Order types
+
+| Type | Behavior | Supported |
+|------|----------|-----------|
+| `gtc` | Good-til-cancelled (default) | All exchanges |
+| `ioc` | Immediate-or-cancel | Polymarket, Kalshi |
+| `fok` | Fill-or-kill | Polymarket |
+
+Set via `params.order_type` in the create order request body. Unsupported combinations return `501`.
+
+## Supported exchanges
+
+| Exchange | Create | Cancel | Positions | Balance | Orderbook | Price History |
+|----------|--------|--------|-----------|---------|-----------|---------------|
+| Polymarket | Yes | Yes | Yes | Yes | Yes | Yes |
+| Kalshi | Yes | Yes | Yes | Yes | Yes | Yes |
+| Limitless | Yes | Yes | Yes | Yes | Yes | Yes |
+| Opinion | Yes | Yes | Yes | Yes | Yes | Yes |
+| Predict.fun | Yes | Yes | Yes | Yes | Yes | Yes |
+
+Use `GET /exchanges` to see the full capability matrix at runtime.
+
+## Pre-trade checks
+
+Before placing an order, you can use these endpoints to assess liquidity and readiness:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /execution-price` | Estimate VWAP + slippage for a hypothetical order |
+| `GET /orderbook` | Inspect the live orderbook |
+| `GET /approvals` | Check Polymarket token approvals (managed wallets) |
+| `GET /ping` | Verify exchange connectivity and auth status |

@@ -26,6 +26,7 @@ tags:
   - name: Positions
   - name: Account
   - name: Approvals
+  - name: Wallet
 paths:
   /api/v1/exchanges:
     get:
@@ -556,6 +557,7 @@ paths:
           description: Exchange identifier (e.g., kalshi, polymarket).
           schema:
             type: string
+        - $ref: "#/components/parameters/XExchangeCredentials"
       requestBody:
         required: true
         content:
@@ -606,6 +608,7 @@ paths:
           description: Optional market ID filter (exchange-native).
           schema:
             type: string
+        - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
           description: OK
@@ -652,6 +655,7 @@ paths:
           description: Exchange identifier (e.g., kalshi, polymarket).
           schema:
             type: string
+        - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
           description: OK
@@ -694,6 +698,7 @@ paths:
           description: Exchange identifier (e.g., kalshi, polymarket).
           schema:
             type: string
+        - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
           description: OK
@@ -738,6 +743,7 @@ paths:
           description: Optional market ID filter (exchange-native).
           schema:
             type: string
+        - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
           description: OK
@@ -784,6 +790,7 @@ paths:
           description: Refresh balance before returning (default false).
           schema:
             type: boolean
+        - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
           description: OK
@@ -963,6 +970,72 @@ paths:
           $ref: "#/components/responses/InternalServerError"
         "501":
           $ref: "#/components/responses/NotImplementedError"
+
+  /api/v1/wallet:
+    post:
+      operationId: registerWallet
+      tags:
+        - Wallet
+      summary: Register a managed wallet
+      description: Creates a server-side wallet managed by Parsec via Privy. Idempotent — calling again returns the existing wallet.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterWalletResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      operationId: getWalletState
+      tags:
+        - Wallet
+      summary: Get wallet state
+      description: Returns the current state of the managed wallet, session signer, and linked exchanges.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletStateResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/link:
+    post:
+      operationId: linkExchange
+      tags:
+        - Wallet
+      summary: Link a managed wallet to an exchange
+      description: |
+        Links the managed wallet to the specified exchange. Currently supports Polymarket only.
+        Performs session signer grant, CLOB credential derivation, and token approvals in one call.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange to link (currently only "polymarket").
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LinkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/v1/credentials:
     put:
@@ -1761,30 +1834,59 @@ components:
           description: |
             Optional key-value parameters. Supported keys:
             - `order_type`: Order time-in-force. Values: `gtc` (default), `ioc`, `fok`. Unsupported types return 501 per exchange.
+        credentials:
+          $ref: "#/components/schemas/RequestCredentials"
+
+    RequestCredentials:
+      type: object
+      description: |
+        Per-request exchange credentials (Mode B). When provided, Parsec creates a transient
+        exchange session instead of using stored credentials. Credentials are never persisted.
+      properties:
+        api_key_id:
+          type: string
+          description: Kalshi API key ID.
+        private_key:
+          type: string
+          description: Kalshi RSA private key (PEM format).
+        clob_api_key:
+          type: string
+          description: Polymarket CLOB API key.
+        clob_api_secret:
+          type: string
+          description: Polymarket CLOB API secret.
+        clob_api_passphrase:
+          type: string
+          description: Polymarket CLOB API passphrase.
 
     UpdateCredentialsRequest:
       type: object
       properties:
-        evm_private_key:
+        api_key_id:
           type:
             - string
             - "null"
-        kalshi_api_key_id:
+          description: Kalshi API key ID.
+        private_key:
           type:
             - string
             - "null"
-        kalshi_private_key:
+          description: Kalshi RSA private key (PEM format).
+        clob_api_key:
           type:
             - string
             - "null"
-        poly_funder:
+          description: Polymarket CLOB API key.
+        clob_api_secret:
           type:
             - string
             - "null"
-        poly_signature_type:
+          description: Polymarket CLOB API secret.
+        clob_api_passphrase:
           type:
             - string
             - "null"
+          description: Polymarket CLOB API passphrase.
 
     ExchangeStatus:
       type: object
@@ -2017,3 +2119,114 @@ components:
             - number
             - "null"
           description: Total cost including fees (total_cost + fee_estimate). Null when fee rate is unknown.
+
+    RegisterWalletResponse:
+      type: object
+      required:
+        - eoa_address
+        - privy_wallet_id
+      properties:
+        eoa_address:
+          type: string
+          description: EVM wallet address on Polygon.
+        privy_wallet_id:
+          type: string
+          description: Privy wallet identifier.
+
+    WalletInfo:
+      type: object
+      required:
+        - eoa_address
+        - privy_wallet_id
+      properties:
+        eoa_address:
+          type: string
+          description: EVM wallet address on Polygon.
+        privy_wallet_id:
+          type: string
+          description: Privy wallet identifier.
+        created_at:
+          type: string
+          format: date-time
+          description: Wallet creation timestamp.
+
+    SessionSignerInfo:
+      type: object
+      required:
+        - active
+      properties:
+        active:
+          type: boolean
+          description: Whether the session signer is currently active.
+        expires_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Session signer expiration timestamp.
+        signer_id:
+          type:
+            - string
+            - "null"
+          description: Session signer identifier.
+
+    ExchangeLinkInfo:
+      type: object
+      required:
+        - exchange
+        - has_credentials
+      properties:
+        exchange:
+          type: string
+          description: Exchange identifier.
+        has_credentials:
+          type: boolean
+          description: Whether credentials are stored for this exchange.
+
+    WalletStateResponse:
+      type: object
+      properties:
+        wallet:
+          $ref: "#/components/schemas/WalletInfo"
+        session_signer:
+          $ref: "#/components/schemas/SessionSignerInfo"
+        linked_exchanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExchangeLinkInfo"
+
+    LinkResponse:
+      type: object
+      required:
+        - exchange
+        - status
+        - linked_exchanges
+      properties:
+        exchange:
+          type: string
+          description: Exchange that was linked.
+        status:
+          type: string
+          description: Link status (e.g., "linked").
+        wallet_address:
+          type:
+            - string
+            - "null"
+          description: Wallet address used for the link.
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: Updated list of all linked exchange identifiers.
+
+  parameters:
+    XExchangeCredentials:
+      name: X-Exchange-Credentials
+      in: header
+      required: false
+      description: |
+        Base64-encoded JSON of per-request exchange credentials (Mode B).
+        When provided, Parsec creates a transient exchange session instead of using stored credentials.
+        The JSON shape matches the RequestCredentials schema.
+      schema:
+        type: string
