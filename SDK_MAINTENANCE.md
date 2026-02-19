@@ -26,7 +26,7 @@ If you are working from the **docs repo directly** (`parsecular/docs`), drop the
 | Version parity guard | `scripts/check-sdk-version-parity.py` | Fails fast if OpenAPI + TS + Python versions drift |
 | OpenAPI mirror guard | `scripts/check-openapi-mirror-parity.py` | Fails if source OpenAPI and SDK mirror OpenAPI are not identical |
 | Custom patch scope guard | `scripts/check-sdk-custom-patch-scope.py` | Fails if disallowed generated files are manually edited in staging repos |
-| Contract coverage guard | `scripts/check-public-endpoint-contract-coverage.py` | Fails if any public OpenAPI endpoint is missing from live contract suites |
+| Contract coverage guard | `scripts/check-public-endpoint-contract-coverage.py` | Fails if any public OpenAPI endpoint is missing from live contract suites or SDK customer smoke suites |
 | SDK contract parity guard | `scripts/check-sdk-contract-test-parity.py` | Fails if staging/prod SDK contract suites diverge |
 
 ### Repo Naming Clarification
