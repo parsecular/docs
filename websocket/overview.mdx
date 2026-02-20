@@ -162,13 +162,14 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "fill_id": "fill_456",
   "order_id": "order_789",
   "side": "buy",
+  "liquidity_role": "maker",
   "server_seq": 1236,
   "feed_state": "healthy",
   "source_channel": "user"
 }
 ```
 
-Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` fields when available.
+Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` fields when available. Fill messages may also include `liquidity_role`: `"maker"`, `"taker"`, or omitted when unavailable. Present on `kind: "fill"` messages only.
 
 ### Heartbeat
 
