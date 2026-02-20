@@ -972,6 +972,7 @@ paths:
           $ref: "#/components/responses/NotImplementedError"
 
   /api/v1/wallet:
+    x-internal: true
     post:
       operationId: registerWallet
       tags:
@@ -1008,6 +1009,7 @@ paths:
           $ref: "#/components/responses/InternalServerError"
 
   /api/v1/link:
+    x-internal: true
     post:
       operationId: linkExchange
       tags:
@@ -1077,6 +1079,66 @@ paths:
         "401":
           $ref: "#/components/responses/UnauthorizedError"
 
+  /api/v1/billing/checkout:
+    post:
+      operationId: createCheckoutSession
+      x-internal: true
+      tags:
+        - Billing
+      summary: Create a Stripe Checkout session for tier upgrade
+      description: |
+        Creates a Stripe Checkout session that redirects the user to Stripe's
+        hosted payment page. Requires authentication.
+        Returns 400 if the user is already on the target tier or higher.
+      parameters:
+        - name: tier
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pro, scale]
+            default: pro
+          description: Target tier to upgrade to.
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: Stripe Checkout URL to redirect the user to.
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
+  /webhook/stripe:
+    post:
+      operationId: stripeWebhook
+      x-internal: true
+      tags:
+        - Billing
+      summary: Stripe webhook endpoint
+      description: |
+        Receives Stripe webhook events for subscription lifecycle management.
+        Handles invoice.paid (upgrade), customer.subscription.updated (status changes),
+        and customer.subscription.deleted (downgrade). Unauthenticated — verified
+        via Stripe-Signature header.
+      security: []
+      responses:
+        "200":
+          description: Event received
+        "401":
+          description: Invalid or missing Stripe signature
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1115,7 +1177,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     TooManyRequestsError:
-      description: "Rate limit exceeded. Includes a Retry-After header (seconds). Free tier: 2 req/sec, Pro tier: 60 req/sec (120 burst)."
+      description: "Rate limit exceeded. Includes a Retry-After header (seconds). Free tier: 10 req/sec, Pro tier: 60 req/sec (120 burst)."
       headers:
         Retry-After:
           description: Seconds until the next request is allowed
