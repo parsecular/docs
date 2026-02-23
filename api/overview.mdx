@@ -17,6 +17,37 @@ All API requests require an API key passed via the `X-API-Key` header:
 curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?exchanges=polymarket
 ```
 
+## Quick Start
+
+Every market in Parsec has a **`parsec_id`** in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`). Use `/markets` to find a market, then pass its `parsec_id` to any data endpoint.
+
+```bash
+# 1. Find a market
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&search=btc&limit=3"
+# → Returns markets with parsec_id, e.g. "polymarket:572473"
+
+# 2. Get live orderbook
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes"
+
+# 3. Get current price (last 7 days of hourly candles)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price?parsec_id=polymarket:572473&interval=1h"
+
+# 4. Get historical trades (24h window — timestamps are Unix seconds)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&start_ts=1771545600&end_ts=1771632000"
+
+# 5. Get historical orderbook snapshots (1h window)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&start_ts=1771581600&end_ts=1771585200"
+```
+
+<Tip>
+**Timestamps** are Unix seconds (not milliseconds). Add `start_ts` to any data endpoint to switch from live to historical mode. Use `cursor` to paginate through large result sets.
+</Tip>
+
 ## Response Format
 
 Single-resource endpoints return the object directly. List endpoints return a wrapper with pagination:
@@ -41,10 +72,10 @@ On error:
 |--------|----------|-------------|
 | `GET` | [`/exchanges`](/api/list-exchanges) | List available exchanges |
 | `GET` | [`/markets`](/api/list-markets) | List markets from one or more exchanges |
-| `GET` | [`/orderbook`](/api/get-orderbook) | Get L2 orderbook for a market |
+| `GET` | [`/orderbook`](/api/get-orderbook) | Get live or historical L2 orderbook |
 | `GET` | [`/execution-price`](/api/get-execution-price) | Estimate VWAP and slippage |
-| `GET` | [`/price-history`](/api/get-price-history) | Get OHLCV candlestick data |
-| `GET` | [`/trades`](/api/get-trades) | Get recent trades |
+| `GET` | [`/price`](/api/get-price) | Get OHLCV candlestick data + point-in-time price |
+| `GET` | [`/trades`](/api/get-trades) | Get recent or historical trades |
 | `GET` | [`/events`](/api/list-events) | List events (market groups) |
 
 ### Orders

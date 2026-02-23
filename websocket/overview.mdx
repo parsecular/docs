@@ -43,8 +43,8 @@ After authentication, subscribe to markets:
 {
   "type": "subscribe",
   "markets": [
-    { "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes", "depth": 10 },
-    { "parsec_id": "kalshi:KXBTC-25DEC-100K" }
+    { "parsec_id": "polymarket:572473", "outcome": "Yes", "depth": 10 },
+    { "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS" }
   ]
 }
 ```
@@ -60,7 +60,7 @@ After authentication, subscribe to markets:
 ```json
 {
   "type": "unsubscribe",
-  "markets": [{ "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }]
+  "markets": [{ "parsec_id": "polymarket:572473", "outcome": "Yes" }]
 }
 ```
 
@@ -69,7 +69,7 @@ After authentication, subscribe to markets:
 Request a fresh snapshot if data becomes stale:
 
 ```json
-{ "type": "resync", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "resync", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 
 ## Server Messages
@@ -79,11 +79,11 @@ Request a fresh snapshot if data becomes stale:
 ```json
 {
   "type": "orderbook",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "tick_size": 0.001,
   "title": "Will ETH reach $5000?",
   "kind": "snapshot",
@@ -108,11 +108,11 @@ Incremental orderbook updates are sent as `type: "orderbook_delta"`. Deltas use 
 ```json
 {
   "type": "orderbook_delta",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "changes": [
     { "side": "bid", "price": 0.65, "size": 900.0 },
     { "side": "ask", "price": 0.66, "size": 0.0 }
@@ -131,11 +131,11 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
 ```json
 {
   "type": "activity",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "kind": "trade",
   "price": 0.65,
   "size": 100.0,
@@ -151,11 +151,11 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
 ```json
 {
   "type": "activity",
-  "parsec_id": "kalshi:KXBTC-25DEC-100K",
+  "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS",
   "exchange": "kalshi",
   "outcome": "Yes",
   "token_id": "",
-  "market_id": "KXBTC-25DEC-100K",
+  "market_id": "KXPRESPERSON-28-GNEWS",
   "kind": "fill",
   "price": 0.62,
   "size": 50.0,
@@ -180,7 +180,7 @@ Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` 
 ### Error
 
 ```json
-{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:0x1234abcd" }
+{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:572473" }
 ```
 
 `parsec_id` is included when the error relates to a specific market subscription. It is omitted for connection-level errors (e.g., authentication failures).
@@ -190,7 +190,7 @@ Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` 
 Sent when you've fallen behind on updates:
 
 ```json
-{ "type": "resync_required", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "resync_required", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 
 ### Slow Reader
@@ -198,7 +198,7 @@ Sent when you've fallen behind on updates:
 Warning that you're consuming messages too slowly:
 
 ```json
-{ "type": "slow_reader", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "slow_reader", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 
 ## Book State
@@ -325,7 +325,7 @@ ws.onmessage = (event) => {
       console.log('Authenticated:', msg.customer_id);
       ws.send(JSON.stringify({
         type: 'subscribe',
-        markets: [{ parsec_id: 'polymarket:0x1234', outcome: 'yes', depth: 10 }]
+        markets: [{ parsec_id: 'polymarket:572473', outcome: 'yes', depth: 10 }]
       }));
       break;
 

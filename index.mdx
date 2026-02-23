@@ -98,7 +98,7 @@ ws.on('orderbook', (book) => {
 });
 
 await ws.connect();
-ws.subscribe({ parsecId: 'polymarket:0x...', outcome: 'Yes' });
+ws.subscribe({ parsecId: 'polymarket:572473', outcome: 'Yes' });
 ```
 ```python Python
 import asyncio
@@ -113,7 +113,7 @@ async def on_book(book):
 
 async def main():
     await ws.connect()
-    ws.subscribe(parsec_id="polymarket:0x...", outcome="Yes")
+    ws.subscribe(parsec_id="polymarket:572473", outcome="Yes")
     await ws.run_forever()
 
 asyncio.run(main())

@@ -34,6 +34,10 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
   Unix seconds end timestamp (inclusive).
 </ParamField>
 
+<ParamField query="cursor" type="string">
+  Opaque pagination cursor from a previous response. Pass `next_cursor` from the previous page to fetch the next page of trades.
+</ParamField>
+
 ## Response
 
 <ResponseField name="(root)" type="object">
@@ -79,8 +83,18 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
         </ResponseField>
       </Expandable>
     </ResponseField>
+    <ResponseField name="has_more" type="boolean">
+      `true` if there are more trades beyond this page. Use `next_cursor` to fetch the next page.
+    </ResponseField>
+    <ResponseField name="next_cursor" type="string | null">
+      Opaque cursor for the next page. Pass as `cursor` in the next request. `null` when there are no more pages.
+    </ResponseField>
   </Expandable>
 </ResponseField>
+
+## Examples
+
+### Recent trades (default)
 
 <RequestExample>
 ```bash
@@ -107,9 +121,28 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "timestamp": "2026-02-12T07:18:18.845367Z",
       "source_channel": "kalshi_rest_trade"
     }
-  ]
+  ],
+  "has_more": true,
+  "next_cursor": "eyJ0cyI6MTczOTM1MDY5OH0"
 }
 ```
 </ResponseExample>
+
+### Trades in a time window
+
+```bash
+# Fetch trades from a 24-hour window
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&outcome=yes&start_ts=1771545600&end_ts=1771632000&limit=100"
+  # start_ts = Feb 20 2026 00:00 UTC, end_ts = Feb 21 2026 00:00 UTC
+```
+
+### Paginate through trades
+
+```bash
+# Fetch the next page using the cursor from the previous response
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&outcome=yes&start_ts=1771545600&end_ts=1771632000&limit=100&cursor=eyJ0cyI6MTczOTM1MDY5OH0"
+```
 
 For real-time streaming, use the [WebSocket API](/websocket/overview).
