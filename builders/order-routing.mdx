@@ -1,0 +1,244 @@
+---
+title: "Order Routing"
+description: "Place, manage, and track orders on behalf of your end-users."
+---
+
+## Overview
+
+As a builder, you route orders for your end-users using **impersonation**.
+Every order endpoint works the same as for regular traders — you just add the
+`X-Builder-Customer-Id` header.
+
+<Info>
+Before routing orders, ensure the end-user has a wallet and is linked to the
+target exchange. See [User Management](/builders/user-management).
+</Info>
+
+## Placing an order
+
+`POST /api/v1/orders?exchange={exchange}`
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100
+  }'
+```
+```typescript TypeScript
+const order = await fetch(
+  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
+  {
+    method: 'POST',
+    headers: {
+      'X-API-Key': BUILDER_KEY,
+      'X-Builder-Customer-Id': customerId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      market_id: '0x1234abcd',
+      outcome: 'Yes',
+      side: 'buy',
+      price: 0.55,
+      size: 100,
+    }),
+  },
+);
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/orders",
+    headers={
+        "X-API-Key": BUILDER_KEY,
+        "X-Builder-Customer-Id": customer_id,
+    },
+    params={"exchange": "polymarket"},
+    json={
+        "market_id": "0x1234abcd",
+        "outcome": "Yes",
+        "side": "buy",
+        "price": 0.55,
+        "size": 100,
+    },
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "id": "order_abc123",
+  "market_id": "0x1234abcd",
+  "outcome": "Yes",
+  "side": "buy",
+  "price": 0.55,
+  "size": 100,
+  "filled": 0,
+  "status": "open",
+  "created_at": "2026-02-24T15:30:00Z"
+}
+```
+</ResponseExample>
+
+### Request fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `market_id` | string | Yes | Exchange-native market ID |
+| `outcome` | string | Yes | `"Yes"` or `"No"` (binary), or outcome name (categorical) |
+| `side` | string | Yes | `"buy"` or `"sell"` |
+| `price` | number | Yes | Limit price (0.01 - 0.99 for binary) |
+| `size` | number | Yes | Number of contracts |
+| `params.order_type` | string | No | `"gtc"` (default), `"ioc"`, or `"fok"` |
+| `credentials` | object | No | Per-request credentials (Mode B) |
+
+## Placing an order with fee escrow
+
+To collect fees on an order, include the `fee_auth` object signed by the
+end-user's wallet. See [Fee Escrow](/builders/fee-escrow) for details.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100,
+    "fee_auth": {
+      "order_id": "0xabc123...",
+      "payer": "0xUserWalletAddress",
+      "fee_amount": "250000",
+      "deadline": 1740500000,
+      "signature": "0x..."
+    },
+    "payer_address": "0xUserWalletAddress",
+    "signer_address": "0xUserWalletAddress"
+  }'
+```
+</CodeGroup>
+
+## Listing orders
+
+`GET /api/v1/orders?exchange={exchange}`
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+```
+```typescript TypeScript
+const orders = await fetch(
+  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
+  { headers: builderHeaders(customerId) },
+);
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/orders",
+    headers=parsec_headers(customer_id),
+    params={"exchange": "polymarket"},
+)
+```
+</CodeGroup>
+
+## Getting an order
+
+`GET /api/v1/orders/:order_id?exchange={exchange}`
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+```
+</CodeGroup>
+
+## Cancelling an order
+
+`DELETE /api/v1/orders/:order_id?exchange={exchange}`
+
+If fee escrow is active on the order, the escrowed fee is automatically refunded
+to the payer's wallet on cancellation.
+
+<CodeGroup>
+```bash curl
+curl -X DELETE "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+```
+```typescript TypeScript
+const cancelled = await fetch(
+  `https://api.parsecapi.com/api/v1/orders/${orderId}?exchange=polymarket`,
+  { method: 'DELETE', headers: builderHeaders(customerId) },
+);
+```
+```python Python
+resp = requests.delete(
+    f"https://api.parsecapi.com/api/v1/orders/{order_id}",
+    headers=parsec_headers(customer_id),
+    params={"exchange": "polymarket"},
+)
+```
+</CodeGroup>
+
+## Other endpoints
+
+All standard Parsec endpoints work with builder impersonation:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/positions` | GET | List end-user's positions |
+| `/balance` | GET | Get end-user's balance |
+| `/fills` | GET | Get end-user's trade history |
+| `/orderbook` | GET | Get orderbook (no impersonation needed) |
+| `/markets` | GET | List markets (no impersonation needed) |
+| `/ping` | GET | Check exchange connectivity |
+
+<Note>
+Read-only market data endpoints (`/markets`, `/orderbook`, `/trades`, `/price`,
+`/events`) do **not** require `X-Builder-Customer-Id` — they work with just
+your builder API key.
+</Note>
+
+## Order types
+
+| Type | Description | Exchanges |
+|------|-------------|-----------|
+| `gtc` | Good-til-cancelled (default) | All |
+| `ioc` | Immediate-or-cancel — fills what it can, cancels the rest | Polymarket, Kalshi |
+| `fok` | Fill-or-kill — fills entirely or cancels | Polymarket |
+
+Set via `params.order_type`:
+
+```json
+{
+  "market_id": "0x...",
+  "outcome": "Yes",
+  "side": "buy",
+  "price": 0.55,
+  "size": 100,
+  "params": { "order_type": "ioc" }
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Fee Escrow" icon="vault" href="/builders/fee-escrow">
+    Collect fees on every order.
+  </Card>
+  <Card title="Builder Tiers" icon="arrow-trend-up" href="/builders/tiers">
+    See how your revenue share scales with volume.
+  </Card>
+</CardGroup>

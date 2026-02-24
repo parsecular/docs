@@ -1,0 +1,297 @@
+---
+title: "User Management"
+description: "Create, manage, and authenticate end-users in your builder application."
+---
+
+## Overview
+
+As a builder, you manage end-users programmatically. Each end-user gets their
+own Parsec customer ID, API key, wallet, and exchange credentials. You control
+all of this through the Builder API using your builder API key.
+
+## Creating end-users
+
+`POST /api/v1/builder/users`
+
+Each user is identified by an `external_id` — your app's internal user ID.
+This call is **idempotent**: calling it again with the same `external_id`
+returns the existing user.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_001",
+    "email": "alice@example.com",
+    "qps_limit": 10,
+    "fee_escrow_enabled": true,
+    "fee_bps": 25,
+    "affiliate_address": "0xYourWalletAddress"
+  }'
+```
+```typescript TypeScript
+const user = await parsec.post('/api/v1/builder/users', {
+  body: {
+    external_id: 'user_001',
+    email: 'alice@example.com',
+    qps_limit: 10,
+    fee_escrow_enabled: true,
+    fee_bps: 25,
+    affiliate_address: '0xYourWalletAddress',
+  },
+});
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={
+        "external_id": "user_001",
+        "email": "alice@example.com",
+        "qps_limit": 10,
+        "fee_escrow_enabled": True,
+        "fee_bps": 25,
+        "affiliate_address": "0xYourWalletAddress",
+    },
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "tier": "free",
+  "qps_limit": 10,
+  "created_at": "2026-02-24T12:00:00Z",
+  "linked_exchanges": [],
+  "wallet": null,
+  "fee_escrow_enabled": true,
+  "fee_bps": 25,
+  "affiliate_address": "0xYourWalletAddress"
+}
+```
+</ResponseExample>
+
+### Request fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `external_id` | string | Yes | Your app's internal user ID (unique per builder) |
+| `email` | string | No | User's email (used for Privy account creation) |
+| `qps_limit` | number | No | Per-user rate limit (default: 10, draws from your QPS pool) |
+| `fee_escrow_enabled` | boolean | No | Enable fee escrow for this user's orders |
+| `fee_bps` | number | No | Fee in basis points (1-10000, e.g. 25 = 0.25%) |
+| `affiliate_address` | string | No | Ethereum address to receive fee payouts |
+
+## Creating wallets
+
+`POST /api/v1/builder/users/:customer_id/wallet`
+
+Creates a Privy-managed embedded wallet for the end-user. Required before
+linking to exchanges.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/wallet" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const wallet = await parsec.post(`/api/v1/builder/users/${user.customer_id}/wallet`);
+console.log(wallet.eoa_address);
+```
+```python Python
+resp = requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/wallet",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "privy_wallet_id": "wallet_abc123"
+}
+```
+</ResponseExample>
+
+## Linking exchanges
+
+`POST /api/v1/builder/users/:customer_id/link`
+
+Links the user's wallet to a prediction market exchange.
+
+<CodeGroup>
+```bash curl
+# Polymarket (uses managed wallet — no extra credentials needed)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/link" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "exchange": "polymarket" }'
+
+# Kalshi (requires API credentials)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/link" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "kalshi",
+    "api_key_id": "kalshi_key_id",
+    "private_key": "-----BEGIN EC PRIVATE KEY-----\n..."
+  }'
+```
+```typescript TypeScript
+// Polymarket
+await parsec.post(`/api/v1/builder/users/${user.customer_id}/link`, {
+  body: { exchange: 'polymarket' },
+});
+
+// Kalshi
+await parsec.post(`/api/v1/builder/users/${user.customer_id}/link`, {
+  body: {
+    exchange: 'kalshi',
+    api_key_id: 'kalshi_key_id',
+    private_key: '-----BEGIN EC PRIVATE KEY-----\n...',
+  },
+});
+```
+```python Python
+# Polymarket
+requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/link",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={"exchange": "polymarket"},
+)
+
+# Kalshi
+requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/link",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={
+        "exchange": "kalshi",
+        "api_key_id": "kalshi_key_id",
+        "private_key": "-----BEGIN EC PRIVATE KEY-----\n...",
+    },
+)
+```
+</CodeGroup>
+
+## Listing end-users
+
+`GET /api/v1/builder/users`
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/users?limit=20" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const users = await parsec.get('/api/v1/builder/users', {
+  params: { limit: 20 },
+});
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    params={"limit": 20},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "users": [
+    {
+      "customer_id": "a1b2c3d4-...",
+      "external_id": "user_001",
+      "api_key": "pk_live_abc123...",
+      "tier": "free",
+      "qps_limit": 10,
+      "linked_exchanges": ["polymarket"],
+      "wallet": {
+        "eoa_address": "0x1234...",
+        "wallet_type": "eoa"
+      },
+      "fee_escrow_enabled": true,
+      "fee_bps": 25,
+      "affiliate_address": "0xYourWallet..."
+    }
+  ],
+  "next_cursor": "eyJidWlsZGVyX2V4dGVybmFsX2lkIjoiMDAyIn0=",
+  "count": 1
+}
+```
+</ResponseExample>
+
+Pagination uses cursor-based tokens. Pass `cursor` from `next_cursor` to fetch
+the next page.
+
+## Updating end-users
+
+`PATCH /api/v1/builder/users/:customer_id`
+
+Update rate limits or fee escrow settings for an existing end-user.
+
+<CodeGroup>
+```bash curl
+curl -X PATCH "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "qps_limit": 20, "fee_bps": 50 }'
+```
+```typescript TypeScript
+await parsec.patch(`/api/v1/builder/users/${user.customer_id}`, {
+  body: { qps_limit: 20, fee_bps: 50 },
+});
+```
+```python Python
+requests.patch(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={"qps_limit": 20, "fee_bps": 50},
+)
+```
+</CodeGroup>
+
+## Deactivating end-users
+
+`DELETE /api/v1/builder/users/:customer_id`
+
+Deactivates all wallets, credentials, and session signers. This is
+**not reversible** — the user will need to be re-linked to trade again.
+
+<CodeGroup>
+```bash curl
+curl -X DELETE "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+await parsec.delete(`/api/v1/builder/users/${user.customer_id}`);
+```
+```python Python
+requests.delete(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+Returns `204 No Content` on success.
+
+## What's next?
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/builders/authentication">
+    How end-user authentication works in your app.
+  </Card>
+  <Card title="Order Routing" icon="arrow-right-arrow-left" href="/builders/order-routing">
+    Place orders on behalf of your users.
+  </Card>
+</CardGroup>

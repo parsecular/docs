@@ -1,0 +1,253 @@
+---
+title: "Authentication"
+description: "How builder impersonation and end-user authentication work."
+---
+
+## How builder auth works
+
+Builder authentication uses **impersonation**. Your builder API key
+authenticates the request, and the `X-Builder-Customer-Id` header tells Parsec
+which end-user the request is for.
+
+```
+Your App                          Parsec API
+────────                          ──────────
+User action in your UI
+        │
+        ▼
+Your backend looks up               X-API-Key: pk_live_BUILDER_KEY
+the user's Parsec customer_id  ───► X-Builder-Customer-Id: CUSTOMER_ID
+        │                           POST /orders?exchange=polymarket
+        ▼
+Response returned to user      ◄──  { "id": "order_123", "status": "open" }
+```
+
+<Info>
+**Your users never see your builder API key.** Authentication happens entirely
+on your backend. Your frontend talks to your backend, and your backend talks
+to Parsec.
+</Info>
+
+## Required headers
+
+Every impersonated request must include both headers:
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `X-API-Key` | `pk_live_YOUR_BUILDER_KEY` | Your builder API key |
+| `X-Builder-Customer-Id` | `a1b2c3d4-...` | The end-user's `customer_id` |
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x...",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100
+  }'
+```
+```typescript TypeScript
+// Set up a helper that always includes the builder headers
+function parsecRequest(customerId: string) {
+  return {
+    headers: {
+      'X-API-Key': process.env.PARSEC_BUILDER_KEY,
+      'X-Builder-Customer-Id': customerId,
+    },
+  };
+}
+
+// Place an order for a specific user
+const resp = await fetch(
+  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
+  {
+    method: 'POST',
+    ...parsecRequest(user.parsecCustomerId),
+    headers: {
+      ...parsecRequest(user.parsecCustomerId).headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      market_id: '0x...',
+      outcome: 'Yes',
+      side: 'buy',
+      price: 0.55,
+      size: 100,
+    }),
+  },
+);
+```
+```python Python
+import requests
+
+BUILDER_KEY = "pk_live_YOUR_BUILDER_KEY"
+
+def parsec_headers(customer_id: str) -> dict:
+    return {
+        "X-API-Key": BUILDER_KEY,
+        "X-Builder-Customer-Id": customer_id,
+    }
+
+# Place an order for a specific user
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/orders",
+    headers=parsec_headers(user["customer_id"]),
+    params={"exchange": "polymarket"},
+    json={
+        "market_id": "0x...",
+        "outcome": "Yes",
+        "side": "buy",
+        "price": 0.55,
+        "size": 100,
+    },
+)
+```
+</CodeGroup>
+
+## Typical app architecture
+
+```
+┌──────────────────────────┐
+│      Your Frontend       │
+│  (React, Next.js, etc.)  │
+│                          │
+│  User logs in with your  │
+│  own auth (email, OAuth) │
+└────────────┬─────────────┘
+             │ Your own auth token
+             ▼
+┌──────────────────────────┐
+│      Your Backend        │
+│  (Node, Python, etc.)    │
+│                          │
+│  Maps your user ID ──►   │
+│  Parsec customer_id      │
+│                          │
+│  Stores mapping in your  │
+│  database                │
+└────────────┬─────────────┘
+             │ X-API-Key + X-Builder-Customer-Id
+             ▼
+┌──────────────────────────┐
+│      Parsec API          │
+│                          │
+│  Validates builder key   │
+│  Verifies user ownership │
+│  Routes to exchange      │
+└──────────────────────────┘
+```
+
+## What you store in your database
+
+| Field | Source | Purpose |
+|-------|--------|---------|
+| Your user ID | Your auth system | Identify the user in your app |
+| `customer_id` | `POST /builder/users` response | Impersonate via `X-Builder-Customer-Id` |
+| `external_id` | You choose this | Your internal ID (idempotency key) |
+| `api_key` | `POST /builder/users` response | Not needed for impersonation (optional backup) |
+
+<Note>
+You do **not** need to store or distribute end-user API keys. All requests go
+through your backend using your builder key + impersonation header.
+End-user API keys exist as a fallback for advanced use cases where
+users need direct Parsec access.
+</Note>
+
+## Per-request credentials (Mode B)
+
+For advanced use cases, you can pass exchange credentials per-request instead
+of using stored credentials. This avoids storing sensitive keys on Parsec.
+
+Add the `X-Exchange-Credentials` header with base64-encoded JSON:
+
+<CodeGroup>
+```bash curl
+# base64 encode: {"clob_api_key":"...","clob_api_secret":"...","clob_api_passphrase":"..."}
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID" \
+  -H "X-Exchange-Credentials: eyJjbG9iX2FwaV9rZXkiOi..." \
+  -H "Content-Type: application/json" \
+  -d '{ "market_id": "0x...", "outcome": "Yes", "side": "buy", "price": 0.55, "size": 100 }'
+```
+```typescript TypeScript
+const creds = Buffer.from(JSON.stringify({
+  clob_api_key: '...',
+  clob_api_secret: '...',
+  clob_api_passphrase: '...',
+})).toString('base64');
+
+const resp = await fetch(url, {
+  headers: {
+    'X-API-Key': BUILDER_KEY,
+    'X-Builder-Customer-Id': customerId,
+    'X-Exchange-Credentials': creds,
+  },
+  // ...
+});
+```
+```python Python
+import base64, json
+
+creds = base64.b64encode(json.dumps({
+    "clob_api_key": "...",
+    "clob_api_secret": "...",
+    "clob_api_passphrase": "...",
+}).encode()).decode()
+
+resp = requests.post(url, headers={
+    "X-API-Key": BUILDER_KEY,
+    "X-Builder-Customer-Id": customer_id,
+    "X-Exchange-Credentials": creds,
+})
+```
+</CodeGroup>
+
+## Rate limiting
+
+Builder requests draw from your **QPS pool** (default 500 QPS). Each end-user
+has a configurable `qps_limit` that caps their individual usage within the pool.
+
+Check your pool allocation:
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/pool" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const pool = await parsec.get('/api/v1/builder/pool');
+console.log(pool.qps_pool, pool.total_allocated_qps, pool.end_user_count);
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/pool",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "qps_pool": 500,
+  "end_user_count": 42,
+  "total_allocated_qps": 320
+}
+```
+</ResponseExample>
+
+## Error responses
+
+| Code | Meaning |
+|------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `403` | `X-Builder-Customer-Id` requires a builder account |
+| `403` | End-user not found or not owned by this builder |
+| `400` | `X-Builder-Customer-Id` cannot be used with Bearer token auth |
+| `429` | QPS pool exhausted |

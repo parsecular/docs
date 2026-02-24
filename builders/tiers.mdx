@@ -1,0 +1,164 @@
+---
+title: "Builder Tiers"
+description: "Earn higher revenue shares as you bring more volume to Parsec."
+---
+
+## Overview
+
+Builder tiers reward you for the trading volume your application drives through
+Parsec. As your monthly volume grows, you unlock larger QPS pools, higher fee
+limits, and a greater share of the fees you collect — culminating in majority
+ownership at Platinum.
+
+## Tier levels
+
+| Tier | Monthly Volume | Builder Share | Parsec Share | Max Fee BPS | QPS Pool | Support |
+|------|---------------|---------------|--------------|-------------|----------|---------|
+| **Bronze** | < $500K | 10% | 90% | 50 bps (0.5%) | 500 | Discord |
+| **Silver** | $500K - $5M | 40% | 60% | 100 bps (1.0%) | 2,000 | Discord + priority |
+| **Gold** | $5M - $10M | 50% | 50% | 200 bps (2.0%) | 10,000 | Dedicated Slack |
+| **Platinum** | $10M+ | 60% | 40% | Custom | Custom | Dedicated engineer |
+
+<Info>
+All builders start at **Bronze**. Tier upgrades are evaluated monthly and
+applied automatically. Downgrades have a 1-month grace period.
+</Info>
+
+## The jump incentive
+
+The tiers are designed to reward builders who scale aggressively:
+
+```
+Bronze (10%)  ──── 4x share increase ────►  Silver (40%)
+                    for 10x volume
+
+Silver (40%)  ──── even partnership ──────►  Gold (50%)
+                    at 2x volume
+
+Gold (50%)    ──── majority ownership ────►  Platinum (60%)
+                    at 2x volume
+```
+
+The biggest reward comes from the **Bronze → Silver jump**: growing your volume
+10x earns you a 4x increase in revenue share (10% → 40%). This means your
+effective revenue grows **40x** when you cross the $500K threshold.
+
+At **Gold**, you and Parsec split fees evenly — a true 50/50 partnership.
+
+At **Platinum**, you become the **majority stakeholder** in the fee split,
+taking home 60% of all fees collected.
+
+## How tiers work
+
+### Monthly volume
+
+Your monthly volume is the total notional value of all orders placed via
+`POST /orders` with `X-Builder-Customer-Id` across all your end-users. This
+includes orders on all supported exchanges.
+
+### Max fee BPS
+
+The maximum `fee_bps` that Parsec admins can configure for your account. Higher
+tiers unlock the ability to charge higher fees if your app provides enough value
+to justify them.
+
+### QPS pool
+
+Your shared rate limit pool across all end-users. Higher tiers get larger pools
+for higher-throughput applications.
+
+### Builder share
+
+The percentage of collected fees sent to your `affiliate_address`. The
+remainder goes to the Parsec treasury. Your share increases automatically as
+you move up tiers.
+
+## Revenue examples
+
+Assuming 25 bps fee rate and 80% average fill rate:
+
+| Tier | Monthly Volume | Fees Collected | Builder Share | Your Revenue |
+|------|---------------|----------------|---------------|-------------|
+| Bronze | $500K | $1,250 | 10% | **$100/mo** |
+| Silver | $5M | $12,500 | 40% | **$4,000/mo** |
+| Gold | $10M | $25,000 | 50% | **$10,000/mo** |
+| Platinum | $25M | $62,500 | 60% | **$30,000/mo** |
+
+### Revenue growth at each tier jump
+
+| Transition | Volume Growth | Revenue Growth | Why |
+|-----------|--------------|----------------|-----|
+| Bronze → Silver | 10x | **40x** | 10x volume + 4x share increase |
+| Silver → Gold | 2x | **2.5x** | 2x volume + 1.25x share increase |
+| Gold → Platinum | 2.5x | **3x** | 2.5x volume + 1.2x share increase |
+
+<Tip>
+The Bronze → Silver jump is by far the most rewarding transition. Focus on
+getting to $500K/month — your per-dollar earnings jump dramatically.
+</Tip>
+
+## Tier upgrades
+
+Tier evaluations happen on the **1st of each month** based on the previous
+month's trading volume.
+
+**To check your current stats:**
+
+<CodeGroup>
+```bash curl
+# Check your QPS pool and user count
+curl "https://api.parsecapi.com/api/v1/builder/pool" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+
+# Check your escrow config (fee BPS + affiliate share)
+curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const pool = await parsec.get('/api/v1/builder/pool');
+const escrow = await parsec.get('/api/v1/builder/escrow/config');
+
+console.log('Users:', pool.end_user_count);
+console.log('QPS:', pool.qps_pool);
+console.log('Fee BPS:', escrow.fee_bps);
+console.log('Affiliate:', escrow.affiliate_address);
+```
+```python Python
+pool = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/pool",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+).json()
+
+escrow = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/escrow/config",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+).json()
+
+print(f"Users: {pool['end_user_count']}")
+print(f"QPS pool: {pool['qps_pool']}")
+print(f"Fee BPS: {escrow['fee_bps']}")
+```
+</CodeGroup>
+
+## Platinum tier
+
+Platinum builders get custom terms negotiated directly with the Parsec team:
+
+- **60%+ affiliate share** — majority of all fee revenue
+- Custom fee BPS limits
+- Custom QPS pool sizes
+- Dedicated engineering support
+- Priority feature requests
+- Custom SLA agreements
+
+To discuss Platinum terms, reach out to `millypp` on
+[Discord](https://discord.gg/754dYDXRrx).
+
+<CardGroup cols={2}>
+  <Card title="Fee Escrow Setup" icon="vault" href="/builders/fee-escrow">
+    How on-chain fee collection works.
+  </Card>
+  <Card title="Usage Tracking" icon="chart-bar" href="/builders/tracking">
+    Monitor your builder usage and performance.
+  </Card>
+</CardGroup>

@@ -87,6 +87,34 @@
         ]
       },
       {
+        "tab": "Builders",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "builders/overview",
+              "builders/onboarding"
+            ]
+          },
+          {
+            "group": "Integration",
+            "pages": [
+              "builders/user-management",
+              "builders/authentication",
+              "builders/order-routing"
+            ]
+          },
+          {
+            "group": "Revenue",
+            "pages": [
+              "builders/fee-escrow",
+              "builders/tiers",
+              "builders/tracking"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "WebSocket",
         "pages": [
           "websocket/overview"

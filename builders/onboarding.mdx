@@ -1,0 +1,125 @@
+---
+title: "Onboarding"
+description: "How to apply for the Builder Program and get your builder API key."
+---
+
+## Step 1: Join the Discord
+
+All builder applications start on **Parsec's Discord server**.
+
+<Card title="Join Parsec Discord" icon="discord" href="https://discord.gg/754dYDXRrx">
+  discord.gg/754dYDXRrx
+</Card>
+
+Once you've joined, reach out to an admin to start the process:
+
+| Admin | Discord Username |
+|-------|-----------------|
+| Milind | `millypp` |
+
+Send a DM or tag them in the `#builders` channel with a short description of
+what you're building. Include:
+
+- **App name** and what it does
+- **Expected user count** (rough estimate)
+- **Exchange(s)** you plan to integrate (Polymarket, Kalshi, etc.)
+
+## Step 2: Intro call (30 minutes)
+
+An admin will schedule a **30-minute call** to:
+
+1. Understand your use case and technical requirements
+2. Walk through the Builder API and fee escrow setup
+3. Provision your builder account (`account_type: "builder"`)
+4. Set your initial QPS pool allocation and tier
+5. Answer any integration questions
+
+After the call, you'll receive:
+
+| What you get | Details |
+|-------------|---------|
+| **Builder API key** | `pk_live_...` with `account_type: "builder"` |
+| **QPS pool** | Default 500 QPS shared across all your end-users |
+| **Fee escrow config** | Fee BPS, affiliate address, escrow contract address |
+| **Builder tier** | Starting at Bronze |
+
+## Step 3: Set up your environment
+
+Install the Parsec SDK:
+
+<CodeGroup>
+```bash npm
+npm install parsec-api
+```
+```bash pip
+pip install parsec_api
+```
+</CodeGroup>
+
+Set your builder API key:
+
+<CodeGroup>
+```typescript TypeScript
+import ParsecAPI from 'parsec-api';
+
+const parsec = new ParsecAPI({ apiKey: 'pk_live_YOUR_BUILDER_KEY' });
+```
+```python Python
+from parsec_api import ParsecAPI
+
+parsec = ParsecAPI(api_key="pk_live_YOUR_BUILDER_KEY")
+```
+</CodeGroup>
+
+<Info>
+Your builder API key is different from a regular trader key. It has elevated
+permissions: user management, impersonation, and fee escrow access.
+</Info>
+
+## Step 4: Create your first end-user
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_001",
+    "email": "alice@example.com"
+  }'
+```
+```typescript TypeScript
+const user = await parsec.post('/api/v1/builder/users', {
+  body: {
+    external_id: 'user_001',
+    email: 'alice@example.com',
+  },
+});
+console.log(user.customer_id, user.api_key);
+```
+```python Python
+import requests
+
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={"external_id": "user_001", "email": "alice@example.com"},
+)
+user = resp.json()
+print(user["customer_id"], user["api_key"])
+```
+</CodeGroup>
+
+You're in. Continue to the next guides:
+
+<CardGroup cols={3}>
+  <Card title="User Management" icon="users" href="/builders/user-management">
+    Create wallets and link exchanges for your users.
+  </Card>
+  <Card title="Order Routing" icon="arrow-right-arrow-left" href="/builders/order-routing">
+    Place orders on behalf of your users.
+  </Card>
+  <Card title="Fee Escrow" icon="vault" href="/builders/fee-escrow">
+    Set up on-chain fee collection.
+  </Card>
+</CardGroup>

@@ -1,0 +1,218 @@
+---
+title: "Usage Tracking"
+description: "Monitor your builder usage, end-user activity, and fee escrow performance."
+---
+
+## Overview
+
+Parsec provides several endpoints to help you monitor your builder program's
+health: user count, QPS allocation, linked exchanges, and escrow config.
+
+## QPS pool allocation
+
+`GET /api/v1/builder/pool`
+
+See how much of your QPS pool is allocated and how many end-users you have.
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/pool" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const pool = await fetch(
+  'https://api.parsecapi.com/api/v1/builder/pool',
+  { headers: { 'X-API-Key': BUILDER_KEY } },
+).then(r => r.json());
+
+console.log(`Users: ${pool.end_user_count}`);
+console.log(`QPS used: ${pool.total_allocated_qps} / ${pool.qps_pool}`);
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/pool",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+pool = resp.json()
+print(f"Users: {pool['end_user_count']}")
+print(f"QPS: {pool['total_allocated_qps']} / {pool['qps_pool']}")
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "qps_pool": 500,
+  "end_user_count": 42,
+  "total_allocated_qps": 320
+}
+```
+</ResponseExample>
+
+| Field | Description |
+|-------|-------------|
+| `qps_pool` | Your total QPS allocation (grows with tier) |
+| `end_user_count` | Number of end-users you've created |
+| `total_allocated_qps` | Sum of all end-users' `qps_limit` values |
+
+<Note>
+If `total_allocated_qps` approaches `qps_pool`, new users may experience
+rate limiting. Either reduce per-user QPS limits or contact us to increase
+your pool.
+</Note>
+
+## End-user details
+
+`GET /api/v1/builder/users/:customer_id`
+
+Inspect a specific end-user's configuration, linked exchanges, and wallet status.
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const user = await fetch(
+  `https://api.parsecapi.com/api/v1/builder/users/${customerId}`,
+  { headers: { 'X-API-Key': BUILDER_KEY } },
+).then(r => r.json());
+```
+```python Python
+resp = requests.get(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "customer_id": "a1b2c3d4-...",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123...",
+  "tier": "free",
+  "qps_limit": 10,
+  "created_at": "2026-02-24T12:00:00Z",
+  "linked_exchanges": ["polymarket"],
+  "wallet": {
+    "eoa_address": "0x1234...",
+    "privy_wallet_id": "wallet_abc",
+    "wallet_type": "eoa",
+    "chain_id": 137,
+    "created_at": "2026-02-24T12:01:00Z"
+  },
+  "fee_escrow_enabled": true,
+  "fee_bps": 25,
+  "affiliate_address": "0xYourWallet..."
+}
+```
+</ResponseExample>
+
+## Escrow configuration
+
+`GET /api/v1/builder/escrow/config`
+
+Check your fee escrow settings and contract parameters.
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const config = await fetch(
+  'https://api.parsecapi.com/api/v1/builder/escrow/config',
+  { headers: { 'X-API-Key': BUILDER_KEY } },
+).then(r => r.json());
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/escrow/config",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "fee_escrow_enabled": true,
+  "fee_bps": 25,
+  "affiliate_address": "0xYourWallet...",
+  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142",
+  "min_fee_usdc": "100000",
+  "min_fee_bps": 1,
+  "treasury_address": "0x...",
+  "affiliate_fee_bps": 2000
+}
+```
+</ResponseExample>
+
+## Per-user activity
+
+Use impersonation to check an individual end-user's positions and balance:
+
+<CodeGroup>
+```bash curl
+# Check balance
+curl "https://api.parsecapi.com/api/v1/balance?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+
+# Check positions
+curl "https://api.parsecapi.com/api/v1/positions?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+
+# Check open orders
+curl "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+
+# Check fills
+curl "https://api.parsecapi.com/api/v1/fills?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID"
+```
+</CodeGroup>
+
+## On-chain fee tracking
+
+Since fee escrow operates on Polygon, you can verify all fee transactions
+on-chain:
+
+| What to check | How |
+|---------------|-----|
+| **Fee pulled** | Look for `FeePulled` events on the escrow contract |
+| **Fee distributed** | Look for `FeeDistributed` events (treasury + affiliate amounts) |
+| **Fee refunded** | Look for `FeeRefunded` events |
+| **Contract state** | Call `feeRecords(orderId)` to check any order's escrow status |
+
+The escrow contract address is `0xbd25057b4d3252ca1ec26e1e5efb6480315ba142` on Polygon.
+
+<Tip>
+Use [Polygonscan](https://polygonscan.com/address/0xbd25057b4d3252ca1ec26e1e5efb6480315ba142)
+to browse all fee escrow events in real-time.
+</Tip>
+
+## Monitoring checklist
+
+| Check | Endpoint | Frequency |
+|-------|----------|-----------|
+| QPS utilization | `GET /builder/pool` | Daily |
+| User count growth | `GET /builder/users` | Weekly |
+| Escrow config correct | `GET /builder/escrow/config` | After changes |
+| User wallet funded | `GET /balance` (impersonated) | Before first trade |
+| Exchange linked | `GET /builder/users/:id` | After user creation |
+| Orders flowing | `GET /orders` (impersonated) | Continuous |
+
+<CardGroup cols={2}>
+  <Card title="Builder Tiers" icon="arrow-trend-up" href="/builders/tiers">
+    How your revenue share scales with volume.
+  </Card>
+  <Card title="Onboarding" icon="rocket" href="/builders/onboarding">
+    Get started with the Builder Program.
+  </Card>
+</CardGroup>
