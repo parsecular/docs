@@ -11,42 +11,19 @@ https://api.parsecapi.com/api/v1
 
 ## Authentication
 
-All API requests require an API key passed via the `X-API-Key` header:
+All API requests (except SIWE auth) require an API key passed via the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?exchanges=polymarket
 ```
 
-## Quick Start
+### Getting an API key
 
-Every market in Parsec has a **`parsec_id`** in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`). Use `/markets` to find a market, then pass its `parsec_id` to any data endpoint.
-
-```bash
-# 1. Find a market
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&search=btc&limit=3"
-# → Returns markets with parsec_id, e.g. "polymarket:572473"
-
-# 2. Get live orderbook
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes"
-
-# 3. Get current price (last 7 days of hourly candles)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/price?parsec_id=polymarket:572473&interval=1h"
-
-# 4. Get historical trades (24h window — timestamps are Unix seconds)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&start_ts=1771545600&end_ts=1771632000"
-
-# 5. Get historical orderbook snapshots (1h window)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&start_ts=1771581600&end_ts=1771585200"
-```
-
-<Tip>
-**Timestamps** are Unix seconds (not milliseconds). Add `start_ts` to any data endpoint to switch from live to historical mode. Use `cursor` to paginate through large result sets.
-</Tip>
+| Method | Description | Guide |
+|--------|-------------|-------|
+| **Wallet Auth (SIWE)** | Sign in with your Ethereum wallet — headless, no browser | [Setup guide](/getting-started/wallet-auth) |
+| **Web signup** | Sign up at [parsecapi.com](https://parsecapi.com) | [Direct trader](/getting-started/direct-trader) |
+| **Builder program** | Get a builder key with user management capabilities | [Builder onboarding](/builders/onboarding) |
 
 ## Response Format
 
@@ -66,6 +43,12 @@ On error:
 ```
 
 ## Available Endpoints
+
+### Authentication (unauthenticated)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/auth/siwe/nonce`](/api/siwe-nonce) | Get a one-time nonce for SIWE |
+| `POST` | [`/auth/siwe`](/api/siwe-authenticate) | Authenticate with a signed SIWE message |
 
 ### Market Data
 | Method | Endpoint | Description |

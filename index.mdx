@@ -14,124 +14,22 @@ WebSocket feed across Polymarket, Kalshi, Limitless, Opinion, and Predict.fun.
   <Card title="Read Market Data" icon="chart-line" href="/api/overview">
     Fetch markets, orderbooks, prices, and trades — no exchange account needed.
   </Card>
+  <Card title="Wallet Auth (SIWE)" icon="ethereum" href="/getting-started/wallet-auth">
+    Sign in with your Ethereum wallet — no browser needed. Ideal for scripts and bots.
+  </Card>
   <Card title="Direct Trader" icon="key" href="/getting-started/direct-trader">
     Bring your own exchange credentials and trade via API/SDK.
   </Card>
+</CardGroup>
+
+<CardGroup cols={3}>
   <Card title="Managed Wallet" icon="wallet" href="/getting-started/managed-wallet">
     We create and manage a wallet for you — link exchanges in one click.
   </Card>
-</CardGroup>
-
-<Card title="Pro: Per-Request Credentials" icon="shield" href="/getting-started/per-request-credentials">
-  Pass credentials per-request without storing them on our servers.
-</Card>
-
-## Quick start
-
-Install the SDK and fetch markets in 3 lines.
-
-<CodeGroup>
-```bash npm
-npm install parsec-api
-```
-```bash pip
-pip install parsec_api
-```
-</CodeGroup>
-
-**Fetch markets:**
-
-<CodeGroup>
-```typescript TypeScript
-import ParsecAPI from 'parsec-api';
-
-const client = new ParsecAPI();
-
-const markets = await client.markets.list({ exchanges: ['polymarket'], limit: 5 });
-console.log(markets.markets);
-```
-```python Python
-from parsec_api import ParsecAPI
-
-client = ParsecAPI()
-
-markets = client.markets.list(exchanges=["polymarket"], limit=5)
-print(markets.markets)
-```
-</CodeGroup>
-
-**Place an order:**
-
-<CodeGroup>
-```typescript TypeScript
-const order = await client.orders.create({
-  exchange: 'polymarket',
-  market_id: '0x...',
-  outcome: 'yes',
-  side: 'buy',
-  price: 0.55,
-  size: 100,
-});
-console.log(order.id, order.status);
-```
-```python Python
-order = client.orders.create(
-    exchange="polymarket",
-    market_id="0x...",
-    outcome="yes",
-    side="buy",
-    price=0.55,
-    size=100,
-)
-print(order.id, order.status)
-```
-</CodeGroup>
-
-**Stream real-time orderbooks:**
-
-<CodeGroup>
-```typescript TypeScript
-const ws = client.ws();
-
-ws.on('orderbook', (book) => {
-  console.log(`${book.parsecId}: best bid ${book.bids[0]?.price}`);
-});
-
-await ws.connect();
-ws.subscribe({ parsecId: 'polymarket:572473', outcome: 'Yes' });
-```
-```python Python
-import asyncio
-from parsec_api import ParsecAPI
-
-client = ParsecAPI()
-ws = client.ws()
-
-@ws.on("orderbook")
-async def on_book(book):
-    print(f"{book.parsec_id}: best bid {book.bids[0].price if book.bids else 'N/A'}")
-
-async def main():
-    await ws.connect()
-    ws.subscribe(parsec_id="polymarket:572473", outcome="Yes")
-    await ws.run_forever()
-
-asyncio.run(main())
-```
-</CodeGroup>
-
-<CardGroup cols={3}>
-  <Card title="API Reference" icon="code" href="/api/list-exchanges">
-    Browse all REST endpoints.
+  <Card title="Pro: Per-Request Credentials" icon="shield" href="/getting-started/per-request-credentials">
+    Pass credentials per-request without storing them on our servers.
   </Card>
-  <Card title="Order Router" icon="arrow-right-arrow-left" href="/order-router/overview">
-    Place, cancel, and manage orders.
-  </Card>
-  <Card title="WebSocket" icon="signal" href="/websocket/overview">
-    Stream real-time orderbooks and trades.
+  <Card title="Builder Program" icon="hammer" href="/builders/overview">
+    Build prediction market apps on Parsec. Manage users, route orders, earn revenue.
   </Card>
 </CardGroup>
-
-<Tip>
-Both SDKs ship with runnable examples covering market data, order lifecycle, and WebSocket streaming. See the `examples/` directory in each SDK package.
-</Tip>

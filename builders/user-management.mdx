@@ -1,0 +1,344 @@
+---
+title: "User Management"
+description: "Create, manage, and authenticate end-users in your builder application."
+---
+
+## Overview
+
+As a builder, you manage end-users programmatically. Each end-user gets their
+own Parsec customer ID, API key, and exchange credentials. You control
+all of this through the Builder API using your builder API key.
+
+Every end-user needs a wallet to trade. You choose how that wallet is set up:
+
+| Wallet type | How it's created | Best for |
+|-------------|-----------------|----------|
+| **Managed (Privy EOA)** | `POST /builder/users/:id/wallet` | Users without their own wallet — Parsec creates and manages one |
+| **External** | Pass `wallet_address` at user creation | Users who already have a MetaMask or other EVM wallet |
+
+Both wallet types support impersonation, order routing, and fee escrow.
+
+## Creating end-users
+
+`POST /api/v1/builder/users`
+
+Each user is identified by an `external_id` — your app's internal user ID.
+This call is **idempotent**: calling it again with the same `external_id`
+returns the existing user.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_001",
+    "email": "alice@example.com",
+    "qps_limit": 10
+  }'
+```
+```typescript TypeScript
+const user = await parsec.post('/api/v1/builder/users', {
+  body: {
+    external_id: 'user_001',
+    email: 'alice@example.com',
+    qps_limit: 10,
+  },
+});
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={
+        "external_id": "user_001",
+        "email": "alice@example.com",
+        "qps_limit": 10,
+    },
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "tier": "free",
+  "qps_limit": 10,
+  "created_at": "2026-02-24T12:00:00Z",
+  "linked_exchanges": [],
+  "wallet": null
+}
+```
+</ResponseExample>
+
+### Request fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `external_id` | string | Yes | Your app's internal user ID (unique per builder) |
+| `email` | string | No | User's email (used for Privy account creation) |
+| `qps_limit` | number | No | Per-user rate limit (default: 10, draws from your QPS pool) |
+| `wallet_address` | string | No | User's existing wallet address (e.g. MetaMask). Creates an `"external"` wallet record. See [External wallets](#external-wallets) below. |
+
+<Note>
+Fee escrow settings (`fee_bps`, `affiliate_address`) are configured at the
+builder account level during onboarding and apply to all your end-users
+automatically. You do not set them per-user.
+</Note>
+
+## Wallet setup
+
+After creating an end-user, set up their wallet using one of the two paths.
+
+### Managed wallets (Privy EOA)
+
+`POST /api/v1/builder/users/:customer_id/wallet`
+
+Creates a Privy-managed embedded wallet for the end-user. Parsec holds the
+signing key — your users don't need to manage a wallet or hold gas tokens.
+Required before linking to exchanges.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/wallet" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const wallet = await parsec.post(`/api/v1/builder/users/${user.customer_id}/wallet`);
+console.log(wallet.eoa_address);
+```
+```python Python
+resp = requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/wallet",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "privy_wallet_id": "wallet_abc123"
+}
+```
+</ResponseExample>
+
+### External wallets
+
+If your end-user already has a MetaMask or other EVM wallet, pass their address
+at user creation time instead of calling `POST /wallet`:
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_002",
+    "wallet_address": "0xUserMetaMaskAddress"
+  }'
+```
+```typescript TypeScript
+const user = await parsec.post('/api/v1/builder/users', {
+  body: {
+    external_id: 'user_002',
+    wallet_address: '0xUserMetaMaskAddress',
+  },
+});
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={
+        "external_id": "user_002",
+        "wallet_address": "0xUserMetaMaskAddress",
+    },
+)
+```
+</CodeGroup>
+
+No signature verification is required — builders are trusted to assert wallet
+ownership for their end-users.
+
+<Info>
+External wallet users can still use impersonation, order routing, and fee
+escrow. The wallet address is recorded so Parsec knows which on-chain address
+belongs to the user.
+</Info>
+
+## Linking exchanges
+
+`POST /api/v1/builder/users/:customer_id/link`
+
+Links the user's wallet to a prediction market exchange.
+
+<CodeGroup>
+```bash curl
+# Polymarket (uses managed wallet — no extra credentials needed)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/link" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "exchange": "polymarket" }'
+
+# Kalshi (requires API credentials)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID/link" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "kalshi",
+    "api_key_id": "kalshi_key_id",
+    "private_key": "-----BEGIN EC PRIVATE KEY-----\n..."
+  }'
+```
+```typescript TypeScript
+// Polymarket
+await parsec.post(`/api/v1/builder/users/${user.customer_id}/link`, {
+  body: { exchange: 'polymarket' },
+});
+
+// Kalshi
+await parsec.post(`/api/v1/builder/users/${user.customer_id}/link`, {
+  body: {
+    exchange: 'kalshi',
+    api_key_id: 'kalshi_key_id',
+    private_key: '-----BEGIN EC PRIVATE KEY-----\n...',
+  },
+});
+```
+```python Python
+# Polymarket
+requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/link",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={"exchange": "polymarket"},
+)
+
+# Kalshi
+requests.post(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}/link",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={
+        "exchange": "kalshi",
+        "api_key_id": "kalshi_key_id",
+        "private_key": "-----BEGIN EC PRIVATE KEY-----\n...",
+    },
+)
+```
+</CodeGroup>
+
+## Listing end-users
+
+`GET /api/v1/builder/users`
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/users?limit=20" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const users = await parsec.get('/api/v1/builder/users', {
+  params: { limit: 20 },
+});
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/users",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    params={"limit": 20},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "users": [
+    {
+      "customer_id": "a1b2c3d4-...",
+      "external_id": "user_001",
+      "api_key": "pk_live_abc123...",
+      "tier": "free",
+      "qps_limit": 10,
+      "linked_exchanges": ["polymarket"],
+      "wallet": {
+        "eoa_address": "0x1234...",
+        "wallet_type": "eoa"
+      }
+    }
+  ],
+  "next_cursor": "eyJidWlsZGVyX2V4dGVybmFsX2lkIjoiMDAyIn0=",
+  "count": 1
+}
+```
+</ResponseExample>
+
+Pagination uses cursor-based tokens. Pass `cursor` from `next_cursor` to fetch
+the next page.
+
+## Updating end-users
+
+`PATCH /api/v1/builder/users/:customer_id`
+
+Update the rate limit for an existing end-user.
+
+<CodeGroup>
+```bash curl
+curl -X PATCH "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "qps_limit": 20 }'
+```
+```typescript TypeScript
+await parsec.patch(`/api/v1/builder/users/${user.customer_id}`, {
+  body: { qps_limit: 20 },
+});
+```
+```python Python
+requests.patch(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+    json={"qps_limit": 20},
+)
+```
+</CodeGroup>
+
+## Deactivating end-users
+
+`DELETE /api/v1/builder/users/:customer_id`
+
+Deactivates all wallets, credentials, and session signers. This is
+**not reversible** — the user will need to be re-linked to trade again.
+
+<CodeGroup>
+```bash curl
+curl -X DELETE "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+await parsec.delete(`/api/v1/builder/users/${user.customer_id}`);
+```
+```python Python
+requests.delete(
+    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+Returns `204 No Content` on success.
+
+## What's next?
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/builders/authentication">
+    How end-user authentication works in your app.
+  </Card>
+  <Card title="Order Routing" icon="arrow-right-arrow-left" href="/builders/order-routing">
+    Place orders on behalf of your users.
+  </Card>
+</CardGroup>

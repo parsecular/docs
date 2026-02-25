@@ -1,0 +1,47 @@
+---
+title: "Get SIWE Nonce"
+description: "Request a one-time nonce for SIWE authentication"
+---
+
+`GET /api/v1/auth/siwe/nonce`
+
+Returns a random 32-character hex nonce for use in a SIWE (Sign-In With
+Ethereum) authentication message. The nonce is valid for **5 minutes** and can
+only be used once.
+
+This endpoint is **unauthenticated** — no API key required.
+
+## Parameters
+
+No parameters.
+
+## Response
+
+<ResponseField name="nonce" type="string">
+  A 32-character hex string. Include this in the `Nonce:` field of your SIWE
+  message.
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/auth/siwe/nonce"
+```
+```typescript TypeScript
+const resp = await fetch('https://api.parsecapi.com/api/v1/auth/siwe/nonce');
+const { nonce } = await resp.json();
+```
+```python Python
+import requests
+
+resp = requests.get("https://api.parsecapi.com/api/v1/auth/siwe/nonce")
+nonce = resp.json()["nonce"]
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "nonce": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+}
+```
+</ResponseExample>

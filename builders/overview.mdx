@@ -1,0 +1,64 @@
+---
+title: "Builders"
+description: "Build prediction market apps on Parsec. One integration, every exchange."
+---
+
+## What is the Builder Program?
+
+The Builder Program lets you build prediction market applications on top of
+Parsec's unified API. You manage your end-users, route their orders across
+every supported exchange, and earn revenue on every transaction through
+fee escrow.
+
+**You build the app. We handle the infrastructure.**
+
+<CardGroup cols={3}>
+  <Card title="Get Started" icon="rocket" href="/builders/onboarding">
+    Apply, get approved, and start building in under a week.
+  </Card>
+  <Card title="Earn Revenue" icon="coins" href="/builders/fee-escrow">
+    Collect fees on every order through on-chain escrow.
+  </Card>
+  <Card title="Grow Your Tier" icon="arrow-trend-up" href="/builders/tiers">
+    Unlock higher revenue shares as your volume grows.
+  </Card>
+</CardGroup>
+
+## How it works
+
+```
+Your App                     Parsec API                   Exchanges
+────────                     ──────────                   ──────────
+1. Create end-users    ───►  POST /builder/users     ───►  (API keys generated)
+2. Create wallets      ───►  POST /builder/users/:id/wallet
+3. Link exchanges      ───►  POST /builder/users/:id/link
+4. Route orders        ───►  POST /orders + X-Builder-Customer-Id
+5. Collect fees        ───►  Fee escrow (on-chain)   ───►  USDC to your wallet
+```
+
+## What you get
+
+| Capability | Description |
+|------------|-------------|
+| **User management** | Create, list, update, and deactivate end-users programmatically |
+| **Managed + external wallets** | Parsec creates managed wallets (Privy EOA) or records your users' existing wallets |
+| **Unified order routing** | Place orders on Polymarket, Kalshi, Limitless, Opinion, Predict.fun |
+| **Fee escrow** | On-chain fee collection with automatic distribution to your affiliate address |
+| **Builder tiers** | Higher revenue shares as your order volume grows |
+| **QPS pool** | Dedicated rate limit pool shared across your end-users |
+| **Real-time data** | WebSocket feeds for orderbooks, trades, and prices |
+
+## Builder vs. Trader
+
+| Feature | Trader (API Key) | Builder (API Key + Impersonation) |
+|---------|-------------------|-----------------------------------|
+| Trade own account | Yes | Yes |
+| Create end-users | No | Yes |
+| Impersonate users | No | Yes (`X-Builder-Customer-Id`) |
+| Fee escrow | No | Yes |
+| QPS pool | Per-key limit | Shared pool across all users |
+| Builder tiers | N/A | Iron, Bronze, Silver, Gold, Platinum |
+
+<Card title="Ready to build?" icon="discord" href="/builders/onboarding">
+  Start the onboarding process and get your builder API key.
+</Card>

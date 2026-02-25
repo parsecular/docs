@@ -1,0 +1,276 @@
+---
+title: "Fee Escrow"
+description: "Collect on-chain fees on every order your users place."
+---
+
+## Overview
+
+Fee escrow lets you collect a fee on every order your end-users place. Fees are
+pulled on-chain via a smart contract before the order is submitted to the
+exchange.
+
+**How it works:**
+
+1. Your app collects an EIP-712 signature from the end-user authorizing the fee
+2. You include the signature in the `POST /orders` request
+3. Parsec pulls the fee from the user's wallet into the escrow contract
+4. When the order fills, fees are distributed to your affiliate address + Parsec treasury
+5. If the order is cancelled, the full fee is refunded to the user
+
+```
+User signs fee auth          Parsec pulls fee          Order fills/cancels
+──────────────────    ───►   ────────────────   ───►   ───────────────────
+EIP-712 signature            USDC → Escrow             Distribute or Refund
+in your frontend             contract                  to affiliate + treasury
+```
+
+## Escrow contract
+
+| Field | Value |
+|-------|-------|
+| **Network** | Polygon (chain ID 137) |
+| **Contract** | `0xbd25057b4d3252ca1ec26e1e5efb6480315ba142` |
+| **Token** | USDC (6 decimals) |
+
+## Setup
+
+Fee escrow is configured during your onboarding call. Your escrow settings
+include:
+
+- **`fee_bps`** — your fee rate in basis points (e.g. 25 = 0.25%)
+- **`affiliate_address`** — your 0x wallet address that receives fee payouts
+
+To change your fee escrow settings, reach out on
+[Discord](https://discord.gg/754dYDXRrx).
+
+### Check your config
+
+`GET /api/v1/builder/escrow/config`
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const config = await fetch(
+  'https://api.parsecapi.com/api/v1/builder/escrow/config',
+  { headers: { 'X-API-Key': BUILDER_KEY } },
+).then(r => r.json());
+```
+```python Python
+resp = requests.get(
+    "https://api.parsecapi.com/api/v1/builder/escrow/config",
+    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
+)
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "fee_escrow_enabled": true,
+  "fee_bps": 25,
+  "affiliate_address": "0xYourWalletAddress",
+  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142"
+}
+```
+</ResponseExample>
+
+### Config fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fee_escrow_enabled` | boolean | Whether fee escrow is active for your account |
+| `fee_bps` | number | Fee in basis points (1-10000). 25 = 0.25% |
+| `affiliate_address` | string | Your Ethereum address receiving fee payouts |
+| `escrow_contract_address` | string | The escrow smart contract address on Polygon |
+
+## Collecting fees on orders
+
+Once fee escrow is enabled by your admin, you can start collecting fees on orders.
+
+### Step 1: Compute the fee
+
+In your frontend or backend, compute the fee amount:
+
+```typescript
+// fee_bps = 25 (0.25%)
+// order size = 100 contracts at $0.55 = $55.00 USDC
+// fee = 55.00 * 25 / 10000 = $0.1375 USDC
+// In USDC base units (6 decimals): 137500
+
+const orderValue = price * size; // 55.00
+const feeUsdc = orderValue * feeBps / 10000; // 0.1375
+const feeBaseUnits = Math.ceil(feeUsdc * 1e6); // 137500
+```
+
+### Step 2: Get the user's EIP-712 signature
+
+The end-user's wallet signs a `PullFee` authorization:
+
+```typescript
+// EIP-712 domain
+const domain = {
+  name: 'ParsecFeeEscrow',
+  version: '1',
+  chainId: 137,
+  verifyingContract: '0xbd25057b4d3252ca1ec26e1e5efb6480315ba142',
+};
+
+// EIP-712 type
+const types = {
+  PullFee: [
+    { name: 'orderId', type: 'bytes32' },
+    { name: 'payer', type: 'address' },
+    { name: 'feeAmount', type: 'uint256' },
+    { name: 'deadline', type: 'uint256' },
+  ],
+};
+
+// Generate a unique order ID (random bytes32)
+const orderId = ethers.utils.hexlify(ethers.utils.randomBytes(32));
+
+// Deadline: 5 minutes from now
+const deadline = Math.floor(Date.now() / 1000) + 300;
+
+const value = {
+  orderId,
+  payer: userWalletAddress,
+  feeAmount: feeBaseUnits.toString(),
+  deadline,
+};
+
+// User signs in their wallet (MetaMask, WalletConnect, etc.)
+const signature = await signer._signTypedData(domain, types, value);
+```
+
+### Step 3: Include in the order request
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100,
+    "fee_auth": {
+      "order_id": "0xabc123...",
+      "payer": "0xUserWalletAddress",
+      "fee_amount": "137500",
+      "deadline": 1740500000,
+      "signature": "0x..."
+    },
+    "payer_address": "0xUserWalletAddress",
+    "signer_address": "0xUserWalletAddress"
+  }'
+```
+```typescript TypeScript
+const order = await fetch(
+  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
+  {
+    method: 'POST',
+    headers: {
+      'X-API-Key': BUILDER_KEY,
+      'X-Builder-Customer-Id': customerId,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      market_id: '0x1234abcd',
+      outcome: 'Yes',
+      side: 'buy',
+      price: 0.55,
+      size: 100,
+      fee_auth: {
+        order_id: orderId,
+        payer: userWalletAddress,
+        fee_amount: feeBaseUnits.toString(),
+        deadline,
+        signature,
+      },
+      payer_address: userWalletAddress,
+      signer_address: userWalletAddress,
+    }),
+  },
+);
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/orders",
+    headers={
+        "X-API-Key": BUILDER_KEY,
+        "X-Builder-Customer-Id": customer_id,
+    },
+    params={"exchange": "polymarket"},
+    json={
+        "market_id": "0x1234abcd",
+        "outcome": "Yes",
+        "side": "buy",
+        "price": 0.55,
+        "size": 100,
+        "fee_auth": {
+            "order_id": order_id,
+            "payer": user_wallet,
+            "fee_amount": str(fee_base_units),
+            "deadline": deadline,
+            "signature": signature,
+        },
+        "payer_address": user_wallet,
+        "signer_address": user_wallet,
+    },
+)
+```
+</CodeGroup>
+
+### Fee auth fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fee_auth.order_id` | string | 0x-prefixed bytes32 (unique per order, generated by your app) |
+| `fee_auth.payer` | string | 0x-prefixed address of the user paying the fee |
+| `fee_auth.fee_amount` | string | Fee in USDC base units (6 decimals) |
+| `fee_auth.deadline` | number | Unix timestamp after which the authorization expires |
+| `fee_auth.signature` | string | 0x-prefixed EIP-712 signature from the payer |
+| `payer_address` | string | Must match `fee_auth.payer` |
+| `signer_address` | string | Address that signed the authorization |
+
+## Fee distribution
+
+When the order fills on the exchange, fees are split between you and Parsec
+based on your [builder tier](/builders/tiers):
+
+| Recipient | Share | Example (Silver tier, 0.25% fee on $55 order) |
+|-----------|-------|----------------------------------------------|
+| **Your affiliate address** | Builder share (35% at Silver) | 35% of $0.1375 = $0.048 |
+| **Parsec** | Remainder | 65% of $0.1375 = $0.089 |
+
+Your share percentage increases as you move up tiers.
+
+**Partial fills:** Fees are distributed proportionally. If 60 of 100 contracts
+fill, 60% of the fee is distributed and 40% is refunded.
+
+## Automatic refunds
+
+Fees are automatically refunded to the payer in these cases:
+
+| Scenario | When |
+|----------|------|
+| Order cancelled | Immediately on `DELETE /orders/:id` |
+| Order fails to submit | Immediately (background task) |
+| Order stuck pending | After 10 minutes with no exchange order ID |
+| Stale order | After 24 hours pending |
+
+<Note>
+Refunds are handled by Parsec's escrow monitor (runs every 60 seconds).
+You do not need to implement refund logic.
+</Note>
+
+## Supported exchanges
+
+Fee escrow is currently supported on **Polymarket only**. Support for additional
+exchanges will be added based on builder demand.

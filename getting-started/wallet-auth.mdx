@@ -1,0 +1,325 @@
+---
+title: "Wallet Auth (SIWE)"
+description: "Authenticate with your Ethereum wallet — no browser required."
+---
+
+## Overview
+
+Sign-In With Ethereum (SIWE) lets you authenticate directly with your MetaMask
+or any EVM wallet. You sign a message, Parsec verifies it, and you get an API
+key. No browser login, no OAuth flow — pure headless authentication for scripts,
+bots, and SDK integrations.
+
+```
+Your Wallet           Your Script              Parsec API
+──────────            ───────────              ──────────
+                      GET /auth/siwe/nonce ──► { nonce: "abc123..." }
+                              │
+Sign SIWE message ◄───────────
+with your private key
+        │
+        ▼
+                      POST /auth/siwe ────────► { api_key: "pk_live_...",
+                        { message, signature }    customer_id: "...",
+                                                  wallet_address: "0x...",
+                                                  is_new: true }
+                              │
+                      Use API key for all
+                      subsequent requests
+```
+
+## Step 1: Get a nonce
+
+Request a one-time nonce from Parsec. Nonces are valid for 5 minutes and can
+only be used once.
+
+<CodeGroup>
+```bash curl
+curl "https://api.parsecapi.com/api/v1/auth/siwe/nonce"
+```
+```typescript TypeScript
+const resp = await fetch('https://api.parsecapi.com/api/v1/auth/siwe/nonce');
+const { nonce } = await resp.json();
+```
+```python Python
+import requests
+
+resp = requests.get("https://api.parsecapi.com/api/v1/auth/siwe/nonce")
+nonce = resp.json()["nonce"]
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "nonce": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+}
+```
+</ResponseExample>
+
+## Step 2: Build and sign the SIWE message
+
+Construct an [EIP-4361](https://eips.ethereum.org/EIPS/eip-4361) message and
+sign it with your wallet. The message must include the nonce from Step 1.
+
+<CodeGroup>
+```typescript TypeScript (ethers.js)
+import { ethers } from 'ethers';
+
+const wallet = new ethers.Wallet('YOUR_PRIVATE_KEY');
+const address = wallet.address;
+const now = new Date().toISOString();
+
+const message = `parsec.finance wants you to sign in with your Ethereum account:
+${address}
+
+Sign in to Parsec
+
+URI: https://parsec.finance
+Version: 1
+Chain ID: 1
+Nonce: ${nonce}
+Issued At: ${now}`;
+
+const signature = await wallet.signMessage(message);
+```
+```python Python (eth_account)
+from eth_account import Account
+from eth_account.messages import encode_defunct
+from datetime import datetime, timezone
+
+private_key = "YOUR_PRIVATE_KEY"
+account = Account.from_key(private_key)
+address = account.address
+now = datetime.now(timezone.utc).isoformat()
+
+message = f"""parsec.finance wants you to sign in with your Ethereum account:
+{address}
+
+Sign in to Parsec
+
+URI: https://parsec.finance
+Version: 1
+Chain ID: 1
+Nonce: {nonce}
+Issued At: {now}"""
+
+signable = encode_defunct(text=message)
+signed = account.sign_message(signable)
+signature = signed.signature.hex()
+```
+</CodeGroup>
+
+<Warning>
+The `Issued At` timestamp must be within 5 minutes of the server's clock.
+Use the current UTC time when constructing the message.
+</Warning>
+
+## Step 3: Authenticate
+
+Send the signed message to Parsec. You'll receive an API key that you can use
+for all subsequent requests.
+
+<CodeGroup>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/auth/siwe" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "parsec.finance wants you to sign in with your Ethereum account:\n0xYourAddress\n\nSign in to Parsec\n\nURI: https://parsec.finance\nVersion: 1\nChain ID: 1\nNonce: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6\nIssued At: 2026-02-24T12:00:00Z",
+    "signature": "0x..."
+  }'
+```
+```typescript TypeScript
+const resp = await fetch('https://api.parsecapi.com/api/v1/auth/siwe', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message, signature }),
+});
+const auth = await resp.json();
+console.log(auth.api_key);     // "pk_live_..."
+console.log(auth.is_new);      // true on first auth, false on repeat
+```
+```python Python
+resp = requests.post(
+    "https://api.parsecapi.com/api/v1/auth/siwe",
+    json={"message": message, "signature": signature},
+)
+auth = resp.json()
+print(auth["api_key"])       # "pk_live_..."
+print(auth["is_new"])        # True on first auth, False on repeat
+```
+</CodeGroup>
+
+<ResponseExample>
+```json
+{
+  "api_key": "pk_live_abc123def456abc123def456abc12345",
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "wallet_address": "0xab5801a7d398351b8be11c439e05c5b3259aec9b",
+  "is_new": true
+}
+```
+</ResponseExample>
+
+<Info>
+**Idempotent.** Authenticating with the same wallet always returns the same API
+key. The `is_new` field tells you whether this was a first-time registration
+(`true`) or a returning user (`false`).
+</Info>
+
+## Step 4: Use your API key
+
+Your API key works like any other Parsec key — pass it in the `X-API-Key` header.
+
+<CodeGroup>
+```bash curl
+curl -H "X-API-Key: pk_live_abc123def456abc123def456abc12345" \
+  "https://api.parsecapi.com/api/v1/ping?exchange=polymarket"
+```
+```typescript TypeScript
+import ParsecAPI from 'parsec-api';
+
+const client = new ParsecAPI({ apiKey: auth.api_key });
+const markets = await client.markets.list({ exchanges: ['polymarket'], limit: 5 });
+```
+```python Python
+from parsec_api import ParsecAPI
+
+client = ParsecAPI(api_key=auth["api_key"])
+markets = client.markets.list(exchanges=["polymarket"], limit=5)
+```
+</CodeGroup>
+
+## Trading with SIWE accounts
+
+SIWE authentication gives you full access to read-only endpoints (markets,
+orderbooks, prices, trades) immediately. For trading, you need exchange
+credentials:
+
+| Exchange | How to trade |
+|----------|-------------|
+| **Kalshi** | Store your Kalshi API credentials via `PUT /credentials` |
+| **Polymarket** | Register a managed wallet via `POST /wallet`, then link via `POST /link` |
+
+<CodeGroup>
+```typescript TypeScript
+// Option A: Store Kalshi credentials
+await client.credentials.update({
+  api_key_id: 'your-kalshi-key-id',
+  private_key: '-----BEGIN RSA PRIVATE KEY-----\nMIIE...',
+});
+
+// Option B: Set up managed wallet for Polymarket
+const wallet = await client.wallet.register();
+const link = await client.link.create({ exchange: 'polymarket' });
+```
+```python Python
+# Option A: Store Kalshi credentials
+client.credentials.update(
+    api_key_id="your-kalshi-key-id",
+    private_key="-----BEGIN RSA PRIVATE KEY-----\nMIIE...",
+)
+
+# Option B: Set up managed wallet for Polymarket
+wallet = client.wallet.register()
+link = client.link.create(exchange="polymarket")
+```
+</CodeGroup>
+
+## Full example
+
+<CodeGroup>
+```typescript TypeScript
+import { ethers } from 'ethers';
+
+const BASE = 'https://api.parsecapi.com/api/v1';
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!);
+
+// 1. Get nonce
+const { nonce } = await (await fetch(`${BASE}/auth/siwe/nonce`)).json();
+
+// 2. Build and sign SIWE message
+const message = `parsec.finance wants you to sign in with your Ethereum account:
+${wallet.address}
+
+Sign in to Parsec
+
+URI: https://parsec.finance
+Version: 1
+Chain ID: 1
+Nonce: ${nonce}
+Issued At: ${new Date().toISOString()}`;
+
+const signature = await wallet.signMessage(message);
+
+// 3. Authenticate
+const auth = await (await fetch(`${BASE}/auth/siwe`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message, signature }),
+})).json();
+
+// 4. Use the API key
+const markets = await (await fetch(`${BASE}/markets?exchanges=polymarket&limit=3`, {
+  headers: { 'X-API-Key': auth.api_key },
+})).json();
+
+console.log(`Authenticated as ${auth.wallet_address}`);
+console.log(`Found ${markets.markets.length} markets`);
+```
+```python Python
+import requests
+from eth_account import Account
+from eth_account.messages import encode_defunct
+from datetime import datetime, timezone
+
+BASE = "https://api.parsecapi.com/api/v1"
+account = Account.from_key("YOUR_PRIVATE_KEY")
+
+# 1. Get nonce
+nonce = requests.get(f"{BASE}/auth/siwe/nonce").json()["nonce"]
+
+# 2. Build and sign SIWE message
+now = datetime.now(timezone.utc).isoformat()
+message = f"""parsec.finance wants you to sign in with your Ethereum account:
+{account.address}
+
+Sign in to Parsec
+
+URI: https://parsec.finance
+Version: 1
+Chain ID: 1
+Nonce: {nonce}
+Issued At: {now}"""
+
+signed = account.sign_message(encode_defunct(text=message))
+
+# 3. Authenticate
+auth = requests.post(f"{BASE}/auth/siwe", json={
+    "message": message,
+    "signature": signed.signature.hex(),
+}).json()
+
+# 4. Use the API key
+markets = requests.get(f"{BASE}/markets", params={
+    "exchanges": "polymarket", "limit": 3,
+}, headers={"X-API-Key": auth["api_key"]}).json()
+
+print(f"Authenticated as {auth['wallet_address']}")
+print(f"Found {len(markets['markets'])} markets")
+```
+</CodeGroup>
+
+## What's next?
+
+<CardGroup cols={3}>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Browse all REST endpoints.
+  </Card>
+  <Card title="Order Router" icon="arrow-right-arrow-left" href="/order-router/overview">
+    Place, cancel, and manage orders.
+  </Card>
+  <Card title="WebSocket" icon="signal" href="/websocket/overview">
+    Stream real-time orderbooks and trades.
+  </Card>
+</CardGroup>
