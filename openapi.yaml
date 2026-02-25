@@ -1250,10 +1250,32 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     TooManyRequestsError:
-      description: "Rate limit exceeded. Includes Retry-After header (seconds) plus tier and limit_qps fields in the JSON body. Free: 10 req/sec, Pro: 60 req/sec (120 burst), Scale: 200 req/sec (400 burst)."
+      description: |
+        Rate limit exceeded. Two distinct limit types can trigger a 429:
+
+        **Per-second (QPS):** `code: "rate_limit_exceeded"`, `retryable: true`.
+        Free: 10 req/sec, Pro: 60 req/sec (120 burst), Scale: 200 req/sec (400 burst).
+
+        **Monthly:** `code: "monthly_limit_exceeded"`, `retryable: false`.
+        Free: 50,000 req/month, Pro: 5,000,000 req/month, Scale: unlimited.
+
+        Monthly usage headers are included on every successful response for capped tiers:
+        `x-ratelimit-monthly-limit`, `x-ratelimit-monthly-remaining`, `x-ratelimit-monthly-reset`.
       headers:
         Retry-After:
-          description: Seconds until the next request is allowed
+          description: Seconds until the next request is allowed (QPS limits only)
+          schema:
+            type: integer
+        x-ratelimit-monthly-limit:
+          description: Monthly request cap for the customer's tier (0 = unlimited)
+          schema:
+            type: integer
+        x-ratelimit-monthly-remaining:
+          description: Requests remaining in the current billing month
+          schema:
+            type: integer
+        x-ratelimit-monthly-reset:
+          description: Unix timestamp (seconds) when the monthly counter resets
           schema:
             type: integer
       content:
@@ -1305,6 +1327,7 @@ components:
             - not_supported
             - insufficient_funds
             - rate_limit_exceeded
+            - monthly_limit_exceeded
             - service_unavailable
             - not_found
         retryable:
