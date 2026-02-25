@@ -77,7 +77,6 @@ resources:
     methods:
       balance: get /api/v1/balance
       ping: get /api/v1/ping
-      capabilities: get /api/v1/session/capabilities
       user_activity: get /api/v1/user-activity
       update_credentials: put /api/v1/credentials
 

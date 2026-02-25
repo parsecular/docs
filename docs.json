@@ -93,8 +93,7 @@
               "api/get-balance",
               "api/update-credentials",
               "api/get-approvals",
-              "api/set-approvals",
-              "api/get-capabilities"
+              "api/set-approvals"
             ]
           }
         ]

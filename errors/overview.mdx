@@ -5,11 +5,40 @@ description: "HTTP status codes, error responses, and SDK error handling"
 
 ## Error Response Format
 
-All error responses return a JSON object with an `error` field:
+All error responses return a JSON object with three fields:
 
 ```json
-{ "error": "Error message here" }
+{
+  "error": "human-readable message",
+  "code": "machine_readable_code",
+  "retryable": false
+}
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Human-readable error message |
+| `code` | string | Machine-readable error code (see table below) |
+| `retryable` | boolean | `true` if the request can be safely retried (only for `rate_limit_exceeded` and `service_unavailable`) |
+
+### Error Codes
+
+| Code | Meaning |
+|------|---------|
+| `unauthorized` | Missing or invalid API key |
+| `credentials_required` | Exchange credentials not configured |
+| `authentication_failed` | Exchange-level auth failure |
+| `missing_parameter` | Required parameter missing |
+| `bad_request` | Invalid request format or parameters |
+| `exchange_not_found` | Unknown exchange identifier |
+| `market_not_found` | Market does not exist |
+| `order_not_found` | Order does not exist |
+| `not_found` | Generic resource not found |
+| `insufficient_funds` | Not enough balance for the operation |
+| `not_supported` | Exchange does not support this operation |
+| `rate_limit_exceeded` | Too many requests (retryable) |
+| `service_unavailable` | Upstream exchange down (retryable) |
+| `internal_error` | Unexpected server failure |
 
 ## HTTP Status Codes
 
@@ -27,14 +56,14 @@ All error responses return a JSON object with an `error` field:
 
 ## Rate Limiting
 
-When rate limited, the response includes a `Retry-After` header:
+When rate limited, the response includes a `Retry-After` header plus your current tier and QPS limit:
 
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 1
 Content-Type: application/json
 
-{ "error": "rate limit exceeded" }
+{ "error": "rate limit exceeded", "code": "rate_limit_exceeded", "retryable": true, "tier": "free", "limit_qps": 10 }
 ```
 
 Both SDKs automatically retry on `429` responses with exponential backoff (up to 2 retries).
@@ -88,11 +117,11 @@ except APIStatusError as err:
 ### `401` — Invalid API Key
 
 ```json
-{ "error": "invalid API key" }
+{ "error": "invalid API key", "code": "unauthorized", "retryable": false }
 ```
 
 ```json
-{ "error": "missing X-API-Key header" }
+{ "error": "missing X-API-Key header", "code": "unauthorized", "retryable": false }
 ```
 
 Make sure you're passing your API key in the `X-API-Key` header, or set the `PARSEC_API_KEY` environment variable for the SDKs.
@@ -100,15 +129,23 @@ Make sure you're passing your API key in the `X-API-Key` header, or set the `PAR
 ### `403` — Exchange Credentials Issue
 
 ```json
-{ "error": "exchange authentication failed: kalshi" }
+{ "error": "exchange authentication failed: kalshi", "code": "authentication_failed", "retryable": false }
 ```
 
 Your exchange credentials are missing or invalid. Go to **Settings** in your Parsec dashboard and re-enter your credentials for the affected exchange.
 
+### `400` — Historical Data Tier Limit
+
+```json
+{ "error": "historical data limited to 5 days on the free tier — upgrade for more", "code": "bad_request", "retryable": false }
+```
+
+Your `start_ts` requests data older than your tier allows. Free: 5 days, Pro: 30 days, Scale: unlimited.
+
 ### `400` — Missing Required Parameters
 
 ```json
-{ "error": "exchanges parameter is required" }
+{ "error": "exchanges parameter is required", "code": "missing_parameter", "retryable": false }
 ```
 
 Check the [API Reference](/api/list-exchanges) for required parameters on each endpoint.

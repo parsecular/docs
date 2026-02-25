@@ -25,6 +25,37 @@ curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?excha
 | **Web signup** | Sign up at [parsecapi.com](https://parsecapi.com) | [Direct trader](/getting-started/direct-trader) |
 | **Builder program** | Get a builder key with user management capabilities | [Builder onboarding](/builders/onboarding) |
 
+## Quick Start
+
+Every market in Parsec has a **`parsec_id`** in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`). Use `/markets` to find a market, then pass its `parsec_id` to any data endpoint.
+
+```bash
+# 1. Find a market
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&search=btc&limit=3"
+# → Returns markets with parsec_id, e.g. "polymarket:572473"
+
+# 2. Get live orderbook
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes"
+
+# 3. Get current price (last 7 days of hourly candles)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price?parsec_id=polymarket:572473&interval=1h"
+
+# 4. Get historical trades (timestamps are Unix seconds)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&start_ts=1771545600&end_ts=1771632000"
+
+# 5. Get historical orderbook snapshots (1h window)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&start_ts=1771581600&end_ts=1771585200"
+```
+
+<Tip>
+**Timestamps** are Unix seconds (not milliseconds). Add `start_ts` to any data endpoint to switch from live to historical mode. Use `cursor` to paginate through large result sets.
+</Tip>
+
 ## Response Format
 
 Single-resource endpoints return the object directly. List endpoints return a wrapper with pagination:
@@ -39,8 +70,10 @@ Single-resource endpoints return the object directly. List endpoints return a wr
 On error:
 
 ```json
-{ "error": "Error message here" }
+{ "error": "human-readable message", "code": "machine_readable_code", "retryable": false }
 ```
+
+See [Error Handling](/errors/overview) for the full list of error codes.
 
 ## Available Endpoints
 
@@ -79,7 +112,6 @@ On error:
 | `PUT` | [`/credentials`](/api/update-credentials) | Update exchange credentials |
 | `GET` | [`/approvals`](/api/get-approvals) | Check token approvals |
 | `POST` | [`/approvals`](/api/set-approvals) | Set token approvals |
-| `GET` | [`/session/capabilities`](/api/get-capabilities) | Get linked exchanges and tier |
 
 ### WebSocket
 | Method | Endpoint | Description |
@@ -98,20 +130,34 @@ All API requests are rate limited per API key using a token bucket algorithm. Li
 
 | Tier | Sustained (req/sec) | Burst |
 |------|---------------------|-------|
-| Free | 2 | 2 (no burst) |
+| Free | 10 | 10 (no burst) |
 | Pro | 60 | 120 |
+| Scale | 200 | 400 |
 
-When rate limited, you'll receive a `429 Too Many Requests` response with a `Retry-After` header:
+When rate limited, you'll receive a `429 Too Many Requests` response with a `Retry-After` header.
+The response includes your current `tier` and `limit_qps` so you know which plan you're on:
 
 ```
 HTTP/1.1 429 Too Many Requests
 Retry-After: 1
 Content-Type: application/json
 
-{ "error": "rate limit exceeded" }
+{ "error": "rate limit exceeded", "code": "rate_limit_exceeded", "retryable": true, "tier": "free", "limit_qps": 10 }
 ```
 
 The SDKs handle 429 responses automatically with 2 retries and exponential backoff.
+
+## Historical Data Limits
+
+Historical data endpoints (`/trades`, `/price`, `/orderbook` with `start_ts`) are limited by tier:
+
+| Tier | Max Lookback |
+|------|-------------|
+| Free | 5 days |
+| Pro | 30 days |
+| Scale | Unlimited |
+
+Requests for data older than your tier allows return a `400` error with a descriptive message. The error includes the tier name and allowed lookback window.
 
 ## Pagination
 

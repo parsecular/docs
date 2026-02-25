@@ -27,7 +27,7 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
 </ParamField>
 
 <ParamField query="start_ts" type="number">
-  Unix seconds start timestamp (inclusive).
+  Unix seconds start timestamp (inclusive). Historical data is tier-gated: Free: 5 days, Pro: 30 days, Scale: unlimited. Requests beyond your limit return `400`.
 </ParamField>
 
 <ParamField query="end_ts" type="number">
@@ -81,6 +81,21 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
         <ResponseField name="source_channel" type="string">
           Data source channel identifier.
         </ResponseField>
+        <ResponseField name="outcome" type="string | null">
+          Trade outcome side (e.g. `"Yes"`, `"No"`). Present when the exchange provides this.
+        </ResponseField>
+        <ResponseField name="yes_price" type="number | null">
+          YES-side price from exchange data (never derived). May be `null` if the trade was on the NO side.
+        </ResponseField>
+        <ResponseField name="no_price" type="number | null">
+          NO-side price from exchange data (never derived). May be `null` if the trade was on the YES side.
+        </ResponseField>
+        <ResponseField name="tx_hash" type="string | null">
+          Transaction hash (Polymarket only).
+        </ResponseField>
+        <ResponseField name="taker_address" type="string | null">
+          Taker wallet address (Polymarket `proxy_wallet`). `null` for exchanges that don't expose this.
+        </ResponseField>
       </Expandable>
     </ResponseField>
     <ResponseField name="has_more" type="boolean">
@@ -119,7 +134,12 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "side": "buy",
       "aggressor_side": "buy",
       "timestamp": "2026-02-12T07:18:18.845367Z",
-      "source_channel": "kalshi_rest_trade"
+      "source_channel": "kalshi_rest_trade",
+      "outcome": "Yes",
+      "yes_price": 0.21,
+      "no_price": null,
+      "tx_hash": null,
+      "taker_address": null
     }
   ],
   "has_more": true,
@@ -131,7 +151,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 ### Trades in a time window
 
 ```bash
-# Fetch trades from a 24-hour window
+# Fetch trades from a time window (24h example)
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&outcome=yes&start_ts=1771545600&end_ts=1771632000&limit=100"
   # start_ts = Feb 20 2026 00:00 UTC, end_ts = Feb 21 2026 00:00 UTC

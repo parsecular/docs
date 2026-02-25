@@ -14,7 +14,7 @@ wss://api.parsecapi.com/ws
 Send an auth message immediately after connecting using either an API key or a terminal token:
 
 ```json
-{ "type": "auth", "api_key": "sk_your_api_key" }
+{ "type": "auth", "api_key": "pk_live_YOUR_KEY" }
 ```
 
 ```json
@@ -233,20 +233,25 @@ Use `server_seq` to detect gaps. If you receive a sequence number more than 1 hi
 | 2003 | `exchange_unavailable` | Exchange is unavailable |
 | 2005 | `invalid_outcome` | Invalid outcome value |
 | 3001 | `rate_limited` | Subscribe rate limit exceeded |
-| 3002 | `max_subscriptions` | Max subscriptions reached |
+| 3002 | `max_subscriptions` | Max subscriptions reached (includes tier and limit in message) |
 
 ## Limits
 
 Limits depend on your API key tier:
 
-| Limit | Free | Pro |
-|-------|------|-----|
-| Max subscriptions (total across connections) | 20 | 500 |
-| Max orderbook depth (levels/side) | 10 | 100 |
-| Subscribe rate limit | 3 req/sec | 3 req/sec |
-| Authentication timeout | 15 sec | 15 sec |
+| Limit | Free | Pro | Scale |
+|-------|------|-----|-------|
+| Max subscriptions (total across connections) | 5 | 500 | 2000 |
+| Max orderbook depth (levels/side) | 10 | 100 | 100 |
+| Subscribe rate limit | 3 req/sec | 3 req/sec | 3 req/sec |
+| Authentication timeout | 15 sec | 15 sec | 15 sec |
 
-When you exceed the subscription limit, the server responds with error code `3002`.
+When you exceed the subscription limit, the server responds with error code `3002`. The error message includes your current tier and limit:
+
+```json
+{ "type": "error", "code": 3002, "message": "max subscriptions reached (limit: 5, tier: free)" }
+```
+
 When you exceed the subscribe rate limit, the server responds with error code `3001`.
 
 ## Supported Exchanges
@@ -314,7 +319,7 @@ If you need lower-level control, you can use the WebSocket API directly:
 const ws = new WebSocket('wss://api.parsecapi.com/ws');
 
 ws.onopen = () => {
-  ws.send(JSON.stringify({ type: 'auth', api_key: 'sk_your_api_key' }));
+  ws.send(JSON.stringify({ type: 'auth', api_key: 'pk_live_YOUR_KEY' }));
 };
 
 ws.onmessage = (event) => {

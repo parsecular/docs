@@ -40,6 +40,8 @@ Returns OHLCV candlestick data for a market. Supports two modes:
   - `1d`: 14 days
   - `1w`: 30 days
   - `max`: 30 days
+
+  These defaults are clamped to your tier's history limit (Free: 5 days, Pro: 30 days, Scale: unlimited). Explicit `start_ts` beyond your tier limit returns `400`.
 </ParamField>
 
 <ParamField query="end_ts" type="number">

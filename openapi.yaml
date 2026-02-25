@@ -8,8 +8,6 @@ info:
     Success responses return the resource directly (no envelope).
     Error responses use HTTP status codes and a JSON body of the form `{ "error": "...", "code": "...", "retryable": true|false }`.
 servers:
-  - url: http://localhost:3000
-    description: Local development
   - url: https://api.parsecapi.com
     description: Production
 security:
@@ -160,7 +158,7 @@ paths:
       tags:
         - Orderbook
       summary: Get live L2 orderbook or historical snapshots
-      description: "When start_ts or end_ts is provided, returns historical orderbook snapshots instead of a live L2 snapshot. Large time ranges are handled via internal chunking and may be slow for very wide windows. In historical mode, limit defaults to 500 (max 1000)."
+      description: "When start_ts or end_ts is provided, returns historical orderbook snapshots instead of a live L2 snapshot. Large time ranges are handled via internal chunking and may be slow for very wide windows. In historical mode, limit defaults to 500 (max 1000). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
@@ -243,7 +241,7 @@ paths:
       tags:
         - Price
       summary: Get historical OHLCV candlesticks for a unified market
-      description: Returns an array of candlesticks with timestamps at period start (UTC).
+      description: "Returns an array of candlesticks with timestamps at period start (UTC). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
@@ -322,7 +320,7 @@ paths:
       tags:
         - Trades
       summary: Get recent public trades ("tape") for a unified market outcome
-      description: Returns an array of recent trades for the requested market+outcome (normalized prices 0.0-1.0).
+      description: "Returns an array of recent trades for the requested market+outcome (normalized prices 0.0-1.0). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
@@ -1093,23 +1091,6 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /api/v1/session/capabilities:
-    get:
-      operationId: getSessionCapabilities
-      tags:
-        - Account
-      summary: Get session capabilities for the authenticated API key
-      description: Returns the customer's tier and list of linked exchanges.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SessionCapabilitiesResponse"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-
   /api/v1/billing/checkout:
     post:
       operationId: createCheckoutSession
@@ -1130,6 +1111,14 @@ paths:
             enum: [pro, scale]
             default: pro
           description: Target tier to upgrade to.
+        - name: billing_period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [monthly, yearly, annual]
+            default: monthly
+          description: "Billing period for the subscription. `yearly` and `annual` are synonyms. Yearly plans include a 20% discount. If a yearly price is not configured for the target tier, falls back to monthly."
       responses:
         "200":
           description: Checkout session URL
@@ -1261,7 +1250,7 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     TooManyRequestsError:
-      description: "Rate limit exceeded. Includes a Retry-After header (seconds). Free tier: 10 req/sec, Pro tier: 60 req/sec (120 burst)."
+      description: "Rate limit exceeded. Includes Retry-After header (seconds) plus tier and limit_qps fields in the JSON body. Free: 10 req/sec, Pro: 60 req/sec (120 burst), Scale: 200 req/sec (400 burst)."
       headers:
         Retry-After:
           description: Seconds until the next request is allowed
@@ -1321,6 +1310,12 @@ components:
         retryable:
           type: boolean
           description: Whether the request can be retried.
+        tier:
+          type: string
+          description: Customer tier. Present on 429 rate limit responses.
+        limit_qps:
+          type: integer
+          description: QPS limit for the customer's tier. Present on 429 rate limit responses.
 
     Outcome:
       type: object
@@ -2251,6 +2246,7 @@ components:
         - refresh_balance
         - websocket
         - fetch_orderbook_history
+        - fetch_fills
       properties:
         fetch_markets:
           type: boolean
@@ -2280,6 +2276,10 @@ components:
           type: boolean
         fetch_orderbook_history:
           type: boolean
+        fetch_fills:
+          type: boolean
+
+  # Note: fetch_fills is not yet enabled on any exchange. Listed for forward-compat.
 
     ExchangeCapability:
       type: object
@@ -2296,21 +2296,6 @@ components:
           description: Human-readable exchange name.
         has:
           $ref: "#/components/schemas/CapabilityMap"
-
-    SessionCapabilitiesResponse:
-      type: object
-      required:
-        - linked_exchanges
-        - tier
-      properties:
-        linked_exchanges:
-          type: array
-          items:
-            type: string
-          description: Exchange IDs the customer has credentials linked for.
-        tier:
-          type: string
-          description: Customer tier (e.g., "free", "pro", "admin").
 
     ExecutionEstimateResponse:
       type: object
