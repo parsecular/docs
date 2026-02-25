@@ -15,6 +15,7 @@ servers:
 security:
   - ApiKeyAuth: []
 tags:
+  - name: Authentication
   - name: Exchanges
   - name: Markets
   - name: Orderbook
@@ -1138,6 +1139,59 @@ paths:
           description: Event received
         "401":
           description: Invalid or missing Stripe signature
+
+  /api/v1/auth/siwe/nonce:
+    get:
+      operationId: getSiweNonce
+      tags:
+        - Authentication
+      summary: Get a one-time nonce for SIWE authentication
+      description: |
+        Returns a random 32-character hex nonce for use in a SIWE (Sign-In With
+        Ethereum) authentication message. Valid for 5 minutes, single-use.
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiweNonceResponse"
+
+  /api/v1/auth/siwe:
+    post:
+      operationId: siweAuthenticate
+      tags:
+        - Authentication
+      summary: Authenticate with a signed SIWE message
+      description: |
+        Verifies a signed EIP-4361 SIWE message and returns an API key.
+        Idempotent — the same wallet always receives the same API key.
+        Creates a new user on first authentication.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiweAuthenticateRequest"
+      responses:
+        "200":
+          description: Returning user (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiweAuthenticateResponse"
+        "201":
+          description: New user created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiweAuthenticateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
 components:
   securitySchemes:
@@ -2280,6 +2334,57 @@ components:
           items:
             type: string
           description: Updated list of all linked exchange identifiers.
+
+    SiweNonceResponse:
+      type: object
+      required:
+        - nonce
+      properties:
+        nonce:
+          type: string
+          description: A 32-character hex nonce. Valid for 5 minutes, single-use.
+          example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+
+    SiweAuthenticateRequest:
+      type: object
+      required:
+        - message
+        - signature
+      properties:
+        message:
+          type: string
+          description: |
+            The full EIP-4361 SIWE message text. Must include a valid Nonce from
+            GET /auth/siwe/nonce and an Issued At timestamp within 5 minutes.
+        signature:
+          type: string
+          description: |
+            EIP-191 personal_sign signature of the message, hex-encoded with 0x prefix.
+          example: "0x1234567890abcdef..."
+
+    SiweAuthenticateResponse:
+      type: object
+      required:
+        - api_key
+        - customer_id
+        - wallet_address
+        - is_new
+      properties:
+        api_key:
+          type: string
+          description: Parsec API key (pk_live_...). Use in X-API-Key header.
+          example: "pk_live_abc123def456abc123def456abc12345"
+        customer_id:
+          type: string
+          description: Unique customer identifier (UUID).
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        wallet_address:
+          type: string
+          description: The authenticated Ethereum address, lowercased.
+          example: "0xab5801a7d398351b8be11c439e05c5b3259aec9b"
+        is_new:
+          type: boolean
+          description: True if first-time registration, false if returning user.
 
   parameters:
     XExchangeCredentials:

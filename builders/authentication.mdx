@@ -242,6 +242,17 @@ resp = requests.get(
 ```
 </ResponseExample>
 
+## End-user wallet types
+
+Builders support two wallet types for end-users. Both work with impersonation,
+order routing, and fee escrow. See
+[User Management](/builders/user-management#wallet-setup) for setup details.
+
+| Wallet type | Setup | When to use |
+|-------------|-------|-------------|
+| **Managed (Privy EOA)** | `POST /builder/users/:id/wallet` | User doesn't have a wallet — Parsec creates one |
+| **External** | `wallet_address` at user creation | User already has MetaMask or another EVM wallet |
+
 ## Error responses
 
 | Code | Meaning |

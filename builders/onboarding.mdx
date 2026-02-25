@@ -26,12 +26,12 @@ what you're building. Include:
 
 ## Step 2: Intro call (30 minutes)
 
-An admin will schedule a **30-minute call** to:
+We'll schedule a **30-minute call** to:
 
 1. Understand your use case and technical requirements
 2. Walk through the Builder API and fee escrow setup
-3. Provision your builder account (`account_type: "builder"`)
-4. Set your initial QPS pool allocation and tier
+3. Provision your builder account and API key
+4. Configure your fee escrow settings (fee rate + affiliate address)
 5. Answer any integration questions
 
 After the call, you'll receive:
@@ -41,7 +41,7 @@ After the call, you'll receive:
 | **Builder API key** | `pk_live_...` with `account_type: "builder"` |
 | **QPS pool** | Default 500 QPS shared across all your end-users |
 | **Fee escrow config** | Fee BPS, affiliate address, escrow contract address |
-| **Builder tier** | Starting at Bronze |
+| **Builder tier** | Starting at Iron (upgrades automatically with volume) |
 
 ## Step 3: Set up your environment
 
@@ -85,7 +85,8 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   -H "Content-Type: application/json" \
   -d '{
     "external_id": "user_001",
-    "email": "alice@example.com"
+    "email": "alice@example.com",
+    "wallet_address": "0xUserMetaMaskAddress"
   }'
 ```
 ```typescript TypeScript
@@ -93,6 +94,7 @@ const user = await parsec.post('/api/v1/builder/users', {
   body: {
     external_id: 'user_001',
     email: 'alice@example.com',
+    wallet_address: '0xUserMetaMaskAddress', // optional: record their external wallet
   },
 });
 console.log(user.customer_id, user.api_key);
@@ -103,7 +105,11 @@ import requests
 resp = requests.post(
     "https://api.parsecapi.com/api/v1/builder/users",
     headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-    json={"external_id": "user_001", "email": "alice@example.com"},
+    json={
+        "external_id": "user_001",
+        "email": "alice@example.com",
+        "wallet_address": "0xUserMetaMaskAddress",  # optional: record their external wallet
+    },
 )
 user = resp.json()
 print(user["customer_id"], user["api_key"])

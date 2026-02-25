@@ -25,6 +25,7 @@
           {
             "group": "Setup Guides",
             "pages": [
+              "getting-started/wallet-auth",
               "getting-started/direct-trader",
               "getting-started/managed-wallet",
               "getting-started/per-request-credentials"
@@ -34,16 +35,28 @@
       },
       {
         "tab": "API Reference",
-        "pages": [
-          "api/list-exchanges",
-          "api/list-markets",
-          "api/get-orderbook",
-          "api/get-execution-price",
-          "api/get-price-history",
-          "api/get-trades",
-          "api/list-events",
-          "api/user-activity",
-          "api/ws-usage"
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/siwe-nonce",
+              "api/siwe-authenticate"
+            ]
+          },
+          {
+            "group": "Market Data",
+            "pages": [
+              "api/list-exchanges",
+              "api/list-markets",
+              "api/get-orderbook",
+              "api/get-execution-price",
+              "api/get-price-history",
+              "api/get-trades",
+              "api/list-events",
+              "api/user-activity",
+              "api/ws-usage"
+            ]
+          }
         ]
       },
       {

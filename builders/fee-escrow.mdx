@@ -34,17 +34,14 @@ in your frontend             contract                  to affiliate + treasury
 
 ## Setup
 
-Fee escrow is configured by Parsec admins during your onboarding call. The admin
-will set:
+Fee escrow is configured during your onboarding call. Your escrow settings
+include:
 
-- **`fee_escrow_enabled`** — whether fee escrow is active for your builder account
-- **`fee_bps`** — the fee rate in basis points (e.g. 25 = 0.25%)
+- **`fee_bps`** — your fee rate in basis points (e.g. 25 = 0.25%)
 - **`affiliate_address`** — your 0x wallet address that receives fee payouts
 
-<Note>
-You cannot modify these settings yourself. To change your fee escrow config,
-contact your Parsec admin on [Discord](https://discord.gg/754dYDXRrx).
-</Note>
+To change your fee escrow settings, reach out on
+[Discord](https://discord.gg/754dYDXRrx).
 
 ### Check your config
 
@@ -75,11 +72,7 @@ resp = requests.get(
   "fee_escrow_enabled": true,
   "fee_bps": 25,
   "affiliate_address": "0xYourWalletAddress",
-  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142",
-  "min_fee_usdc": "100000",
-  "min_fee_bps": 1,
-  "treasury_address": "0x...",
-  "affiliate_fee_bps": 2000
+  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142"
 }
 ```
 </ResponseExample>
@@ -88,14 +81,10 @@ resp = requests.get(
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `fee_escrow_enabled` | boolean | Whether fee escrow is active |
+| `fee_escrow_enabled` | boolean | Whether fee escrow is active for your account |
 | `fee_bps` | number | Fee in basis points (1-10000). 25 = 0.25% |
-| `affiliate_address` | string | 0x-prefixed Ethereum address receiving fee payouts |
-| `escrow_contract_address` | string | The escrow smart contract address |
-| `min_fee_usdc` | string | Minimum fee in USDC base units |
-| `min_fee_bps` | number | Minimum fee in basis points |
-| `treasury_address` | string | Parsec treasury address |
-| `affiliate_fee_bps` | number | Affiliate's share of fees in basis points (e.g. 2000 = 80% to you, 20% to treasury) |
+| `affiliate_address` | string | Your Ethereum address receiving fee payouts |
+| `escrow_contract_address` | string | The escrow smart contract address on Polygon |
 
 ## Collecting fees on orders
 
@@ -252,15 +241,15 @@ resp = requests.post(
 
 ## Fee distribution
 
-When the order fills on the exchange:
+When the order fills on the exchange, fees are split between you and Parsec
+based on your [builder tier](/builders/tiers):
 
-| Recipient | Share | Example (0.25% fee on $55 order) |
-|-----------|-------|----------------------------------|
-| **Your affiliate address** | `affiliate_fee_bps` of the proportional fee | 80% of $0.1375 = $0.11 |
-| **Parsec treasury** | Remainder | 20% of $0.1375 = $0.0275 |
+| Recipient | Share | Example (Silver tier, 0.25% fee on $55 order) |
+|-----------|-------|----------------------------------------------|
+| **Your affiliate address** | Builder share (35% at Silver) | 35% of $0.1375 = $0.048 |
+| **Parsec** | Remainder | 65% of $0.1375 = $0.089 |
 
-The split is based on `affiliate_fee_bps` configured in the escrow contract
-(default: 2000 = 20% to treasury, 80% to affiliate).
+Your share percentage increases as you move up tiers.
 
 **Partial fills:** Fees are distributed proportionally. If 60 of 100 contracts
 fill, 60% of the fee is distributed and 40% is refunded.

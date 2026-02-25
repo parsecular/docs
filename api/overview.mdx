@@ -11,11 +11,19 @@ https://api.parsecapi.com/api/v1
 
 ## Authentication
 
-All API requests require an API key passed via the `X-API-Key` header:
+All API requests (except SIWE auth) require an API key passed via the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?exchanges=polymarket
 ```
+
+### Getting an API key
+
+| Method | Description | Guide |
+|--------|-------------|-------|
+| **Wallet Auth (SIWE)** | Sign in with your Ethereum wallet — headless, no browser | [Setup guide](/getting-started/wallet-auth) |
+| **Web signup** | Sign up at [parsecapi.com](https://parsecapi.com) | [Direct trader](/getting-started/direct-trader) |
+| **Builder program** | Get a builder key with user management capabilities | [Builder onboarding](/builders/onboarding) |
 
 ## Response Format
 
@@ -35,6 +43,12 @@ On error:
 ```
 
 ## Available Endpoints
+
+### Authentication (unauthenticated)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | [`/auth/siwe/nonce`](/api/siwe-nonce) | Get a one-time nonce for SIWE |
+| `POST` | [`/auth/siwe`](/api/siwe-authenticate) | Authenticate with a signed SIWE message |
 
 ### Market Data
 | Method | Endpoint | Description |
