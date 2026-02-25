@@ -42,9 +42,9 @@ resources:
     methods:
       retrieve: get /api/v1/orderbook
 
-  price_history:
+  price:
     methods:
-      retrieve: get /api/v1/price-history
+      retrieve: get /api/v1/price
 
   trades:
     methods:

@@ -1,11 +1,14 @@
 ---
-title: "Get Price History"
-description: "Fetch historical OHLCV candlesticks for a market"
+title: "Get Price"
+description: "Fetch OHLCV candlestick series or a point-in-time price for a market"
 ---
 
-`GET /api/v1/price-history`
+`GET /api/v1/price`
 
-Returns historical candlesticks (OHLCV) for a market identified by its `parsec_id`.
+Returns OHLCV candlestick data for a market. Supports two modes:
+
+1. **Candle series** (default): Returns multiple candles over a time range.
+2. **Point-in-time** (`at_ts`): Returns the single closest candle to a specific timestamp.
 
 - Timestamps are **period start** in UTC (RFC3339).
 - Prices are **normalized decimals** in the range `[0.0, 1.0]`.
@@ -25,12 +28,12 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
   Outcome to fetch: `yes` or `no`. Required for categorical markets.
 </ParamField>
 
-<ParamField query="interval" type="string" required>
-  Candle interval. Supported values: `1m`, `1h`, `6h`, `1d`, `1w`, `max`.
+<ParamField query="interval" type="string" default="1h">
+  Candle interval. Supported values: `1m`, `1h`, `6h`, `1d`, `1w`, `max`. Defaults to `1h`.
 </ParamField>
 
 <ParamField query="start_ts" type="number">
-  Unix seconds start timestamp (inclusive). If omitted, the server selects a default range based on `interval`:
+  Unix seconds start timestamp (inclusive). Cannot be combined with `at_ts`. If omitted, the server selects a default range based on `interval`:
   - `1m`: 24 hours
   - `1h`: 7 days
   - `6h`: 14 days
@@ -40,7 +43,11 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
 </ParamField>
 
 <ParamField query="end_ts" type="number">
-  Unix seconds end timestamp (inclusive). Defaults to now.
+  Unix seconds end timestamp (inclusive). Cannot be combined with `at_ts`. Defaults to now.
+</ParamField>
+
+<ParamField query="at_ts" type="number">
+  Point-in-time lookup (Unix seconds). Returns the single closest candle to this timestamp. Cannot be combined with `start_ts` / `end_ts`.
 </ParamField>
 
 ## Response
@@ -88,10 +95,14 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
   </Expandable>
 </ResponseField>
 
+## Examples
+
+### Default candle series (last 7 days of 1h candles)
+
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/price-history?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
+  "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
 ```
 </RequestExample>
 
@@ -115,3 +126,19 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 }
 ```
 </ResponseExample>
+
+### Historical candles with explicit time range
+
+```bash
+# Fetch daily candles for a specific 7-day window (Feb 15–22, 2026)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1d&start_ts=1771113600&end_ts=1771718400"
+```
+
+### Point-in-time price lookup
+
+```bash
+# Get the closest candle to a specific moment (Feb 18 2026 at noon UTC)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h&at_ts=1771416000"
+```

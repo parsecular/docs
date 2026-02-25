@@ -207,7 +207,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 # Direct lookup by parsec IDs
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?parsec_ids=polymarket:0x1234,kalshi:KXBTC-25DEC"
+  "https://api.parsecapi.com/api/v1/markets?parsec_ids=polymarket:572473,kalshi:KXPRESPERSON-28-GNEWS"
 ```
 </RequestExample>
 
@@ -216,23 +216,23 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 {
   "markets": [
     {
-      "parsec_id": "polymarket:0x1234abcd",
-      "parsec_group_id": "polymarket:group_123",
+      "parsec_id": "polymarket:572473",
+      "parsec_group_id": "polymarket:event_572470",
       "exchange": "polymarket",
-      "exchange_market_id": "0x1234abcd",
-      "exchange_group_id": "group_123",
-      "slug": "will-btc-reach-100k",
-      "url": "https://polymarket.com/event/will-btc-reach-100k",
-      "question": "Will BTC reach $100k by end of 2025?",
-      "description": "Resolves Yes if Bitcoin reaches $100,000...",
+      "exchange_market_id": "572473",
+      "exchange_group_id": "event_572470",
+      "slug": "will-trump-nominate-judy-shelton-as-the-next-fed-chair",
+      "url": "https://polymarket.com/event/will-trump-nominate-judy-shelton",
+      "question": "Will Trump nominate Judy Shelton as the next Fed chair?",
+      "description": "Resolves Yes if Trump nominates Judy Shelton...",
       "rules": "Market resolves Yes if...",
-      "group_title": "Bitcoin Price Milestones",
+      "group_title": "Fed Chair Nomination",
       "status": "active",
       "market_type": "binary",
       "outcome_count": 2,
       "outcomes": [
-        { "name": "Yes", "price": 0.65, "token_id": "token_yes_123" },
-        { "name": "No", "price": 0.35, "token_id": "token_no_456" }
+        { "name": "Yes", "price": 0.65, "token_id": "50310842821..." },
+        { "name": "No", "price": 0.35, "token_id": "78204195637..." }
       ],
       "best_bid": 0.64,
       "best_ask": 0.66,
@@ -243,10 +243,10 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "open_interest": 30000.0,
       "min_order_size": 15.0,
       "tick_size": 0.01,
-      "created_at": "2025-01-01T00:00:00Z",
-      "updated_at": "2025-06-15T12:00:00Z",
-      "end_date": "2025-12-31T23:59:59Z",
-      "condition_id": "0xcond123"
+      "created_at": "2026-01-15T00:00:00Z",
+      "updated_at": "2026-02-22T12:00:00Z",
+      "end_date": "2026-06-30T23:59:59Z",
+      "condition_id": "0xdd22472e552920b8438..."
     }
   ],
   "pagination": {

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parsec API
-  version: 0.8.0
+  version: 0.9.0
   description: |
     Parsec REST API.
 
@@ -19,7 +19,7 @@ tags:
   - name: Exchanges
   - name: Markets
   - name: Orderbook
-  - name: Price History
+  - name: Price
   - name: Trades
   - name: Events
   - name: WebSocket
@@ -159,8 +159,8 @@ paths:
       operationId: getOrderbook
       tags:
         - Orderbook
-      summary: Get an L2 orderbook snapshot for a unified market
-      description: Returns bids/asks as `[price, size]` tuples.
+      summary: Get live L2 orderbook or historical snapshots
+      description: "When start_ts or end_ts is provided, returns historical orderbook snapshots instead of a live L2 snapshot. Large time ranges are handled via internal chunking and may be slow for very wide windows. In historical mode, limit defaults to 500 (max 1000)."
       parameters:
         - name: parsec_id
           in: query
@@ -194,6 +194,24 @@ paths:
             format: int32
             minimum: 1
             maximum: 100
+        - name: start_ts
+          in: query
+          required: false
+          description: "Unix seconds — when present, switches to historical mode (returns snapshots instead of live book)."
+          schema:
+            type: integer
+        - name: end_ts
+          in: query
+          required: false
+          description: "Unix seconds — end of time range. Defaults to now."
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          required: false
+          description: "Opaque pagination cursor for historical mode."
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -219,11 +237,11 @@ paths:
           $ref: "#/components/responses/ServiceUnavailableError"
 
 
-  /api/v1/price-history:
+  /api/v1/price:
     get:
-      operationId: getPriceHistory
+      operationId: getPrice
       tags:
-        - Price History
+        - Price
       summary: Get historical OHLCV candlesticks for a unified market
       description: Returns an array of candlesticks with timestamps at period start (UTC).
       parameters:
@@ -243,8 +261,8 @@ paths:
             type: string
         - name: interval
           in: query
-          required: true
-          description: Price history interval.
+          required: false
+          description: "Defaults to 1h for point-in-time (at_ts)"
           schema:
             type: string
             enum:
@@ -268,13 +286,19 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: at_ts
+          in: query
+          required: false
+          description: "Point-in-time lookup (Unix seconds). Returns the single closest candle. Cannot be combined with start_ts/end_ts."
+          schema:
+            type: integer
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PriceHistoryResponse"
+                $ref: "#/components/schemas/PriceResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -338,6 +362,12 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor from a previous response.
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -1635,7 +1665,7 @@ components:
           type: number
           description: Open interest at this candle's close.
 
-    PriceHistoryResponse:
+    PriceResponse:
       type: object
       required:
         - parsec_id
@@ -1691,6 +1721,26 @@ components:
           format: date-time
         source_channel:
           type: string
+        tx_hash:
+          type: string
+          nullable: true
+          description: Transaction hash (Polymarket only).
+        outcome:
+          type: string
+          nullable: true
+          description: Trade outcome side (e.g. "Yes", "No", "yes", "no").
+        yes_price:
+          type: number
+          nullable: true
+          description: YES-side price from exchange data (never derived). May be null if the trade was on the NO side.
+        no_price:
+          type: number
+          nullable: true
+          description: NO-side price from exchange data (never derived). May be null if the trade was on the YES side.
+        taker_address:
+          type: string
+          nullable: true
+          description: Taker wallet address (Polymarket proxy_wallet). Null for exchanges that don't expose this.
 
     TradesResponse:
       type: object
@@ -1716,6 +1766,78 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MarketTrade"
+        has_more:
+          type: boolean
+          description: "True if there are more results available"
+        next_cursor:
+          type: string
+          nullable: true
+    OrderbookSnapshotDto:
+      type: object
+      required:
+        - timestamp
+        - bids
+        - asks
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        hash:
+          type: string
+          nullable: true
+        bids:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+        asks:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+    OrderbookHistoryResult:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - outcome
+        - token_id
+        - market_id
+        - snapshots
+        - has_more
+      properties:
+        parsec_id:
+          type: string
+        exchange:
+          type: string
+        outcome:
+          type: string
+        token_id:
+          type: string
+        market_id:
+          type: string
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderbookSnapshotDto"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+        tick_size:
+          type: number
+        min_order_size:
+          type: number
     WsCustomerUsageResponse:
       type: object
       required:
@@ -2128,6 +2250,7 @@ components:
         - approvals
         - refresh_balance
         - websocket
+        - fetch_orderbook_history
       properties:
         fetch_markets:
           type: boolean
@@ -2154,6 +2277,8 @@ components:
         refresh_balance:
           type: boolean
         websocket:
+          type: boolean
+        fetch_orderbook_history:
           type: boolean
 
     ExchangeCapability:

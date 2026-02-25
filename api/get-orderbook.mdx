@@ -1,16 +1,24 @@
 ---
 title: "Get Orderbook"
-description: "Fetch orderbook data for a specific market"
+description: "Fetch live or historical orderbook data for a specific market"
 ---
 
 `GET /api/v1/orderbook`
 
-Returns the current orderbook (bids and asks) for a market identified by its `parsec_id`.
+Returns orderbook data (bids and asks) for a market identified by its `parsec_id`. Supports two modes:
+
+1. **Live snapshot** (default): Returns the current orderbook from the exchange.
+2. **Historical snapshots** (`start_ts`): Returns a paginated series of L2 orderbook snapshots over a time range.
+
+## Error Semantics
+
+- `403` means your API key is not authorized for the request.
+- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
 
 ## Parameters
 
 <ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:0x1234abcd`).
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`).
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
@@ -18,14 +26,29 @@ Returns the current orderbook (bids and asks) for a market identified by its `pa
 </ParamField>
 
 <ParamField query="limit" type="number" default="50">
-  Max price levels per side. Range: 1–100.
+  **Live mode:** Max price levels per side. Range: 1-100.
+  **Historical mode:** Max snapshots per page. Range: 1-1000. Defaults to 500.
 </ParamField>
 
 <ParamField query="depth" type="number" default="50">
   Alias for `limit` (for REST/WS symmetry). If both are provided, `limit` takes precedence.
 </ParamField>
 
-## Response
+<ParamField query="start_ts" type="number">
+  Unix seconds start timestamp (inclusive). When present, switches to **historical mode** and returns orderbook snapshots instead of a live snapshot. Defaults to 24 hours ago if only `end_ts` is provided.
+</ParamField>
+
+<ParamField query="end_ts" type="number">
+  Unix seconds end timestamp (inclusive). Only used in historical mode. Defaults to now.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Opaque pagination cursor from a previous historical response. Pass `next_cursor` from the previous page to fetch the next page of snapshots.
+</ParamField>
+
+## Live Response
+
+Returned when `start_ts` is **not** provided.
 
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
@@ -53,37 +76,147 @@ Returns the current orderbook (bids and asks) for a market identified by its `pa
     <ResponseField name="timestamp" type="string | null">
       ISO 8601 timestamp of when the orderbook was fetched.
     </ResponseField>
-    <ResponseField name="tick_size" type="number">
+    <ResponseField name="tick_size" type="number | null">
+      Minimum price increment for orders on this market. Omitted when not available from the exchange.
+    </ResponseField>
+    <ResponseField name="min_order_size" type="number | null">
+      Minimum order size in contracts. Omitted when not available from the exchange.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Historical Response
+
+Returned when `start_ts` is provided.
+
+<ResponseField name="(root)" type="object">
+  <Expandable title="properties">
+    <ResponseField name="parsec_id" type="string">
+      The requested market identifier.
+    </ResponseField>
+    <ResponseField name="exchange" type="string">
+      Exchange name.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome for this orderbook.
+    </ResponseField>
+    <ResponseField name="token_id" type="string">
+      Exchange-specific token/asset identifier.
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Exchange-specific market identifier.
+    </ResponseField>
+    <ResponseField name="snapshots" type="array">
+      Array of historical L2 orderbook snapshots, ordered by timestamp ascending.
+      <Expandable title="Snapshot properties">
+        <ResponseField name="timestamp" type="string">
+          Snapshot timestamp (UTC, ISO 8601).
+        </ResponseField>
+        <ResponseField name="recorded_at" type="string | null">
+          When the snapshot was recorded by the indexer (UTC, ISO 8601).
+        </ResponseField>
+        <ResponseField name="hash" type="string | null">
+          Content hash of the snapshot (for deduplication).
+        </ResponseField>
+        <ResponseField name="bids" type="array">
+          `[price, size]` pairs, sorted by price descending.
+        </ResponseField>
+        <ResponseField name="asks" type="array">
+          `[price, size]` pairs, sorted by price ascending.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="has_more" type="boolean">
+      `true` if there are more snapshots beyond this page. Use `next_cursor` to fetch the next page.
+    </ResponseField>
+    <ResponseField name="next_cursor" type="string | null">
+      Opaque cursor for the next page. Pass as `cursor` in the next request. `null` when there are no more pages.
+    </ResponseField>
+    <ResponseField name="tick_size" type="number | null">
       Minimum price increment for orders on this market.
     </ResponseField>
-    <ResponseField name="min_order_size" type="number">
+    <ResponseField name="min_order_size" type="number | null">
       Minimum order size in contracts.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
+## Examples
+
+### Live orderbook
+
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:0x1234abcd&outcome=yes&depth=10"
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&depth=10"
 ```
 </RequestExample>
 
 <ResponseExample>
 ```json
 {
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "21742633143...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
-  "timestamp": "2025-02-04T12:34:56Z",
+  "timestamp": "2026-02-22T12:34:56Z",
+  "tick_size": 0.01
+}
+```
+</ResponseExample>
+
+### Historical snapshots (1 hour window)
+
+```bash
+# Fetch orderbook snapshots for a 1-hour window
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&start_ts=1771581600&end_ts=1771585200&limit=100"
+  # start_ts = Feb 20 2026 10:00 UTC, end_ts = Feb 20 2026 11:00 UTC
+```
+
+```json
+{
+  "parsec_id": "polymarket:572473",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "token_id": "50310842821...",
+  "market_id": "572473",
+  "snapshots": [
+    {
+      "timestamp": "2026-02-22T10:00:01Z",
+      "recorded_at": "2026-02-22T10:00:02Z",
+      "hash": "a1b2c3d4...",
+      "bids": [[0.65, 1000.0], [0.64, 2500.0]],
+      "asks": [[0.66, 800.0], [0.67, 1500.0]]
+    },
+    {
+      "timestamp": "2026-02-22T10:00:42Z",
+      "recorded_at": "2026-02-22T10:00:43Z",
+      "hash": "e5f6a7b8...",
+      "bids": [[0.66, 900.0], [0.65, 2200.0]],
+      "asks": [[0.67, 750.0], [0.68, 1400.0]]
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJ0cyI6MTc0MDIyMDg0Mn0",
   "tick_size": 0.01,
   "min_order_size": 15.0
 }
 ```
-</ResponseExample>
+
+### Paginate through historical snapshots
+
+```bash
+# Fetch the next page using the cursor from the previous response
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&start_ts=1771581600&end_ts=1771585200&limit=100&cursor=eyJ0cyI6MTc0MDIyMDg0Mn0"
+```
+
+<Note>
+**Data availability:** Historical orderbook snapshots depend on upstream exchange indexer availability. Snapshot frequency varies by market — active markets may have thousands of snapshots per hour. For real-time orderbook data, use the live endpoint (omit `start_ts`) or the [WebSocket API](/websocket/overview).
+</Note>
 
 For real-time streaming, use the [WebSocket API](/websocket/overview).
