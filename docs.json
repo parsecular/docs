@@ -76,6 +76,14 @@
               "api/list-fills",
               "api/get-balance"
             ]
+          },
+          {
+            "group": "CTF Operations",
+            "pages": [
+              "api/ctf-split",
+              "api/ctf-merge",
+              "api/ctf-redeem"
+            ]
           }
         ]
       },

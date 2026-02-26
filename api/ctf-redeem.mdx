@@ -1,0 +1,81 @@
+---
+title: "Redeem Positions"
+description: "Redeem winning tokens for USDC after market resolution via gasless relayer"
+---
+
+`POST /api/v1/polymarket/ctf/redeem`
+
+Redeems winning outcome tokens for USDC after a market has resolved.
+The transaction is submitted gaslessly through Polymarket's relayer — no POL needed for gas.
+
+For **neg-risk markets** (multi-outcome), set `neg_risk: true` and provide the `amounts`
+array. For standard binary markets, only `condition_id` is needed.
+
+<Info>
+  This endpoint is **Polymarket-only** and uses the platform's Builder credentials
+  to relay the on-chain CTF `redeemPositions` call. The caller must be authenticated
+  with a valid API key.
+</Info>
+
+## Parameters
+
+### Body
+
+<ParamField body="condition_id" type="string" required>
+  The condition ID (bytes32 hex) identifying the resolved market condition.
+  Example: `"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"`
+</ParamField>
+
+<ParamField body="neg_risk" type="boolean" default="false">
+  Set to `true` for neg-risk (multi-outcome) markets. When `true`, the redemption
+  is routed through the NegRiskAdapter contract and `amounts` is required.
+</ParamField>
+
+<ParamField body="amounts" type="string[]">
+  Token amounts for each outcome in smallest unit (6 decimals).
+  **Required** when `neg_risk` is `true`.
+  Example: `["500000", "500000"]`
+</ParamField>
+
+## Response
+
+<ResponseField name="transaction_hash" type="string | null">
+  The on-chain transaction hash, if the relayer accepted the transaction.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Relayer status (e.g., `"pending"`, `"submitted"`).
+</ResponseField>
+
+<RequestExample>
+```bash
+# Standard binary market
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "condition_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+  }' \
+  "https://api.parsecapi.com/api/v1/polymarket/ctf/redeem"
+
+# Neg-risk (multi-outcome) market
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "condition_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "neg_risk": true,
+    "amounts": ["500000", "500000"]
+  }' \
+  "https://api.parsecapi.com/api/v1/polymarket/ctf/redeem"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "transaction_hash": "0xabc123...",
+  "status": "submitted"
+}
+```
+</ResponseExample>

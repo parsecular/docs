@@ -1,0 +1,61 @@
+---
+title: "Merge Positions"
+description: "Merge YES/NO outcome tokens back into USDC via gasless relayer"
+---
+
+`POST /api/v1/polymarket/ctf/merge`
+
+Merges equal amounts of YES and NO outcome tokens back into USDC collateral.
+The transaction is submitted gaslessly through Polymarket's relayer — no POL needed for gas.
+
+<Info>
+  This endpoint is **Polymarket-only** and uses the platform's Builder credentials
+  to relay the on-chain CTF `mergePositions` call. The caller must be authenticated
+  with a valid API key.
+</Info>
+
+## Parameters
+
+### Body
+
+<ParamField body="condition_id" type="string" required>
+  The condition ID (bytes32 hex) identifying the market condition to merge.
+  Example: `"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"`
+</ParamField>
+
+<ParamField body="amount" type="string" required>
+  USDC amount in smallest unit (6 decimals). For example, `"1000000"` = 1 USDC.
+  You must hold at least this amount of both YES and NO tokens.
+</ParamField>
+
+## Response
+
+<ResponseField name="transaction_hash" type="string | null">
+  The on-chain transaction hash, if the relayer accepted the transaction.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Relayer status (e.g., `"pending"`, `"submitted"`).
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "condition_id": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    "amount": "1000000"
+  }' \
+  "https://api.parsecapi.com/api/v1/polymarket/ctf/merge"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "transaction_hash": "0xabc123...",
+  "status": "submitted"
+}
+```
+</ResponseExample>
