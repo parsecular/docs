@@ -73,8 +73,8 @@ Subscribe to one or more markets after authenticating.
 {
   "type": "subscribe",
   "markets": [
-    { "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes", "depth": 10 },
-    { "parsec_id": "kalshi:KXBTC-25DEC-100K" }
+    { "parsec_id": "polymarket:572473", "outcome": "Yes", "depth": 10 },
+    { "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS" }
   ]
 }
 ```
@@ -96,7 +96,7 @@ Subscribe to one or more markets after authenticating.
 ```json
 {
   "type": "unsubscribe",
-  "markets": [{ "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }]
+  "markets": [{ "parsec_id": "polymarket:572473", "outcome": "Yes" }]
 }
 ```
 </RequestExample>
@@ -122,7 +122,7 @@ sequence gap.
 
 <RequestExample>
 ```json
-{ "type": "resync", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "resync", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 </RequestExample>
 
@@ -206,11 +206,11 @@ Sent on initial subscription and after a resync. `type: "orderbook"`.
 ```json
 {
   "type": "orderbook",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "tick_size": 0.001,
   "min_order_size": 1.0,
   "kind": "snapshot",
@@ -257,11 +257,11 @@ All other fields (`parsec_id`, `exchange`, `outcome`, `token_id`, `market_id`,
 ```json
 {
   "type": "orderbook_delta",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "changes": [
     { "side": "bid", "price": 0.65, "size": 900.0 },
     { "side": "ask", "price": 0.66, "size": 0.0 }
@@ -328,11 +328,11 @@ orderbook messages.
 ```json Trade
 {
   "type": "activity",
-  "parsec_id": "polymarket:0x1234abcd",
+  "parsec_id": "polymarket:572473",
   "exchange": "polymarket",
   "outcome": "Yes",
-  "token_id": "217426...",
-  "market_id": "0x1234abcd",
+  "token_id": "50310842821...",
+  "market_id": "572473",
   "kind": "trade",
   "price": 0.65,
   "size": 100.0,
@@ -349,11 +349,11 @@ orderbook messages.
 ```json Fill
 {
   "type": "activity",
-  "parsec_id": "kalshi:KXBTC-25DEC-100K",
+  "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS",
   "exchange": "kalshi",
   "outcome": "Yes",
   "token_id": "",
-  "market_id": "KXBTC-25DEC-100K",
+  "market_id": "KXPRESPERSON-28-GNEWS",
   "kind": "fill",
   "price": 0.62,
   "size": 50.0,
@@ -391,7 +391,7 @@ The server dropped a delta and your local book is corrupted. Send a
 
 <ResponseExample>
 ```json
-{ "type": "resync_required", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "resync_required", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 </ResponseExample>
 
@@ -403,7 +403,7 @@ You are consuming messages too slowly and may miss updates.
 
 <ResponseExample>
 ```json
-{ "type": "slow_reader", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
+{ "type": "slow_reader", "parsec_id": "polymarket:572473", "outcome": "Yes" }
 ```
 </ResponseExample>
 
@@ -482,6 +482,12 @@ Use it to detect gaps:
 
 Subscribe, unsubscribe, and resync messages all count toward the 3 req/sec rate limit.
 
+When you exceed the subscription limit, the server responds with error code `3002`:
+
+```json
+{ "type": "error", "code": 3002, "message": "max subscriptions reached (limit: 5, tier: free)" }
+```
+
 ## Supported Exchanges
 
 | Exchange | Orderbook | Trades | Fills |
@@ -556,7 +562,7 @@ ws.onmessage = (event) => {
       console.log('Authenticated:', msg.customer_id);
       ws.send(JSON.stringify({
         type: 'subscribe',
-        markets: [{ parsec_id: 'polymarket:0x1234', outcome: 'Yes', depth: 10 }]
+        markets: [{ parsec_id: 'polymarket:572473', outcome: 'Yes', depth: 10 }]
       }));
       break;
 

@@ -42,9 +42,9 @@ resources:
     methods:
       retrieve: get /api/v1/orderbook
 
-  price_history:
+  price:
     methods:
-      retrieve: get /api/v1/price-history
+      retrieve: get /api/v1/price
 
   trades:
     methods:
@@ -77,7 +77,6 @@ resources:
     methods:
       balance: get /api/v1/balance
       ping: get /api/v1/ping
-      capabilities: get /api/v1/session/capabilities
       user_activity: get /api/v1/user-activity
   onboard:
     methods:

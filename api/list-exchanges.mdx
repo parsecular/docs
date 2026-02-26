@@ -43,7 +43,30 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "fetch_user_activity": true,
       "approvals": true,
       "refresh_balance": true,
-      "websocket": true
+      "websocket": true,
+      "fetch_orderbook_history": true,
+      "fetch_fills": false
+    }
+  },
+  {
+    "id": "kalshi",
+    "name": "Kalshi",
+    "has": {
+      "fetch_markets": true,
+      "create_order": true,
+      "cancel_order": true,
+      "fetch_positions": true,
+      "fetch_balance": true,
+      "fetch_orderbook": true,
+      "fetch_price_history": true,
+      "fetch_trades": true,
+      "fetch_events": true,
+      "fetch_user_activity": false,
+      "approvals": false,
+      "refresh_balance": false,
+      "websocket": true,
+      "fetch_orderbook_history": false,
+      "fetch_fills": false
     }
   },
   {
@@ -51,8 +74,8 @@ curl -H "X-API-Key: YOUR_API_KEY" \
     "name": "Opinion",
     "has": {
       "fetch_markets": true,
-      "create_order": false,
-      "cancel_order": false,
+      "create_order": true,
+      "cancel_order": true,
       "fetch_positions": true,
       "fetch_balance": true,
       "fetch_orderbook": false,
@@ -62,9 +85,15 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "fetch_user_activity": true,
       "approvals": false,
       "refresh_balance": false,
-      "websocket": false
+      "websocket": false,
+      "fetch_orderbook_history": false,
+      "fetch_fills": false
     }
   }
 ]
 ```
 </ResponseExample>
+
+<Note>
+Capability flags like `create_order` and `cancel_order` may be `false` if exchange credentials are not configured. Use `GET /ping` to verify your auth status per exchange.
+</Note>

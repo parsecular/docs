@@ -10,7 +10,7 @@ Walks the orderbook to estimate the volume-weighted average price (VWAP) for a h
 ## Parameters
 
 <ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:0x1234abcd`).
+  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`).
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
@@ -62,7 +62,7 @@ Walks the orderbook to estimate the volume-weighted average price (VWAP) for a h
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/execution-price?parsec_id=polymarket:0x1234abcd&outcome=yes&side=buy&amount=100"
+  "https://api.parsecapi.com/api/v1/execution-price?parsec_id=polymarket:572473&outcome=yes&side=buy&amount=100"
 ```
 </RequestExample>
 
