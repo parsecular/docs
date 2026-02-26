@@ -25,6 +25,7 @@ tags:
   - name: Positions
   - name: Account
   - name: Wallet
+  - name: CTF
 paths:
   /api/v1/exchanges:
     get:
@@ -1043,6 +1044,97 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/v1/polymarket/ctf/split:
+    post:
+      operationId: ctfSplit
+      tags:
+        - CTF
+      summary: Split USDC into YES/NO outcome tokens
+      description: |
+        Splits USDC collateral into YES and NO outcome tokens for a binary market
+        condition. The transaction is submitted gaslessly through Polymarket's relayer.
+        Polymarket-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CtfSplitRequest"
+      responses:
+        "200":
+          description: Transaction submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/polymarket/ctf/merge:
+    post:
+      operationId: ctfMerge
+      tags:
+        - CTF
+      summary: Merge YES/NO outcome tokens back into USDC
+      description: |
+        Merges equal amounts of YES and NO outcome tokens back into USDC collateral.
+        The transaction is submitted gaslessly through Polymarket's relayer.
+        Polymarket-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CtfMergeRequest"
+      responses:
+        "200":
+          description: Transaction submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/polymarket/ctf/redeem:
+    post:
+      operationId: ctfRedeem
+      tags:
+        - CTF
+      summary: Redeem winning tokens for USDC after market resolution
+      description: |
+        Redeems winning outcome tokens for USDC after a market has resolved.
+        The transaction is submitted gaslessly through Polymarket's relayer.
+        For neg-risk markets, set `neg_risk: true` and provide `amounts`.
+        Polymarket-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CtfRedeemRequest"
+      responses:
+        "200":
+          description: Transaction submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/v1/billing/checkout:
     post:
       operationId: createCheckoutSession
@@ -1201,6 +1293,68 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    CtfSplitRequest:
+      type: object
+      required:
+        - condition_id
+        - amount
+      properties:
+        condition_id:
+          type: string
+          description: Condition ID (bytes32 hex).
+          example: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        amount:
+          type: string
+          description: USDC amount in smallest unit (6 decimals).
+          example: "1000000"
+
+    CtfMergeRequest:
+      type: object
+      required:
+        - condition_id
+        - amount
+      properties:
+        condition_id:
+          type: string
+          description: Condition ID (bytes32 hex).
+          example: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        amount:
+          type: string
+          description: USDC amount in smallest unit (6 decimals).
+          example: "1000000"
+
+    CtfRedeemRequest:
+      type: object
+      required:
+        - condition_id
+      properties:
+        condition_id:
+          type: string
+          description: Condition ID (bytes32 hex).
+          example: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        neg_risk:
+          type: boolean
+          default: false
+          description: Set to true for neg-risk (multi-outcome) markets.
+        amounts:
+          type: array
+          items:
+            type: string
+          description: Token amounts for each outcome (required when neg_risk is true).
+          example: ["500000", "500000"]
+
+    CtfResponse:
+      type: object
+      properties:
+        transaction_hash:
+          type:
+            - string
+            - "null"
+          description: On-chain transaction hash.
+        status:
+          type: string
+          description: Relayer transaction status.
+
     ErrorResponse:
       type: object
       required:

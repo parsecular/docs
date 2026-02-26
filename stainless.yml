@@ -91,6 +91,14 @@ resources:
       message: get /api/v1/exchange/polymarket/auth-message
       credentials: post /api/v1/exchange/polymarket/auth-credentials
 
+  ctf:
+    models:
+      ctf_response: "#/components/schemas/CtfResponse"
+    methods:
+      split: post /api/v1/polymarket/ctf/split
+      merge: post /api/v1/polymarket/ctf/merge
+      redeem: post /api/v1/polymarket/ctf/redeem
+
 settings:
   disable_mock_tests: true
   license: Apache-2.0
