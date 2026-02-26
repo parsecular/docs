@@ -3,7 +3,7 @@ title: "Get Price History"
 description: "Fetch historical OHLCV candlesticks for a market"
 ---
 
-`GET /api/v1/price-history`
+`GET /api/v1/price`
 
 Returns historical candlesticks (OHLCV) for a market identified by its `parsec_id`.
 
@@ -91,7 +91,7 @@ Returns historical candlesticks (OHLCV) for a market identified by its `parsec_i
 <RequestExample>
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/price-history?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
+  "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
 ```
 </RequestExample>
 

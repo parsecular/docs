@@ -13,9 +13,10 @@ parameter — Parsec handles authentication, signing, and protocol differences.
 
 | Mode | How credentials work | Best for |
 |------|---------------------|----------|
-| Stored (Mode A) | `PUT /credentials` once, trade forever | Most users |
-| Managed wallet | `POST /wallet` + `POST /link`, we handle keys | UI traders |
-| Per-request (Mode B) | Pass creds per-request via header/body | Pro traders, builders |
+| Stored (self onboard) | `POST /onboard` once with your credentials, trade forever | Most users |
+| Managed wallet | `POST /onboard` with `mode: "managed"`, we handle keys | UI traders |
+| Per-request | Pass creds per-request via `X-Exchange-Credentials` header | Pro traders, builders |
+| Builder impersonation | `X-Builder-Customer-Id` header routes to end-user | [Builders](/builders/overview) |
 
 <CardGroup cols={3}>
   <Card title="Direct Trader" icon="key" href="/getting-started/direct-trader">
@@ -50,15 +51,39 @@ Set via `params.order_type` in the create order request body. Unsupported combin
 
 ## Supported exchanges
 
-| Exchange | Create | Cancel | Positions | Balance | Orderbook | Price History |
-|----------|--------|--------|-----------|---------|-----------|---------------|
-| Polymarket | Yes | Yes | Yes | Yes | Yes | Yes |
-| Kalshi | Yes | Yes | Yes | Yes | Yes | Yes |
-| Limitless | Yes | Yes | Yes | Yes | Yes | Yes |
-| Opinion | Yes | Yes | Yes | Yes | Yes | Yes |
-| Predict.fun | Yes | Yes | Yes | Yes | Yes | Yes |
+| Exchange | Trading | Positions | Balance | Fills | Orderbook | Price History | Onboarding |
+|----------|---------|-----------|---------|-------|-----------|---------------|------------|
+| Polymarket | Yes | Yes | Yes | Yes | Yes | Yes | Managed + Self |
+| Kalshi | Yes | Yes | Yes | Yes | Yes | Yes | Self |
+| Limitless | Data only | — | — | — | Yes | Yes | — |
+| Opinion | Data only | — | — | — | Polling | Yes | — |
+| Predict.fun | Data only | — | — | — | Polling | Yes | — |
+
+**Trading support** (create/cancel orders, positions, balance, fills) requires exchange credentials.
+Credentials can be stored via `POST /onboard` (Polymarket and Kalshi) or passed per-request via `X-Exchange-Credentials`.
 
 Use `GET /exchanges` to see the full capability matrix at runtime.
+
+## Builder impersonation
+
+Builders route orders on behalf of end-users by adding the
+`X-Builder-Customer-Id` header. All order endpoints work the same — Parsec
+resolves the end-user's credentials automatically.
+
+```bash
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "X-Builder-Customer-Id: CUSTOMER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{ "market_id": "0x...", "outcome": "Yes", "side": "buy", "price": 0.55, "size": 100 }'
+```
+
+Read-only endpoints (`/markets`, `/orderbook`, `/trades`, `/price`, `/events`)
+do **not** require `X-Builder-Customer-Id`.
+
+For fee collection on builder orders, include the `fee_auth` object in the
+create order request. See [Fee Escrow](/builders/fee-escrow) and the
+[Create Order](/api/create-order) reference for the full field list.
 
 ## Pre-trade checks
 
@@ -68,5 +93,4 @@ Before placing an order, you can use these endpoints to assess liquidity and rea
 |----------|---------|
 | `GET /execution-price` | Estimate VWAP + slippage for a hypothetical order |
 | `GET /orderbook` | Inspect the live orderbook |
-| `GET /approvals` | Check Polymarket token approvals (managed wallets) |
 | `GET /ping` | Verify exchange connectivity and auth status |

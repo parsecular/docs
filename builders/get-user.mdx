@@ -1,0 +1,21 @@
+---
+title: "Get User"
+description: "Get a single end-user by customer ID."
+---
+
+`GET /api/v1/builder/users/:customer_id`
+
+Returns the same response shape as the [onboard endpoint](/builders/onboard-user#response).
+
+## Parameters
+
+<ParamField path="customer_id" type="string" required>
+  The end-user's Parsec customer UUID.
+</ParamField>
+
+<RequestExample>
+```bash
+curl "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+</RequestExample>

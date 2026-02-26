@@ -10,7 +10,7 @@ Places a new order on the specified exchange.
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
-  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
+  Exchange identifier: `polymarket` or `kalshi`.
 </ParamField>
 
 ### Body
@@ -43,14 +43,56 @@ Places a new order on the specified exchange.
   | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type. Unsupported combinations return `501` per exchange. |
 </ParamField>
 
-<ParamField body="credentials" type="object">
-  Optional per-request exchange credentials ([Mode B](/getting-started/per-request-credentials)). When provided, Parsec
+<ParamField header="X-Exchange-Credentials" type="string">
+  Optional [per-request exchange credentials](/getting-started/per-request-credentials) (base64-encoded JSON). When provided, Parsec
   creates a transient exchange session instead of using stored credentials.
-  Body credentials take precedence over the `X-Exchange-Credentials` header.
 
   **Kalshi:** `{ "api_key_id": "...", "private_key": "..." }`
 
   **Polymarket:** `{ "clob_api_key": "...", "clob_api_secret": "...", "clob_api_passphrase": "..." }`
+</ParamField>
+
+### Builder fields (optional)
+
+These fields are only used by [builders](/builders/overview) routing orders on
+behalf of end-users via impersonation.
+
+<ParamField header="X-Builder-Customer-Id" type="string">
+  The end-user's `customer_id`. Required for builder impersonation.
+</ParamField>
+
+<ParamField body="fee_auth" type="object">
+  EIP-712 fee authorization signed by the end-user's wallet. Required to collect
+  fees via [fee escrow](/builders/fee-escrow).
+  <Expandable title="properties">
+    <ParamField body="fee_auth.order_id" type="string">
+      `0x`-prefixed hex bytes32 order identifier.
+    </ParamField>
+    <ParamField body="fee_auth.payer" type="string">
+      `0x`-prefixed payer wallet address.
+    </ParamField>
+    <ParamField body="fee_auth.fee_amount" type="string">
+      Fee in USDC base units (6 decimals), as a string.
+    </ParamField>
+    <ParamField body="fee_auth.deadline" type="number">
+      Unix timestamp after which the authorization expires.
+    </ParamField>
+    <ParamField body="fee_auth.signature" type="string">
+      `0x`-prefixed hex EIP-712 signature.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="payer_address" type="string">
+  End-user's wallet address (fee escrow payer). Builder-only.
+</ParamField>
+
+<ParamField body="signer_address" type="string">
+  End-user's signing wallet address. Builder-only.
+</ParamField>
+
+<ParamField body="affiliate" type="string">
+  Affiliate address override. Builder-only.
 </ParamField>
 
 ## Response

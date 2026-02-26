@@ -79,12 +79,18 @@ resources:
       ping: get /api/v1/ping
       capabilities: get /api/v1/session/capabilities
       user_activity: get /api/v1/user-activity
-      update_credentials: put /api/v1/credentials
-
-  approvals:
+  onboard:
     methods:
-      list: get /api/v1/approvals
-      set: post /api/v1/approvals
+      create: post /api/v1/onboard
+
+  wallet:
+    methods:
+      retrieve: get /api/v1/wallet
+
+  polymarket_auth:
+    methods:
+      message: get /api/v1/exchange/polymarket/auth-message
+      credentials: post /api/v1/exchange/polymarket/auth-credentials
 
 settings:
   disable_mock_tests: true

@@ -15,7 +15,7 @@ servers:
 security:
   - ApiKeyAuth: []
 tags:
-  - name: Authentication
+  - name: Onboarding
   - name: Exchanges
   - name: Markets
   - name: Orderbook
@@ -26,7 +26,6 @@ tags:
   - name: Orders
   - name: Positions
   - name: Account
-  - name: Approvals
   - name: Wallet
 paths:
   /api/v1/exchanges:
@@ -902,95 +901,37 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /api/v1/approvals:
-    get:
-      operationId: getApprovals
-      tags:
-        - Approvals
-      summary: Check current token allowances (Polymarket only)
-      description: Polymarket-only helper for checking on-chain allowances required for trading.
-      parameters:
-        - name: exchange
-          in: query
-          required: true
-          description: Must be "polymarket".
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AllowanceStatus"
-        "400":
-          $ref: "#/components/responses/BadRequestError"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "403":
-          $ref: "#/components/responses/ForbiddenError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-        "501":
-          $ref: "#/components/responses/NotImplementedError"
+  /api/v1/onboard:
     post:
-      operationId: setApprovals
+      operationId: onboard
       tags:
-        - Approvals
-      summary: Set token approvals (Polymarket only)
-      description: Polymarket-only helper for submitting approval transactions.
-      parameters:
-        - name: exchange
-          in: query
-          required: true
-          description: Must be "polymarket".
-          schema:
-            type: string
+        - Onboarding
+      summary: Set up an exchange for trading
+      description: |
+        Unified onboarding endpoint. Managed mode creates wallet + exchange credentials (Polymarket only).
+        Self mode stores user-provided credentials (Polymarket or Kalshi).
+        Idempotent and resumable.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApprovalRequest"
+              $ref: "#/components/schemas/OnboardRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApprovalResponse"
+                $ref: "#/components/schemas/OnboardResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
-        "403":
-          $ref: "#/components/responses/ForbiddenError"
         "500":
           $ref: "#/components/responses/InternalServerError"
-        "501":
-          $ref: "#/components/responses/NotImplementedError"
 
   /api/v1/wallet:
-    x-internal: true
-    post:
-      operationId: registerWallet
-      tags:
-        - Wallet
-      summary: Register a managed wallet
-      description: Creates a server-side wallet managed by Parsec via Privy. Idempotent — calling again returns the existing wallet.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RegisterWalletResponse"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
     get:
       operationId: getWalletState
       tags:
@@ -1009,21 +950,20 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  /api/v1/link:
-    x-internal: true
-    post:
-      operationId: linkExchange
+  /api/v1/exchange/polymarket/auth-message:
+    get:
+      operationId: polymarketAuthMessage
       tags:
-        - Wallet
-      summary: Link a managed wallet to an exchange
+        - Onboarding
+      summary: Get EIP-712 typed data for Polymarket CLOB credential derivation
       description: |
-        Links the managed wallet to the specified exchange. Currently supports Polymarket only.
-        Performs session signer grant, CLOB credential derivation, and token approvals in one call.
+        Returns the EIP-712 ClobAuth typed data to sign with your wallet.
+        Use the signature with POST /exchange/polymarket/auth-credentials.
       parameters:
-        - name: exchange
+        - name: address
           in: query
           required: true
-          description: Exchange to link (currently only "polymarket").
+          description: Your Ethereum wallet address.
           schema:
             type: string
       responses:
@@ -1032,30 +972,42 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/LinkResponse"
+                $ref: "#/components/schemas/PolymarketAuthMessageResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
 
-  /api/v1/credentials:
-    put:
-      operationId: updateCredentials
+  /api/v1/exchange/polymarket/auth-credentials:
+    post:
+      operationId: polymarketAuthCredentials
       tags:
-        - Account
-      summary: Update exchange credentials for the authenticated API key
-      description: Updates stored credentials for this API key. Returns 204 on success.
+        - Onboarding
+      summary: Derive Polymarket CLOB credentials from a signed auth message
+      description: |
+        Submits a signed EIP-712 ClobAuth message and derives Polymarket CLOB API credentials.
+        Optionally stores them with ?store=true.
+      parameters:
+        - name: store
+          in: query
+          required: false
+          description: Set to true to store derived credentials for future use.
+          schema:
+            type: boolean
+            default: false
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateCredentialsRequest"
+              $ref: "#/components/schemas/PolymarketAuthCredentialsRequest"
       responses:
-        "204":
-          description: No Content
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolymarketAuthCredentialsResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -1140,58 +1092,6 @@ paths:
         "401":
           description: Invalid or missing Stripe signature
 
-  /api/v1/auth/siwe/nonce:
-    get:
-      operationId: getSiweNonce
-      tags:
-        - Authentication
-      summary: Get a one-time nonce for SIWE authentication
-      description: |
-        Returns a random 32-character hex nonce for use in a SIWE (Sign-In With
-        Ethereum) authentication message. Valid for 5 minutes, single-use.
-      security: []
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiweNonceResponse"
-
-  /api/v1/auth/siwe:
-    post:
-      operationId: siweAuthenticate
-      tags:
-        - Authentication
-      summary: Authenticate with a signed SIWE message
-      description: |
-        Verifies a signed EIP-4361 SIWE message and returns an API key.
-        Idempotent — the same wallet always receives the same API key.
-        Creates a new user on first authentication.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SiweAuthenticateRequest"
-      responses:
-        "200":
-          description: Returning user (idempotent)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiweAuthenticateResponse"
-        "201":
-          description: New user created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SiweAuthenticateResponse"
-        "400":
-          $ref: "#/components/responses/BadRequestError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
 
 components:
   securitySchemes:
@@ -1975,33 +1875,122 @@ components:
           type: string
           description: Polymarket CLOB API passphrase.
 
-    UpdateCredentialsRequest:
+    OnboardRequest:
       type: object
+      required:
+        - exchange
+        - mode
       properties:
-        api_key_id:
-          type:
-            - string
-            - "null"
-          description: Kalshi API key ID.
-        private_key:
-          type:
-            - string
-            - "null"
-          description: Kalshi RSA private key (PEM format).
+        exchange:
+          type: string
+          description: Exchange to onboard ("polymarket" or "kalshi").
+        mode:
+          type: string
+          enum: [managed, self]
+          description: Managed = Parsec creates wallet + credentials. Self = you provide credentials.
+        wallet_type:
+          type: string
+          default: eoa
+          description: Wallet type for managed mode ("eoa" or "safe").
+        chain_id:
+          type: integer
+          default: 137
+          description: Chain ID for wallet creation.
         clob_api_key:
+          type: string
+          description: Polymarket CLOB API key (self mode).
+        clob_api_secret:
+          type: string
+          description: Polymarket CLOB API secret (self mode).
+        clob_api_passphrase:
+          type: string
+          description: Polymarket CLOB API passphrase (self mode).
+        api_key_id:
+          type: string
+          description: Kalshi API key ID (self mode).
+        private_key:
+          type: string
+          description: Kalshi RSA private key in PEM format (self mode).
+
+    OnboardResponse:
+      type: object
+      required:
+        - exchange
+        - mode
+        - status
+        - linked_exchanges
+        - steps_completed
+      properties:
+        exchange:
+          type: string
+          description: Exchange that was onboarded.
+        mode:
+          type: string
+          description: Onboard mode used ("managed" or "self").
+        status:
+          type: string
+          description: Onboard status ("complete").
+        wallet_address:
           type:
             - string
             - "null"
+          description: Wallet address (managed mode only).
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: All exchanges linked to this account.
+        steps_completed:
+          type: array
+          items:
+            type: string
+          description: Steps completed during this call.
+
+    PolymarketAuthMessageResponse:
+      type: object
+      required:
+        - typed_data
+        - timestamp
+      properties:
+        typed_data:
+          type: object
+          description: EIP-712 typed data to sign with your wallet.
+        timestamp:
+          type: string
+          description: Timestamp used in the typed data.
+
+    PolymarketAuthCredentialsRequest:
+      type: object
+      required:
+        - address
+        - signature
+        - timestamp
+      properties:
+        address:
+          type: string
+          description: Your Ethereum wallet address.
+        signature:
+          type: string
+          description: EIP-712 signature of the ClobAuth typed data.
+        timestamp:
+          type: string
+          description: Timestamp from the auth message response.
+
+    PolymarketAuthCredentialsResponse:
+      type: object
+      required:
+        - clob_api_key
+        - clob_api_secret
+        - clob_api_passphrase
+      properties:
+        clob_api_key:
+          type: string
           description: Polymarket CLOB API key.
         clob_api_secret:
-          type:
-            - string
-            - "null"
+          type: string
           description: Polymarket CLOB API secret.
         clob_api_passphrase:
-          type:
-            - string
-            - "null"
+          type: string
           description: Polymarket CLOB API passphrase.
 
     ExchangeStatus:
@@ -2028,89 +2017,6 @@ components:
           additionalProperties:
             $ref: "#/components/schemas/ExchangeStatus"
 
-    ApprovalTarget:
-      type: string
-      enum:
-        - ctf_exchange
-        - neg_risk_ctf_exchange
-        - neg_risk_adapter
-
-    TokenType:
-      type: string
-      enum:
-        - usdc
-        - ctf
-
-    AllowanceStatus:
-      type: object
-      required:
-        - token
-        - target
-        - approved
-        - details
-      properties:
-        token:
-          $ref: "#/components/schemas/TokenType"
-        target:
-          $ref: "#/components/schemas/ApprovalTarget"
-        approved:
-          type: boolean
-        details:
-          type: string
-
-    ApprovalRequest:
-      type: object
-      properties:
-        all:
-          type: boolean
-          default: false
-        usdc:
-          type: boolean
-          default: false
-        ctf:
-          type: boolean
-          default: false
-        usdc_neg_risk:
-          type: boolean
-          default: false
-        ctf_neg_risk:
-          type: boolean
-          default: false
-
-    ApprovalResult:
-      type: object
-      required:
-        - token
-        - target
-        - tx_hash
-        - success
-      properties:
-        token:
-          $ref: "#/components/schemas/TokenType"
-        target:
-          $ref: "#/components/schemas/ApprovalTarget"
-        tx_hash:
-          type:
-            - string
-            - "null"
-        success:
-          type: boolean
-        error:
-          type: string
-          description: Error message, omitted on success.
-
-    ApprovalResponse:
-      type: object
-      required:
-        - results
-        - all_succeeded
-      properties:
-        results:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApprovalResult"
-        all_succeeded:
-          type: boolean
 
     CapabilityMap:
       type: object
@@ -2125,7 +2031,6 @@ components:
         - fetch_trades
         - fetch_events
         - fetch_user_activity
-        - approvals
         - refresh_balance
         - websocket
       properties:
@@ -2148,8 +2053,6 @@ components:
         fetch_events:
           type: boolean
         fetch_user_activity:
-          type: boolean
-        approvals:
           type: boolean
         refresh_balance:
           type: boolean
@@ -2236,19 +2139,6 @@ components:
             - "null"
           description: Total cost including fees (total_cost + fee_estimate). Null when fee rate is unknown.
 
-    RegisterWalletResponse:
-      type: object
-      required:
-        - eoa_address
-        - privy_wallet_id
-      properties:
-        eoa_address:
-          type: string
-          description: EVM wallet address on Polygon.
-        privy_wallet_id:
-          type: string
-          description: Privy wallet identifier.
-
     WalletInfo:
       type: object
       required:
@@ -2310,81 +2200,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExchangeLinkInfo"
-
-    LinkResponse:
-      type: object
-      required:
-        - exchange
-        - status
-        - linked_exchanges
-      properties:
-        exchange:
-          type: string
-          description: Exchange that was linked.
-        status:
-          type: string
-          description: Link status (e.g., "linked").
-        wallet_address:
-          type:
-            - string
-            - "null"
-          description: Wallet address used for the link.
-        linked_exchanges:
-          type: array
-          items:
-            type: string
-          description: Updated list of all linked exchange identifiers.
-
-    SiweNonceResponse:
-      type: object
-      required:
-        - nonce
-      properties:
-        nonce:
-          type: string
-          description: A 32-character hex nonce. Valid for 5 minutes, single-use.
-          example: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
-
-    SiweAuthenticateRequest:
-      type: object
-      required:
-        - message
-        - signature
-      properties:
-        message:
-          type: string
-          description: |
-            The full EIP-4361 SIWE message text. Must include a valid Nonce from
-            GET /auth/siwe/nonce and an Issued At timestamp within 5 minutes.
-        signature:
-          type: string
-          description: |
-            EIP-191 personal_sign signature of the message, hex-encoded with 0x prefix.
-          example: "0x1234567890abcdef..."
-
-    SiweAuthenticateResponse:
-      type: object
-      required:
-        - api_key
-        - customer_id
-        - wallet_address
-        - is_new
-      properties:
-        api_key:
-          type: string
-          description: Parsec API key (pk_live_...). Use in X-API-Key header.
-          example: "pk_live_abc123def456abc123def456abc12345"
-        customer_id:
-          type: string
-          description: Unique customer identifier (UUID).
-          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-        wallet_address:
-          type: string
-          description: The authenticated Ethereum address, lowercased.
-          example: "0xab5801a7d398351b8be11c439e05c5b3259aec9b"
-        is_new:
-          type: boolean
-          description: True if first-time registration, false if returning user.
 
   parameters:
     XExchangeCredentials:

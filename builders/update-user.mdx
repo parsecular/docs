@@ -1,0 +1,27 @@
+---
+title: "Update User"
+description: "Update an end-user's settings."
+---
+
+`PATCH /api/v1/builder/users/:customer_id`
+
+Returns the updated user (same shape as the [onboard response](/builders/onboard-user#response)).
+
+## Parameters
+
+<ParamField path="customer_id" type="string" required>
+  The end-user's Parsec customer UUID.
+</ParamField>
+
+<ParamField body="qps_limit" type="number">
+  New per-user rate limit (must be >= 1).
+</ParamField>
+
+<RequestExample>
+```bash
+curl -X PATCH "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "qps_limit": 20 }'
+```
+</RequestExample>

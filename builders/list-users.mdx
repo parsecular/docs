@@ -1,0 +1,62 @@
+---
+title: "List Users"
+description: "List all end-users in your builder account."
+---
+
+`GET /api/v1/builder/users`
+
+## Parameters
+
+<ParamField query="limit" type="number" default="50">
+  Items per page (1–100).
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Pagination cursor from `next_cursor`.
+</ParamField>
+
+## Response
+
+<ResponseField name="users" type="BuilderUserResponse[]">
+  Array of user objects (same shape as the [onboard response](/builders/onboard-user#response)).
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null">
+  Pass as `cursor` to fetch the next page. Omitted on the last page.
+</ResponseField>
+
+<ResponseField name="count" type="number">
+  Number of items in this response.
+</ResponseField>
+
+<RequestExample>
+```bash
+curl "https://api.parsecapi.com/api/v1/builder/users?limit=20" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "users": [
+    {
+      "customer_id": "a1b2c3d4-...",
+      "external_id": "user_001",
+      "api_key": "pk_live_abc123...",
+      "tier": "free",
+      "qps_limit": 10,
+      "linked_exchanges": ["polymarket"],
+      "wallet": {
+        "eoa_address": "0x1234...",
+        "privy_wallet_id": "wallet_abc123",
+        "wallet_type": "eoa"
+      },
+      "fee_escrow_enabled": false
+    }
+  ],
+  "next_cursor": "eyJidWlsZGVyX2V4dGVybmFsX2lkIjoiMDAyIn0=",
+  "count": 1
+}
+```
+</ResponseExample>

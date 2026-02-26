@@ -1,87 +1,61 @@
 ---
-title: "Managed Wallet Setup"
-description: "Parsec creates and manages a wallet for you — link to Polymarket in one step."
+title: "Managed Credentials"
+description: "Parsec creates a wallet, derives exchange credentials, and signs transactions for you."
 ---
 
 ## Overview
 
-Managed wallets are server-side wallets created by Parsec via Privy. You don't
-need to manage private keys — Parsec signs transactions on your behalf using
-a session signer.
+With managed credentials, Parsec handles everything: wallet creation, credential
+derivation, token approvals, and transaction signing. You don't manage private keys
+or hold gas tokens.
+
+**Best for:** Traders who want the fastest setup, and builders onboarding users
+who don't have existing wallets.
+
+```
+Your App ───► POST /onboard { mode: "managed" } ───► Parsec creates wallet + credentials
+         ───► POST /orders                        ───► Parsec signs and routes
+```
 
 ## Step 1: Get your API key
 
 Sign up at [parsecapi.com](https://parsecapi.com) → **Settings** → copy your API key (`pk_live_...`).
 
-## Step 2: Register a wallet
+## Step 2: Onboard with managed mode
+
+A single call creates your wallet, derives CLOB credentials, and sets token approvals:
 
 <CodeGroup>
 ```bash curl
-curl -X POST "https://api.parsecapi.com/api/v1/wallet" \
-  -H "X-API-Key: pk_live_YOUR_KEY"
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed"
+  }'
 ```
 ```typescript TypeScript
 import ParsecAPI from 'parsec-api';
 
 const client = new ParsecAPI({ apiKey: 'pk_live_YOUR_KEY' });
 
-const wallet = await client.wallet.register();
-console.log(wallet.eoa_address);
-// "0x1234...abcd"
+const result = await client.onboard.create({
+  exchange: 'polymarket',
+  mode: 'managed',
+});
+console.log(result.wallet_address);
 ```
 ```python Python
 from parsec_api import ParsecAPI
 
 client = ParsecAPI(api_key="pk_live_YOUR_KEY")
 
-wallet = client.wallet.register()
-print(wallet.eoa_address)
-# "0x1234...abcd"
-```
-</CodeGroup>
-
-<ResponseExample>
-```json
-{
-  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
-  "privy_wallet_id": "wallet_abc123"
-}
-```
-</ResponseExample>
-
-<Info>
-Idempotent — calling this again returns your existing wallet.
-</Info>
-
-## Step 3: Fund your wallet
-
-Send **USDC** and a small amount of **POL** (for gas) to your `eoa_address` on **Polygon**.
-
-| Token | Amount | Purpose |
-|-------|--------|---------|
-| USDC | Your trading capital | Collateral for orders |
-| POL | ~0.5 POL | Gas for approval transactions |
-
-## Step 4: Link to Polymarket
-
-This single call handles everything needed to trade on Polymarket:
-1. Grants a session signer to your wallet
-2. Derives CLOB API credentials
-3. Sets token approvals (USDC, CTF, Neg Risk)
-4. Stores credentials for future use
-
-<CodeGroup>
-```bash curl
-curl -X POST "https://api.parsecapi.com/api/v1/link?exchange=polymarket" \
-  -H "X-API-Key: pk_live_YOUR_KEY"
-```
-```typescript TypeScript
-const link = await client.link.create({ exchange: 'polymarket' });
-console.log(link.status, link.linked_exchanges);
-```
-```python Python
-link = client.link.create(exchange="polymarket")
-print(link.status, link.linked_exchanges)
+result = client.onboard.create(
+    exchange="polymarket",
+    mode="managed",
+)
+print(result.wallet_address)
 ```
 </CodeGroup>
 
@@ -89,55 +63,53 @@ print(link.status, link.linked_exchanges)
 ```json
 {
   "exchange": "polymarket",
-  "status": "linked",
+  "mode": "managed",
+  "status": "complete",
   "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
-  "linked_exchanges": ["polymarket"]
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["wallet_eoa_created", "exchange_linked"]
 }
 ```
 </ResponseExample>
 
-## Step 5: Check your wallet state
+<Info>
+Idempotent — calling this again skips already-completed steps and returns the same result.
+</Info>
+
+### Safe wallet (optional)
+
+For Gnosis Safe wallets, pass `wallet_type: "safe"`:
+
+```bash
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed",
+    "wallet_type": "safe"
+  }'
+```
+
+## Step 3: Fund your wallet
+
+Send **USDC** to your `wallet_address` on **Polygon**. Gas fees are sponsored — no POL needed.
+
+## Step 4: Trade
 
 <CodeGroup>
 ```bash curl
-curl -H "X-API-Key: pk_live_YOUR_KEY" \
-  "https://api.parsecapi.com/api/v1/wallet"
+curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100
+  }'
 ```
-```typescript TypeScript
-const state = await client.wallet.get();
-console.log(state);
-```
-```python Python
-state = client.wallet.get()
-print(state)
-```
-</CodeGroup>
-
-<ResponseExample>
-```json
-{
-  "wallet": {
-    "eoa_address": "0x1234...abcd",
-    "privy_wallet_id": "wallet_abc123",
-    "created_at": "2026-01-15T12:00:00Z"
-  },
-  "session_signer": {
-    "active": true,
-    "expires_at": "2026-02-15T12:00:00Z",
-    "signer_id": "signer_xyz"
-  },
-  "linked_exchanges": [
-    { "exchange": "polymarket", "has_credentials": true }
-  ]
-}
-```
-</ResponseExample>
-
-## Step 6: Trade
-
-Place orders the same way as a direct trader — your managed wallet handles signing automatically.
-
-<CodeGroup>
 ```typescript TypeScript
 const order = await client.orders.create({
   exchange: 'polymarket',
@@ -162,11 +134,18 @@ print(order.id, order.status)
 ```
 </CodeGroup>
 
+## Supported exchanges
+
+| Exchange | Managed mode |
+|----------|-------------|
+| Polymarket | Yes (EOA or Safe wallet) |
+| Kalshi | No — use [self](/getting-started/direct-trader) or [per-request](/getting-started/per-request-credentials) |
+
 ## What's next?
 
 <CardGroup cols={3}>
-  <Card title="Check Approvals" icon="circle-check" href="/api/get-approvals">
-    Verify your token approvals are set.
+  <Card title="Wallet State" icon="wallet" href="/api/get-wallet">
+    Check wallet, signer, and linked exchanges.
   </Card>
   <Card title="Order Router" icon="arrow-right-arrow-left" href="/order-router/overview">
     Learn how Parsec routes orders across exchanges.

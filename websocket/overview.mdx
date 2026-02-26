@@ -1,44 +1,74 @@
 ---
-title: "WebSocket Overview"
-description: "Real-time orderbook and trade streaming via WebSocket"
+title: "WebSocket"
+description: "Real-time orderbook, trade, and fill streaming."
 ---
 
-## Connection
+`wss://api.parsecapi.com/ws`
 
-```
-wss://api.parsecapi.com/ws
-```
+Real-time streaming for orderbooks, trades, and fills across all supported
+exchanges. Authenticate, subscribe to markets, and receive incremental updates.
 
 ## Authentication
 
-Send an auth message immediately after connecting using either an API key or a terminal token:
+Send an auth message immediately after connecting. Must complete within **15 seconds**.
 
-```json
-{ "type": "auth", "api_key": "sk_your_api_key" }
+<ParamField body="type" type="string" required>
+  `auth` (API key) or `auth_terminal` (terminal token).
+</ParamField>
+
+<ParamField body="api_key" type="string">
+  Your Parsec API key. Required when `type` is `auth`.
+</ParamField>
+
+<ParamField body="token" type="string">
+  Terminal token. Required when `type` is `auth_terminal`.
+</ParamField>
+
+<RequestExample>
+```json API Key
+{ "type": "auth", "api_key": "pk_live_YOUR_KEY" }
 ```
-
-```json
+```json Terminal Token
 { "type": "auth_terminal", "token": "your_terminal_token" }
 ```
+</RequestExample>
 
-On success:
-
-```json
+<ResponseExample>
+```json Success
 { "type": "auth_ok", "customer_id": "cust_abc123" }
 ```
-
-On failure:
-
-```json
+```json Failure
 { "type": "auth_error", "code": 1002, "message": "invalid api key" }
 ```
+</ResponseExample>
 
-Authentication must complete within **15 seconds** or the connection is closed.
+---
 
-## Subscribing
+## Subscribe
 
-After authentication, subscribe to markets:
+Subscribe to one or more markets after authenticating.
 
+<ParamField body="type" type="string" required>
+  `subscribe`.
+</ParamField>
+
+<ParamField body="markets" type="object[]" required>
+  Array of markets to subscribe to.
+</ParamField>
+
+<ParamField body="markets[].parsec_id" type="string" required>
+  Market identifier: `{exchange}:{market_id}`.
+</ParamField>
+
+<ParamField body="markets[].outcome" type="string">
+  Outcome to subscribe to (e.g., `"Yes"` or `"No"`). Omit to subscribe to the default outcome.
+</ParamField>
+
+<ParamField body="markets[].depth" type="number" default="50">
+  Price levels per side. Max: tier-dependent (see [Limits](#limits)).
+</ParamField>
+
+<RequestExample>
 ```json
 {
   "type": "subscribe",
@@ -48,34 +78,131 @@ After authentication, subscribe to markets:
   ]
 }
 ```
+</RequestExample>
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `parsec_id` | string | Yes | Market identifier (`{exchange}:{market_id}`) |
-| `outcome` | string | No | `Yes` or `No` (case-insensitive, default: `Yes`) |
-| `depth` | number | No | Price levels per side (default: 50, max depends on tier: Free=10, Pro=100) |
+---
 
-## Unsubscribing
+## Unsubscribe
 
+<ParamField body="type" type="string" required>
+  `unsubscribe`.
+</ParamField>
+
+<ParamField body="markets" type="object[]" required>
+  Array of markets to unsubscribe from (same shape as subscribe, `depth` ignored).
+</ParamField>
+
+<RequestExample>
 ```json
 {
   "type": "unsubscribe",
   "markets": [{ "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }]
 }
 ```
+</RequestExample>
+
+---
 
 ## Resync
 
-Request a fresh snapshot if data becomes stale:
+Request a fresh full-depth snapshot when data becomes stale or you detect a
+sequence gap.
 
+<ParamField body="type" type="string" required>
+  `resync`.
+</ParamField>
+
+<ParamField body="parsec_id" type="string" required>
+  Market to resync.
+</ParamField>
+
+<ParamField body="outcome" type="string">
+  Outcome to resync. Omit to resync the default outcome.
+</ParamField>
+
+<RequestExample>
 ```json
 { "type": "resync", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
+</RequestExample>
+
+---
 
 ## Server Messages
 
-### Orderbook
+### Orderbook Snapshot
 
+Sent on initial subscription and after a resync. `type: "orderbook"`.
+
+<ResponseField name="parsec_id" type="string">
+  `{exchange}:{market_id}`.
+</ResponseField>
+
+<ResponseField name="exchange" type="string">
+  Exchange name.
+</ResponseField>
+
+<ResponseField name="outcome" type="string">
+  Outcome label.
+</ResponseField>
+
+<ResponseField name="token_id" type="string">
+  Exchange-specific token/contract ID.
+</ResponseField>
+
+<ResponseField name="market_id" type="string">
+  Exchange-native market ID.
+</ResponseField>
+
+<ResponseField name="tick_size" type="number">
+  Minimum price increment.
+</ResponseField>
+
+<ResponseField name="min_order_size" type="number | null">
+  Minimum order size. Omitted if unknown.
+</ResponseField>
+
+<ResponseField name="kind" type="string">
+  Always `"snapshot"`.
+</ResponseField>
+
+<ResponseField name="title" type="string | null">
+  Human-readable market title.
+</ResponseField>
+
+<ResponseField name="bids" type="[price, size][]">
+  Bid levels, sorted descending by price.
+</ResponseField>
+
+<ResponseField name="asks" type="[price, size][]">
+  Ask levels, sorted ascending by price.
+</ResponseField>
+
+<ResponseField name="book_state" type="string">
+  `fresh`, `stale`, or `needs_refresh`.
+</ResponseField>
+
+<ResponseField name="server_seq" type="number">
+  Monotonically increasing sequence number.
+</ResponseField>
+
+<ResponseField name="feed_state" type="string">
+  `healthy`, `degraded`, or `disconnected`.
+</ResponseField>
+
+<ResponseField name="stale_after_ms" type="number">
+  Book marked stale if no update within this window.
+</ResponseField>
+
+<ResponseField name="exchange_ts_ms" type="number | null">
+  Exchange event time (epoch ms).
+</ResponseField>
+
+<ResponseField name="ingest_ts_ms" type="number | null">
+  Server ingest time (epoch ms).
+</ResponseField>
+
+<ResponseExample>
 ```json
 {
   "type": "orderbook",
@@ -85,26 +212,48 @@ Request a fresh snapshot if data becomes stale:
   "token_id": "217426...",
   "market_id": "0x1234abcd",
   "tick_size": 0.001,
-  "title": "Will ETH reach $5000?",
+  "min_order_size": 1.0,
   "kind": "snapshot",
+  "title": "Will ETH reach $5000?",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
   "book_state": "fresh",
   "server_seq": 1234,
   "feed_state": "healthy",
-  "stale_after_ms": 5000
+  "stale_after_ms": 5000,
+  "exchange_ts_ms": 1708123456000,
+  "ingest_ts_ms": 1708123456050
 }
 ```
+</ResponseExample>
 
-`exchange_ts_ms` and `ingest_ts_ms` are included when available and provide epoch-millisecond timestamps for the exchange event time and server ingest time respectively.
+---
 
 ### Orderbook Delta
 
-Incremental orderbook updates are sent as `type: "orderbook_delta"`. Deltas use **absolute replacement** semantics:
+Incremental orderbook update. `type: "orderbook_delta"`. Uses **absolute
+replacement** semantics: `size > 0` = set level, `size == 0` = remove level.
 
-- `size > 0`: set that price level to `size`
-- `size == 0`: delete that price level
+<ResponseField name="changes" type="object[]">
+  List of price level updates.
+  <Expandable title="properties">
+    <ResponseField name="side" type="string">
+      `"bid"` or `"ask"`.
+    </ResponseField>
+    <ResponseField name="price" type="number">
+      Price level.
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      New size. `0` means remove this level.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
 
+All other fields (`parsec_id`, `exchange`, `outcome`, `token_id`, `market_id`,
+`server_seq`, `feed_state`, `book_state`, `stale_after_ms`, `exchange_ts_ms`,
+`ingest_ts_ms`) are the same as the orderbook snapshot.
+
+<ResponseExample>
 ```json
 {
   "type": "orderbook_delta",
@@ -117,18 +266,66 @@ Incremental orderbook updates are sent as `type: "orderbook_delta"`. Deltas use 
     { "side": "bid", "price": 0.65, "size": 900.0 },
     { "side": "ask", "price": 0.66, "size": 0.0 }
   ],
-  "server_seq": 1234,
+  "server_seq": 1235,
   "feed_state": "healthy",
   "book_state": "fresh",
   "stale_after_ms": 5000
 }
 ```
+</ResponseExample>
+
+---
 
 ### Activity (Trades & Fills)
 
-Trades and fills are sent as `type: "activity"` with a `kind` field:
+Trades and fills share `type: "activity"` with a `kind` discriminator.
 
-```json
+<ResponseField name="kind" type="string">
+  `"trade"` (public trade) or `"fill"` (your order was filled).
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Execution price.
+</ResponseField>
+
+<ResponseField name="size" type="number">
+  Execution size.
+</ResponseField>
+
+<ResponseField name="trade_id" type="string | null">
+  Trade identifier. Present on trades.
+</ResponseField>
+
+<ResponseField name="fill_id" type="string | null">
+  Fill identifier. Present on fills.
+</ResponseField>
+
+<ResponseField name="order_id" type="string | null">
+  Order that was filled. Present on fills.
+</ResponseField>
+
+<ResponseField name="side" type="string | null">
+  `"buy"` or `"sell"`. Omitted when unavailable.
+</ResponseField>
+
+<ResponseField name="aggressor_side" type="string | null">
+  Aggressor side. Trades only.
+</ResponseField>
+
+<ResponseField name="liquidity_role" type="string | null">
+  `"maker"` or `"taker"`. Fills only.
+</ResponseField>
+
+<ResponseField name="source_channel" type="string">
+  Exchange-specific data source (e.g. `"polymarket_last_trade_price"`, `"kalshi_user_fill"`).
+</ResponseField>
+
+All other fields (`parsec_id`, `exchange`, `outcome`, `token_id`, `market_id`,
+`server_seq`, `feed_state`, `exchange_ts_ms`, `ingest_ts_ms`) match the
+orderbook messages.
+
+<ResponseExample>
+```json Trade
 {
   "type": "activity",
   "parsec_id": "polymarket:0x1234abcd",
@@ -142,13 +339,14 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "trade_id": "trade_123",
   "side": "buy",
   "aggressor_side": "buy",
-  "server_seq": 1235,
+  "server_seq": 1236,
   "feed_state": "healthy",
-  "source_channel": "trades"
+  "exchange_ts_ms": 1708123456200,
+  "ingest_ts_ms": 1708123456250,
+  "source_channel": "polymarket_last_trade_price"
 }
 ```
-
-```json
+```json Fill
 {
   "type": "activity",
   "parsec_id": "kalshi:KXBTC-25DEC-100K",
@@ -163,51 +361,92 @@ Trades and fills are sent as `type: "activity"` with a `kind` field:
   "order_id": "order_789",
   "side": "buy",
   "liquidity_role": "maker",
-  "server_seq": 1236,
+  "server_seq": 1237,
   "feed_state": "healthy",
-  "source_channel": "user"
+  "exchange_ts_ms": 1708123456300,
+  "ingest_ts_ms": 1708123456350,
+  "source_channel": "kalshi_user_fill"
 }
 ```
+</ResponseExample>
 
-Activity messages may also include optional `exchange_ts_ms` and `ingest_ts_ms` fields when available. Fill messages may also include `liquidity_role`: `"maker"`, `"taker"`, or omitted when unavailable. Present on `kind: "fill"` messages only.
+---
 
 ### Heartbeat
 
+Sent periodically to keep the connection alive.
+
+<ResponseExample>
 ```json
-{ "type": "heartbeat", "ts_ms": 1707044096000 }
+{ "type": "heartbeat", "ts_ms": 1708123456400 }
 ```
+</ResponseExample>
 
-### Error
-
-```json
-{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:0x1234abcd" }
-```
-
-`parsec_id` is included when the error relates to a specific market subscription. It is omitted for connection-level errors (e.g., authentication failures).
+---
 
 ### Resync Required
 
-Sent when you've fallen behind on updates:
+The server dropped a delta and your local book is corrupted. Send a
+[resync](#resync) message to recover.
 
+<ResponseExample>
 ```json
 { "type": "resync_required", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
+</ResponseExample>
+
+---
 
 ### Slow Reader
 
-Warning that you're consuming messages too slowly:
+You are consuming messages too slowly and may miss updates.
 
+<ResponseExample>
 ```json
 { "type": "slow_reader", "parsec_id": "polymarket:0x1234abcd", "outcome": "Yes" }
 ```
+</ResponseExample>
+
+---
+
+### Error
+
+<ResponseField name="code" type="number">
+  Error code (see [Error Codes](#error-codes)).
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable error description.
+</ResponseField>
+
+<ResponseField name="parsec_id" type="string | null">
+  Included when the error relates to a specific market. Omitted for connection-level errors.
+</ResponseField>
+
+<ResponseExample>
+```json
+{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:0x1234abcd" }
+```
+</ResponseExample>
+
+---
+
+## Sequence Numbers
+
+Each message includes a `server_seq` that increments per market subscription.
+Use it to detect gaps:
+
+1. You receive a snapshot at `server_seq = N`
+2. Subsequent deltas arrive as `N+1`, `N+2`, ...
+3. If you receive `server_seq > N+1`, send a [resync](#resync) to recover
 
 ## Book State
 
 | State | Description |
 |-------|-------------|
 | `fresh` | Data is current and reliable |
-| `stale` | No recent updates received |
-| `needs_refresh` | Send a Resync message to get fresh data |
+| `stale` | No updates received within `stale_after_ms` |
+| `needs_refresh` | Send a resync to get fresh data |
 
 ## Feed State
 
@@ -217,51 +456,45 @@ Warning that you're consuming messages too slowly:
 | `degraded` | Partial connectivity or delayed data |
 | `disconnected` | No connection to exchange |
 
-## Sequence Numbers
-
-Use `server_seq` to detect gaps. If you receive a sequence number more than 1 higher than the previous, send a Resync request to recover missed updates.
-
 ## Error Codes
 
 | Code | Type | Description |
 |------|------|-------------|
-| 1001 | `auth_required` | Authentication required |
-| 1001 | `already_authenticated` | Already authenticated (duplicate auth message) |
-| 1002 | `auth_invalid` | Invalid API key or terminal token |
-| 2001 | `invalid_market` | Invalid message format or market ID |
-| 2002 | `market_not_found` | Market does not exist |
-| 2003 | `exchange_unavailable` | Exchange is unavailable |
-| 2005 | `invalid_outcome` | Invalid outcome value |
-| 3001 | `rate_limited` | Subscribe rate limit exceeded |
-| 3002 | `max_subscriptions` | Max subscriptions reached |
+| `1001` | `auth_required` | Authentication required |
+| `1001` | `already_authenticated` | Duplicate auth message on same connection |
+| `1002` | `auth_invalid` | Invalid API key or terminal token |
+| `2001` | `invalid_market` | Malformed message or invalid market ID |
+| `2002` | `market_not_found` | Market does not exist |
+| `2003` | `exchange_unavailable` | Exchange is unavailable or WS stream error |
+| `2005` | `invalid_outcome` | Invalid outcome value |
+| `3001` | `rate_limited` | Subscribe/unsubscribe/resync rate limit exceeded |
+| `3002` | `max_subscriptions` | Subscription limit reached for your tier |
 
 ## Limits
 
-Limits depend on your API key tier:
+| Limit | Free | Pro | Scale |
+|-------|------|-----|-------|
+| Max subscriptions | 5 | 500 | 2,000 |
+| Max orderbook depth | 10 levels/side | 100 levels/side | 100 levels/side |
+| Default orderbook depth | 50 (clamped to tier max) | 50 | 50 |
+| Subscribe rate limit | 3 req/sec | 3 req/sec | 3 req/sec |
+| Auth timeout | 15 sec | 15 sec | 15 sec |
 
-| Limit | Free | Pro |
-|-------|------|-----|
-| Max subscriptions (total across connections) | 20 | 500 |
-| Max orderbook depth (levels/side) | 10 | 100 |
-| Subscribe rate limit | 3 req/sec | 3 req/sec |
-| Authentication timeout | 15 sec | 15 sec |
-
-When you exceed the subscription limit, the server responds with error code `3002`.
-When you exceed the subscribe rate limit, the server responds with error code `3001`.
+Subscribe, unsubscribe, and resync messages all count toward the 3 req/sec rate limit.
 
 ## Supported Exchanges
 
 | Exchange | Orderbook | Trades | Fills |
 |----------|-----------|--------|-------|
-| Polymarket | Yes | Yes | Yes |
-| Limitless | Yes | No | No |
-| Kalshi | Yes | Yes | Yes |
-| Opinion | Polling | No | No |
-| Predict.fun | Polling | No | No |
+| Polymarket | Streaming | Streaming | Streaming |
+| Kalshi | Streaming | Streaming | Streaming |
+| Limitless | Streaming | No | No |
+| Opinion | Polling (3s) | No | No |
+| Predict.fun | Polling (3s) | No | No |
+
+---
 
 ## SDK Usage
-
-The Parsec SDK handles authentication, reconnection, and message parsing automatically. This is the recommended way to consume the WebSocket API.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -306,15 +539,13 @@ asyncio.run(main())
 ```
 </CodeGroup>
 
-## Example: Raw JavaScript Client
-
-If you need lower-level control, you can use the WebSocket API directly:
+## Raw WebSocket Example
 
 ```javascript
 const ws = new WebSocket('wss://api.parsecapi.com/ws');
 
 ws.onopen = () => {
-  ws.send(JSON.stringify({ type: 'auth', api_key: 'sk_your_api_key' }));
+  ws.send(JSON.stringify({ type: 'auth', api_key: 'pk_live_YOUR_KEY' }));
 };
 
 ws.onmessage = (event) => {
@@ -325,24 +556,22 @@ ws.onmessage = (event) => {
       console.log('Authenticated:', msg.customer_id);
       ws.send(JSON.stringify({
         type: 'subscribe',
-        markets: [{ parsec_id: 'polymarket:0x1234', outcome: 'yes', depth: 10 }]
+        markets: [{ parsec_id: 'polymarket:0x1234', outcome: 'Yes', depth: 10 }]
       }));
       break;
 
-    case 'auth_error':
-      console.error(`Auth failed (${msg.code}): ${msg.message}`);
+    case 'orderbook':
+      console.log(`Snapshot ${msg.parsec_id}: ${msg.bids.length} bids, ${msg.asks.length} asks`);
       break;
 
-    case 'orderbook':
-      console.log(`Orderbook ${msg.parsec_id}:`, msg.bids[0], msg.asks[0]);
+    case 'orderbook_delta':
+      for (const change of msg.changes) {
+        console.log(`${change.side} ${change.price} → ${change.size}`);
+      }
       break;
 
     case 'activity':
       console.log(`${msg.kind} ${msg.parsec_id}: ${msg.size} @ ${msg.price}`);
-      break;
-
-    case 'error':
-      console.error(`Error ${msg.code}: ${msg.message}`);
       break;
 
     case 'resync_required':
@@ -351,6 +580,10 @@ ws.onmessage = (event) => {
         parsec_id: msg.parsec_id,
         outcome: msg.outcome
       }));
+      break;
+
+    case 'error':
+      console.error(`Error ${msg.code}: ${msg.message}`);
       break;
   }
 };
@@ -362,7 +595,7 @@ ws.onmessage = (event) => {
   <Card title="Get Orderbook" icon="book" href="/api/get-orderbook">
     Fetch orderbook snapshots via REST.
   </Card>
-  <Card title="WebSocket Usage API" icon="chart-bar" href="/api/ws-usage">
+  <Card title="WebSocket Usage" icon="chart-bar" href="/api/ws-usage">
     Monitor your WebSocket usage statistics.
   </Card>
 </CardGroup>

@@ -1,0 +1,24 @@
+---
+title: "Deactivate User"
+description: "Deactivate an end-user and revoke all credentials."
+---
+
+`DELETE /api/v1/builder/users/:customer_id`
+
+Deactivates all wallets, credentials, and session signers. **Not reversible** —
+the user will need to be re-onboarded to trade again.
+
+Returns `204 No Content`.
+
+## Parameters
+
+<ParamField path="customer_id" type="string" required>
+  The end-user's Parsec customer UUID.
+</ParamField>
+
+<RequestExample>
+```bash
+curl -X DELETE "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+</RequestExample>

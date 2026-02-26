@@ -10,7 +10,7 @@ Every order endpoint works the same as for regular traders — you just add the
 `X-Builder-Customer-Id` header.
 
 <Info>
-Before routing orders, ensure the end-user has a wallet and is linked to the
+Before routing orders, ensure the end-user has been onboarded to the
 target exchange. See [User Management](/builders/user-management).
 </Info>
 
@@ -18,7 +18,91 @@ target exchange. See [User Management](/builders/user-management).
 
 `POST /api/v1/orders?exchange={exchange}`
 
-<CodeGroup>
+### Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket` or `kalshi`.
+</ParamField>
+
+<ParamField header="X-API-Key" type="string" required>
+  Your builder API key.
+</ParamField>
+
+<ParamField header="X-Builder-Customer-Id" type="string" required>
+  The end-user's `customer_id`.
+</ParamField>
+
+<ParamField body="market_id" type="string" required>
+  Exchange-native market ID.
+</ParamField>
+
+<ParamField body="outcome" type="string" required>
+  `"Yes"` or `"No"` (binary), or outcome name (categorical).
+</ParamField>
+
+<ParamField body="side" type="string" required>
+  `"buy"` or `"sell"`.
+</ParamField>
+
+<ParamField body="price" type="number" required>
+  Limit price (0.01–0.99 for binary).
+</ParamField>
+
+<ParamField body="size" type="number" required>
+  Number of contracts.
+</ParamField>
+
+<ParamField body="params" type="object">
+  Optional exchange-specific parameters.
+
+  | Key | Values | Description |
+  |-----|--------|-------------|
+  | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type |
+</ParamField>
+
+<ParamField body="credentials" type="object">
+  Optional [per-request credentials](/getting-started/per-request-credentials). Skips stored credentials.
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Order identifier.
+</ResponseField>
+
+<ResponseField name="market_id" type="string">
+  Market the order was placed on.
+</ResponseField>
+
+<ResponseField name="outcome" type="string">
+  The outcome being traded.
+</ResponseField>
+
+<ResponseField name="side" type="string">
+  `"buy"` or `"sell"`.
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Order price.
+</ResponseField>
+
+<ResponseField name="size" type="number">
+  Total order size.
+</ResponseField>
+
+<ResponseField name="filled" type="number">
+  Amount filled so far.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `pending`, `open`, `filled`, `partially_filled`, `cancelled`, or `rejected`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  ISO 8601 creation timestamp.
+</ResponseField>
+
+<RequestExample>
 ```bash curl
 curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
@@ -69,7 +153,7 @@ resp = requests.post(
     },
 )
 ```
-</CodeGroup>
+</RequestExample>
 
 <ResponseExample>
 ```json
@@ -87,25 +171,15 @@ resp = requests.post(
 ```
 </ResponseExample>
 
-### Request fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `market_id` | string | Yes | Exchange-native market ID |
-| `outcome` | string | Yes | `"Yes"` or `"No"` (binary), or outcome name (categorical) |
-| `side` | string | Yes | `"buy"` or `"sell"` |
-| `price` | number | Yes | Limit price (0.01 - 0.99 for binary) |
-| `size` | number | Yes | Number of contracts |
-| `params.order_type` | string | No | `"gtc"` (default), `"ioc"`, or `"fok"` |
-| `credentials` | object | No | Per-request credentials (Mode B) |
+---
 
 ## Placing an order with fee escrow
 
 To collect fees on an order, include the `fee_auth` object signed by the
 end-user's wallet. See [Fee Escrow](/builders/fee-escrow) for details.
 
-<CodeGroup>
-```bash curl
+<RequestExample>
+```bash
 curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "X-Builder-Customer-Id: CUSTOMER_ID" \
@@ -127,13 +201,15 @@ curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
     "signer_address": "0xUserWalletAddress"
   }'
 ```
-</CodeGroup>
+</RequestExample>
+
+---
 
 ## Listing orders
 
 `GET /api/v1/orders?exchange={exchange}`
 
-<CodeGroup>
+<RequestExample>
 ```bash curl
 curl "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
@@ -152,19 +228,23 @@ resp = requests.get(
     params={"exchange": "polymarket"},
 )
 ```
-</CodeGroup>
+</RequestExample>
+
+---
 
 ## Getting an order
 
 `GET /api/v1/orders/:order_id?exchange={exchange}`
 
-<CodeGroup>
-```bash curl
+<RequestExample>
+```bash
 curl "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polymarket" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "X-Builder-Customer-Id: CUSTOMER_ID"
 ```
-</CodeGroup>
+</RequestExample>
+
+---
 
 ## Cancelling an order
 
@@ -173,7 +253,7 @@ curl "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polymarket" \
 If fee escrow is active on the order, the escrowed fee is automatically refunded
 to the payer's wallet on cancellation.
 
-<CodeGroup>
+<RequestExample>
 ```bash curl
 curl -X DELETE "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polymarket" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
@@ -192,7 +272,9 @@ resp = requests.delete(
     params={"exchange": "polymarket"},
 )
 ```
-</CodeGroup>
+</RequestExample>
+
+---
 
 ## Other endpoints
 
@@ -215,24 +297,13 @@ your builder API key.
 
 ## Order types
 
-| Type | Description | Exchanges |
-|------|-------------|-----------|
-| `gtc` | Good-til-cancelled (default) | All |
-| `ioc` | Immediate-or-cancel — fills what it can, cancels the rest | Polymarket, Kalshi |
-| `fok` | Fill-or-kill — fills entirely or cancels | Polymarket |
+| Type | Behavior | Supported |
+|------|----------|-----------|
+| `gtc` | Good-til-cancelled (default) | All exchanges |
+| `ioc` | Immediate-or-cancel | Polymarket, Kalshi |
+| `fok` | Fill-or-kill | Polymarket |
 
-Set via `params.order_type`:
-
-```json
-{
-  "market_id": "0x...",
-  "outcome": "Yes",
-  "side": "buy",
-  "price": 0.55,
-  "size": 100,
-  "params": { "order_type": "ioc" }
-}
-```
+Set via `params.order_type` in the create order request body. Unsupported combinations return `501`.
 
 <CardGroup cols={2}>
   <Card title="Fee Escrow" icon="vault" href="/builders/fee-escrow">
