@@ -1,21 +1,28 @@
 ---
-title: "Direct Trader Setup"
-description: "Store your exchange credentials and trade through a single API."
+title: "Self Credentials"
+description: "Store your own exchange credentials on Parsec and trade through a single API."
 ---
 
 ## Overview
 
-Direct traders store exchange credentials once on Parsec's servers. All
-subsequent API calls use these stored credentials — no per-request auth needed
-beyond your Parsec API key.
+With self credentials, you provide your own exchange API keys and Parsec stores
+them securely. All subsequent API calls use these stored credentials — no
+per-request auth needed beyond your Parsec API key.
+
+**Best for:** Traders who already have exchange accounts and API keys.
+
+```
+Your App ───► POST /onboard { mode: "self", credentials... } ───► Parsec stores credentials
+         ───► POST /orders                                    ───► Parsec authenticates and routes
+```
 
 ## Step 1: Get your API key
 
 Sign up at [parsecapi.com](https://parsecapi.com) → **Settings** → copy your API key (`pk_live_...`).
 
-## Step 2: Store your exchange credentials
+## Step 2: Onboard your exchange
 
-Use `PUT /api/v1/credentials` to save your exchange credentials. Only include the fields for the exchange you want to configure.
+Use `POST /api/v1/onboard` with `mode: "self"` to store your credentials.
 
 ### Kalshi
 
@@ -25,10 +32,12 @@ Use `PUT /api/v1/credentials` to save your exchange credentials. Only include th
 
 <CodeGroup>
 ```bash curl
-curl -X PUT "https://api.parsecapi.com/api/v1/credentials" \
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
   -H "X-API-Key: pk_live_YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "exchange": "kalshi",
+    "mode": "self",
     "api_key_id": "your-kalshi-key-id",
     "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE..."
   }'
@@ -38,7 +47,9 @@ import ParsecAPI from 'parsec-api';
 
 const client = new ParsecAPI({ apiKey: 'pk_live_YOUR_KEY' });
 
-await client.credentials.update({
+const result = await client.onboard.create({
+  exchange: 'kalshi',
+  mode: 'self',
   api_key_id: 'your-kalshi-key-id',
   private_key: '-----BEGIN RSA PRIVATE KEY-----\nMIIE...',
 });
@@ -48,7 +59,9 @@ from parsec_api import ParsecAPI
 
 client = ParsecAPI(api_key="pk_live_YOUR_KEY")
 
-client.credentials.update(
+result = client.onboard.create(
+    exchange="kalshi",
+    mode="self",
     api_key_id="your-kalshi-key-id",
     private_key="-----BEGIN RSA PRIVATE KEY-----\nMIIE...",
 )
@@ -59,38 +72,96 @@ client.credentials.update(
 
 **Where to get these:**
 - Derive CLOB API credentials from your wallet at [clob.polymarket.com](https://clob.polymarket.com)
-- Or use the Polymarket CLOB auth flow with your EVM wallet
 
 <CodeGroup>
 ```bash curl
-curl -X PUT "https://api.parsecapi.com/api/v1/credentials" \
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
   -H "X-API-Key: pk_live_YOUR_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "exchange": "polymarket",
+    "mode": "self",
     "clob_api_key": "your-clob-api-key",
     "clob_api_secret": "your-clob-api-secret",
-    "clob_api_passphrase": "your-clob-passphrase"
+    "clob_api_passphrase": "your-clob-passphrase",
+    "private_key": "0xYourEthPrivateKey"
   }'
 ```
 ```typescript TypeScript
-await client.credentials.update({
+const result = await client.onboard.create({
+  exchange: 'polymarket',
+  mode: 'self',
   clob_api_key: 'your-clob-api-key',
   clob_api_secret: 'your-clob-api-secret',
   clob_api_passphrase: 'your-clob-passphrase',
+  private_key: '0xYourEthPrivateKey',
 });
 ```
 ```python Python
-client.credentials.update(
+result = client.onboard.create(
+    exchange="polymarket",
+    mode="self",
     clob_api_key="your-clob-api-key",
     clob_api_secret="your-clob-api-secret",
     clob_api_passphrase="your-clob-passphrase",
+    private_key="0xYourEthPrivateKey",
 )
 ```
 </CodeGroup>
 
-## Step 3: Verify connectivity
+<Info>
+The `private_key` field is optional for Polymarket self mode. Including your Ethereum
+private key (`0x`-prefixed hex) enables order signing so you can place and cancel orders.
+Without it, only read operations (balance, positions) work.
+</Info>
 
-Ping the exchange to confirm your credentials are working.
+### Onboard fields reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `exchange` | string | **Yes** | `"polymarket"` or `"kalshi"` |
+| `mode` | string | **Yes** | `"self"` |
+| `clob_api_key` | string | Polymarket | CLOB API key |
+| `clob_api_secret` | string | Polymarket | CLOB API secret |
+| `clob_api_passphrase` | string | Polymarket | CLOB API passphrase |
+| `private_key` | string | Kalshi (required), Polymarket (optional) | Kalshi: RSA private key (PEM). Polymarket: Ethereum private key (`0x`-prefixed hex) for order signing |
+| `api_key_id` | string | Kalshi | Kalshi API key ID |
+
+### Response
+
+<ResponseExample>
+```json Kalshi
+{
+  "exchange": "kalshi",
+  "mode": "self",
+  "status": "complete",
+  "wallet_address": null,
+  "linked_exchanges": ["kalshi"],
+  "steps_completed": ["credentials_validated", "credentials_stored"]
+}
+```
+```json Polymarket
+{
+  "exchange": "polymarket",
+  "mode": "self",
+  "status": "complete",
+  "wallet_address": null,
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["credentials_stored"]
+}
+```
+</ResponseExample>
+
+| Field | Type | Always present | Description |
+|-------|------|----------------|-------------|
+| `exchange` | string | Yes | Exchange that was onboarded |
+| `mode` | string | Yes | `"self"` |
+| `status` | string | Yes | `"complete"` on success |
+| `wallet_address` | string | No | Always `null` for self mode |
+| `linked_exchanges` | string[] | Yes | All exchanges linked to this account |
+| `steps_completed` | string[] | Yes | Steps completed during this call |
+
+## Step 3: Verify connectivity
 
 <CodeGroup>
 ```bash curl

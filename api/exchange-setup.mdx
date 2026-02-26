@@ -1,0 +1,22 @@
+---
+title: "Exchange Setup (Deprecated)"
+description: "This endpoint has been removed. Use POST /onboard instead."
+---
+
+<Warning>
+`POST /api/v1/exchange/setup` has been removed. Use [`POST /api/v1/onboard`](/api/onboard) with `mode: "managed"` instead.
+
+The onboard endpoint handles wallet creation, CLOB credential derivation, and token approvals in a single call.
+</Warning>
+
+```bash
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed"
+  }'
+```
+
+See the [Onboard endpoint](/api/onboard) for full documentation.

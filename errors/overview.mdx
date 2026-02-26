@@ -66,6 +66,35 @@ Content-Type: application/json
 { "error": "rate limit exceeded", "code": "rate_limit_exceeded", "retryable": true, "tier": "free", "limit_qps": 10 }
 ```
 
+### Monthly Quota Exceeded
+
+When you exceed your monthly request limit, you'll receive:
+
+```json
+{ "error": "monthly request limit exceeded" }
+```
+
+Monthly limits reset on the 1st of each month. Check your remaining quota via the `x-ratelimit-monthly-remaining` response header.
+
+### Rate Limit Response Headers
+
+| Header | Description |
+|--------|-------------|
+| `x-ratelimit-monthly-limit` | Your monthly request quota |
+| `x-ratelimit-monthly-remaining` | Requests remaining this month |
+| `x-ratelimit-monthly-reset` | Unix timestamp when quota resets |
+| `Retry-After` | Seconds to wait before retrying (on 429) |
+| `x-parsec-tier` | Your API key tier |
+
+Builder impersonation requests include additional headers:
+
+| Header | Description |
+|--------|-------------|
+| `x-ratelimit-user-limit` | Per-end-user QPS limit |
+| `x-ratelimit-user-remaining` | End-user tokens remaining |
+| `x-ratelimit-pool-limit` | Builder pool QPS limit |
+| `x-ratelimit-pool-remaining` | Pool tokens remaining |
+
 Both SDKs automatically retry on `429` responses with exponential backoff (up to 2 retries).
 
 ## SDK Error Handling
@@ -133,6 +162,19 @@ Make sure you're passing your API key in the `X-API-Key` header, or set the `PAR
 ```
 
 Your exchange credentials are missing or invalid. Go to **Settings** in your Parsec dashboard and re-enter your credentials for the affected exchange.
+
+### `403` — Builder Impersonation Errors
+
+```json
+{ "error": "X-Builder-Customer-Id requires a builder account" }
+```
+
+```json
+{ "error": "end-user not found or not owned by this builder" }
+```
+
+Builder impersonation requires `account_type: "builder"` on your API key.
+The `X-Builder-Customer-Id` header must reference an end-user you created.
 
 ### `400` — Historical Data Tier Limit
 

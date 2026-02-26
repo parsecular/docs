@@ -11,7 +11,7 @@ https://api.parsecapi.com/api/v1
 
 ## Authentication
 
-All API requests (except SIWE auth) require an API key passed via the `X-API-Key` header:
+All API requests require an API key passed via the `X-API-Key` header:
 
 ```bash
 curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?exchanges=polymarket
@@ -21,7 +21,6 @@ curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?excha
 
 | Method | Description | Guide |
 |--------|-------------|-------|
-| **Wallet Auth (SIWE)** | Sign in with your Ethereum wallet — headless, no browser | [Setup guide](/getting-started/wallet-auth) |
 | **Web signup** | Sign up at [parsecapi.com](https://parsecapi.com) | [Direct trader](/getting-started/direct-trader) |
 | **Builder program** | Get a builder key with user management capabilities | [Builder onboarding](/builders/onboarding) |
 
@@ -77,11 +76,11 @@ See [Error Handling](/errors/overview) for the full list of error codes.
 
 ## Available Endpoints
 
-### Authentication (unauthenticated)
+### Onboarding & Wallets
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | [`/auth/siwe/nonce`](/api/siwe-nonce) | Get a one-time nonce for SIWE |
-| `POST` | [`/auth/siwe`](/api/siwe-authenticate) | Authenticate with a signed SIWE message |
+| `POST` | [`/onboard`](/api/onboard) | Set up an exchange (managed or self mode) |
+| `GET` | [`/wallet`](/api/get-wallet) | Get wallet state and linked exchanges |
 
 ### Market Data
 | Method | Endpoint | Description |
@@ -90,7 +89,7 @@ See [Error Handling](/errors/overview) for the full list of error codes.
 | `GET` | [`/markets`](/api/list-markets) | List markets from one or more exchanges |
 | `GET` | [`/orderbook`](/api/get-orderbook) | Get live or historical L2 orderbook |
 | `GET` | [`/execution-price`](/api/get-execution-price) | Estimate VWAP and slippage |
-| `GET` | [`/price`](/api/get-price) | Get OHLCV candlestick data + point-in-time price |
+| `GET` | [`/price`](/api/get-price-history) | Get OHLCV candlestick data + point-in-time price |
 | `GET` | [`/trades`](/api/get-trades) | Get recent or historical trades |
 | `GET` | [`/events`](/api/list-events) | List events (market groups) |
 
@@ -107,11 +106,9 @@ See [Error Handling](/errors/overview) for the full list of error codes.
 |--------|----------|-------------|
 | `GET` | [`/ping`](/api/ping) | Check exchange connectivity |
 | `GET` | [`/positions`](/api/list-positions) | List positions |
+| `GET` | [`/fills`](/api/list-fills) | List fills (trade history) |
 | `GET` | [`/balance`](/api/get-balance) | Get account balance |
 | `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
-| `PUT` | [`/credentials`](/api/update-credentials) | Update exchange credentials |
-| `GET` | [`/approvals`](/api/get-approvals) | Check token approvals |
-| `POST` | [`/approvals`](/api/set-approvals) | Set token approvals |
 
 ### WebSocket
 | Method | Endpoint | Description |
@@ -128,14 +125,14 @@ Some endpoints accept multiple exchanges at once (CSV on the wire):
 
 All API requests are rate limited per API key using a token bucket algorithm. Limits depend on your tier:
 
-| Tier | Sustained (req/sec) | Burst |
-|------|---------------------|-------|
-| Free | 10 | 10 (no burst) |
-| Pro | 60 | 120 |
-| Scale | 200 | 400 |
+| Tier | Sustained (req/sec) | Burst | Monthly Requests |
+|------|---------------------|-------|------------------|
+| Free | 10 | 10 | 50,000 |
+| Pro | 60 | 120 | 5,000,000 |
+| Scale | 200 | 400 | Unlimited |
 
 When rate limited, you'll receive a `429 Too Many Requests` response with a `Retry-After` header.
-The response includes your current `tier` and `limit_qps` so you know which plan you're on:
+Builder impersonation requests include additional headers: `x-ratelimit-user-limit`, `x-ratelimit-user-remaining`, `x-ratelimit-pool-limit`, `x-ratelimit-pool-remaining`.
 
 ```
 HTTP/1.1 429 Too Many Requests

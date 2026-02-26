@@ -147,9 +147,9 @@ resp = requests.post(
 | Field | Source | Purpose |
 |-------|--------|---------|
 | Your user ID | Your auth system | Identify the user in your app |
-| `customer_id` | `POST /builder/users` response | Impersonate via `X-Builder-Customer-Id` |
+| `customer_id` | `POST /builder/onboard` response | Impersonate via `X-Builder-Customer-Id` |
 | `external_id` | You choose this | Your internal ID (idempotency key) |
-| `api_key` | `POST /builder/users` response | Not needed for impersonation (optional backup) |
+| `api_key` | `POST /builder/onboard` response | Not needed for impersonation (optional backup) |
 
 <Note>
 You do **not** need to store or distribute end-user API keys. All requests go
@@ -158,12 +158,11 @@ End-user API keys exist as a fallback for advanced use cases where
 users need direct Parsec access.
 </Note>
 
-## Per-request credentials (Mode B)
+## Per-request credentials
 
-For advanced use cases, you can pass exchange credentials per-request instead
-of using stored credentials. This avoids storing sensitive keys on Parsec.
-
-Add the `X-Exchange-Credentials` header with base64-encoded JSON:
+For users who don't want credentials stored on Parsec, pass exchange credentials
+per-request via the `X-Exchange-Credentials` header (base64-encoded JSON).
+Create the user without `onboard` and include this header on every impersonated request:
 
 <CodeGroup>
 ```bash curl
@@ -207,51 +206,6 @@ resp = requests.post(url, headers={
 })
 ```
 </CodeGroup>
-
-## Rate limiting
-
-Builder requests draw from your **QPS pool** (default 500 QPS). Each end-user
-has a configurable `qps_limit` that caps their individual usage within the pool.
-
-Check your pool allocation:
-
-<CodeGroup>
-```bash curl
-curl "https://api.parsecapi.com/api/v1/builder/pool" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
-```
-```typescript TypeScript
-const pool = await parsec.get('/api/v1/builder/pool');
-console.log(pool.qps_pool, pool.total_allocated_qps, pool.end_user_count);
-```
-```python Python
-resp = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/pool",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-)
-```
-</CodeGroup>
-
-<ResponseExample>
-```json
-{
-  "qps_pool": 500,
-  "end_user_count": 42,
-  "total_allocated_qps": 320
-}
-```
-</ResponseExample>
-
-## End-user wallet types
-
-Builders support two wallet types for end-users. Both work with impersonation,
-order routing, and fee escrow. See
-[User Management](/builders/user-management#wallet-setup) for setup details.
-
-| Wallet type | Setup | When to use |
-|-------------|-------|-------------|
-| **Managed (Privy EOA)** | `POST /builder/users/:id/wallet` | User doesn't have a wallet — Parsec creates one |
-| **External** | `wallet_address` at user creation | User already has MetaMask or another EVM wallet |
 
 ## Error responses
 

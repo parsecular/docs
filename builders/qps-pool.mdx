@@ -1,0 +1,37 @@
+---
+title: "QPS Pool"
+description: "Monitor your QPS allocation across end-users."
+---
+
+`GET /api/v1/builder/pool`
+
+## Response
+
+<ResponseField name="qps_pool" type="number">
+  Total builder QPS pool (default: 500).
+</ResponseField>
+
+<ResponseField name="end_user_count" type="number">
+  Number of end-users.
+</ResponseField>
+
+<ResponseField name="total_allocated_qps" type="number">
+  Sum of all end-user `qps_limit` values.
+</ResponseField>
+
+<RequestExample>
+```bash
+curl "https://api.parsecapi.com/api/v1/builder/pool" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "qps_pool": 500,
+  "end_user_count": 12,
+  "total_allocated_qps": 120
+}
+```
+</ResponseExample>

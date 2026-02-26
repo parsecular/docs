@@ -1,50 +1,27 @@
 ---
-title: "Register Wallet"
-description: "Create a Parsec-managed wallet via Privy"
+title: "Register Wallet (Deprecated)"
+description: "This endpoint has been removed. Use POST /onboard instead."
 ---
 
-`POST /api/v1/wallet`
+<Warning>
+`POST /api/v1/wallet` has been removed. Use [`POST /api/v1/onboard`](/api/onboard) with `mode: "managed"` instead.
 
-Creates a server-side wallet managed by Parsec. The wallet is an EVM wallet on Polygon, created via Privy.
+The onboard endpoint creates a wallet, derives CLOB credentials, and sets token approvals in a single call. It supports both EOA and Safe wallet types via the `wallet_type` parameter.
+</Warning>
+
+```bash
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed"
+  }'
+```
 
 <Info>
-Idempotent — calling this endpoint again returns your existing wallet without creating a new one.
+`GET /api/v1/wallet` is still available to check wallet state and linked exchanges.
+See the [Wallet State endpoint](/api/get-wallet).
 </Info>
 
-## Parameters
-
-No request body required.
-
-## Response
-
-<ResponseField name="eoa_address" type="string">
-  The EVM wallet address on Polygon.
-</ResponseField>
-
-<ResponseField name="privy_wallet_id" type="string">
-  The Privy wallet identifier.
-</ResponseField>
-
-<RequestExample>
-```bash curl
-curl -X POST "https://api.parsecapi.com/api/v1/wallet" \
-  -H "X-API-Key: YOUR_API_KEY"
-```
-```typescript TypeScript
-const wallet = await client.wallet.register();
-console.log(wallet.eoa_address);
-```
-```python Python
-wallet = client.wallet.register()
-print(wallet.eoa_address)
-```
-</RequestExample>
-
-<ResponseExample>
-```json
-{
-  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
-  "privy_wallet_id": "wallet_abc123"
-}
-```
-</ResponseExample>
+See the [Onboard endpoint](/api/onboard) for full documentation.

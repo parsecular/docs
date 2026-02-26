@@ -13,38 +13,52 @@ No parameters required.
 
 ## Response
 
-<ResponseField name="wallet" type="object">
-  Wallet details (null if no wallet registered).
+<ResponseField name="wallet" type="object | null">
+  Primary EOA wallet (backward-compatible). `null` if no wallet exists.
   <Expandable title="properties">
     <ResponseField name="eoa_address" type="string">
-      The EVM wallet address on Polygon.
+      EOA wallet address.
     </ResponseField>
     <ResponseField name="privy_wallet_id" type="string">
-      The Privy wallet identifier.
+      Privy wallet identifier.
     </ResponseField>
-    <ResponseField name="created_at" type="string">
-      ISO 8601 creation timestamp.
+    <ResponseField name="safe_address" type="string | null">
+      Safe wallet address. Only present for `wallet_type: "safe"`.
+    </ResponseField>
+    <ResponseField name="wallet_type" type="string">
+      `"eoa"` or `"safe"`.
+    </ResponseField>
+    <ResponseField name="chain_id" type="number | null">
+      Chain ID (e.g., 137 for Polygon).
+    </ResponseField>
+    <ResponseField name="created_at" type="string | null">
+      RFC 3339 creation timestamp.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-<ResponseField name="session_signer" type="object">
-  Session signer status (null if no signer active).
+<ResponseField name="wallets" type="object[]">
+  All wallets (EOA + Safe) associated with this account.
+  Each element has the same shape as the `wallet` field above.
+</ResponseField>
+
+<ResponseField name="session_signer" type="object | null">
+  Active session signer for order signing. `null` if no signer exists.
   <Expandable title="properties">
     <ResponseField name="active" type="boolean">
-      Whether the session signer is currently active.
+      Whether the session signer is currently active (not revoked).
     </ResponseField>
-    <ResponseField name="expires_at" type="string">
-      ISO 8601 expiration timestamp.
+    <ResponseField name="expires_at" type="string | null">
+      RFC 3339 expiration timestamp.
     </ResponseField>
-    <ResponseField name="signer_id" type="string">
-      The session signer identifier.
+    <ResponseField name="signer_id" type="string | null">
+      Privy session signer identifier.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-<ResponseField name="linked_exchanges" type="array">
-  List of exchanges linked to this wallet.
+<ResponseField name="linked_exchanges" type="object[]">
+  Exchanges with stored credentials.
   <Expandable title="properties">
     <ResponseField name="exchange" type="string">
       Exchange identifier (e.g., `"polymarket"`).
@@ -78,8 +92,19 @@ print(state.linked_exchanges)
   "wallet": {
     "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
     "privy_wallet_id": "wallet_abc123",
+    "wallet_type": "eoa",
+    "chain_id": 137,
     "created_at": "2026-01-15T12:00:00Z"
   },
+  "wallets": [
+    {
+      "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+      "privy_wallet_id": "wallet_abc123",
+      "wallet_type": "eoa",
+      "chain_id": 137,
+      "created_at": "2026-01-15T12:00:00Z"
+    }
+  ],
   "session_signer": {
     "active": true,
     "expires_at": "2026-02-15T12:00:00Z",

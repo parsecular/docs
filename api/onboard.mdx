@@ -1,0 +1,154 @@
+---
+title: "Onboard"
+description: "Set up an exchange for trading in a single call"
+---
+
+`POST /api/v1/onboard`
+
+Unified onboarding endpoint. Supports two modes:
+
+- **Managed** — Parsec creates a wallet and derives exchange credentials on your behalf (Polymarket only).
+- **Self** — You provide your own exchange credentials (Polymarket or Kalshi).
+
+Idempotent and resumable. Re-running skips already-completed steps.
+
+## Parameters
+
+<ParamField body="exchange" type="string" required>
+  Exchange to onboard. `polymarket` or `kalshi`.
+</ParamField>
+
+<ParamField body="mode" type="string" required>
+  `managed` or `self`.
+</ParamField>
+
+### Managed mode options
+
+<ParamField body="wallet_type" type="string" default="eoa">
+  `eoa` (default) or `safe`. Only applies to managed mode.
+</ParamField>
+
+<ParamField body="chain_id" type="number" default="137">
+  Chain ID for wallet creation. Defaults to Polygon (137).
+</ParamField>
+
+### Self mode — Polymarket
+
+<ParamField body="clob_api_key" type="string">
+  Polymarket CLOB API key.
+</ParamField>
+
+<ParamField body="clob_api_secret" type="string">
+  Polymarket CLOB API secret.
+</ParamField>
+
+<ParamField body="clob_api_passphrase" type="string">
+  Polymarket CLOB API passphrase.
+</ParamField>
+
+<ParamField body="private_key" type="string">
+  Your Ethereum private key (hex, `0x`-prefixed). Enables order signing so you can
+  place and cancel orders. Without it, only read operations (balance, positions) work.
+</ParamField>
+
+### Self mode — Kalshi
+
+<ParamField body="api_key_id" type="string">
+  Kalshi API key ID.
+</ParamField>
+
+<ParamField body="private_key" type="string">
+  Kalshi RSA private key (PEM format).
+</ParamField>
+
+## Response
+
+<ResponseField name="exchange" type="string">
+  The exchange that was onboarded.
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  `managed` or `self`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `complete` on success.
+</ResponseField>
+
+<ResponseField name="wallet_address" type="string | null">
+  Wallet address (managed mode only).
+</ResponseField>
+
+<ResponseField name="linked_exchanges" type="string[]">
+  All exchanges linked to this account.
+</ResponseField>
+
+<ResponseField name="steps_completed" type="string[]">
+  Steps completed during this call (for idempotency transparency).
+</ResponseField>
+
+<RequestExample>
+```bash Managed Polymarket
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed"
+  }'
+```
+```bash Self Polymarket
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "self",
+    "clob_api_key": "your-clob-api-key",
+    "clob_api_secret": "your-clob-api-secret",
+    "clob_api_passphrase": "your-clob-passphrase",
+    "private_key": "0xYourEthPrivateKey"
+  }'
+```
+```bash Self Kalshi
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "kalshi",
+    "mode": "self",
+    "api_key_id": "your-kalshi-key-id",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE..."
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Managed
+{
+  "exchange": "polymarket",
+  "mode": "managed",
+  "status": "complete",
+  "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["wallet_eoa_created", "exchange_linked"]
+}
+```
+```json Self
+{
+  "exchange": "kalshi",
+  "mode": "self",
+  "status": "complete",
+  "wallet_address": null,
+  "linked_exchanges": ["kalshi"],
+  "steps_completed": ["credentials_validated", "credentials_stored"]
+}
+```
+</ResponseExample>
+
+## Mode support matrix
+
+| Exchange | Managed | Self |
+|----------|---------|------|
+| Polymarket | Yes | Yes |
+| Kalshi | No (create account at kalshi.com) | Yes |

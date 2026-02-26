@@ -1,0 +1,82 @@
+---
+title: "List Fills"
+description: "Get your trade fill history"
+---
+
+`GET /api/v1/fills`
+
+Returns fills (executed trades) for the authenticated user on the specified exchange.
+
+## Parameters
+
+<ParamField query="exchange" type="string" required>
+  Exchange identifier: `polymarket` or `kalshi`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Filter fills by a specific market ID. When omitted, returns all fills.
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Maximum number of fills to return.
+</ParamField>
+
+## Response
+
+<ResponseField name="(root)" type="Fill[]">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Unique fill identifier.
+    </ResponseField>
+    <ResponseField name="order_id" type="string">
+      ID of the order that was filled.
+    </ResponseField>
+    <ResponseField name="market_id" type="string">
+      Market the fill occurred on.
+    </ResponseField>
+    <ResponseField name="outcome" type="string">
+      The outcome traded (e.g., `"Yes"` or `"No"`).
+    </ResponseField>
+    <ResponseField name="side" type="string">
+      `"buy"` or `"sell"`.
+    </ResponseField>
+    <ResponseField name="price" type="number">
+      Fill price.
+    </ResponseField>
+    <ResponseField name="size" type="number">
+      Number of contracts filled.
+    </ResponseField>
+    <ResponseField name="timestamp" type="string">
+      ISO 8601 timestamp of the fill.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+# All fills
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/fills?exchange=polymarket"
+
+# Filtered by market
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/fills?exchange=polymarket&market_id=0x1234abcd"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+[
+  {
+    "id": "fill_123",
+    "order_id": "order_456",
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.55,
+    "size": 100.0,
+    "timestamp": "2026-02-24T15:30:00Z"
+  }
+]
+```
+</ResponseExample>

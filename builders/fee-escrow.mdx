@@ -72,7 +72,11 @@ resp = requests.get(
   "fee_escrow_enabled": true,
   "fee_bps": 25,
   "affiliate_address": "0xYourWalletAddress",
-  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142"
+  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142",
+  "min_fee_usdc": "100000",
+  "min_fee_bps": 10,
+  "treasury_address": "0x...",
+  "affiliate_fee_bps": 5000
 }
 ```
 </ResponseExample>
@@ -85,6 +89,10 @@ resp = requests.get(
 | `fee_bps` | number | Fee in basis points (1-10000). 25 = 0.25% |
 | `affiliate_address` | string | Your Ethereum address receiving fee payouts |
 | `escrow_contract_address` | string | The escrow smart contract address on Polygon |
+| `min_fee_usdc` | string | Minimum fee in USDC base units (6 decimals). `"100000"` = $0.10 |
+| `min_fee_bps` | number | Minimum fee rate in basis points |
+| `treasury_address` | string | Parsec treasury address receiving the platform share |
+| `affiliate_fee_bps` | number | Affiliate share in basis points (e.g. 5000 = 50%) |
 
 ## Collecting fees on orders
 

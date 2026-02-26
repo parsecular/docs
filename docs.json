@@ -21,15 +21,6 @@
               "api/overview",
               "errors/overview"
             ]
-          },
-          {
-            "group": "Setup Guides",
-            "pages": [
-              "getting-started/wallet-auth",
-              "getting-started/direct-trader",
-              "getting-started/managed-wallet",
-              "getting-started/per-request-credentials"
-            ]
           }
         ]
       },
@@ -37,10 +28,10 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "Authentication",
+            "group": "Onboarding",
             "pages": [
-              "api/siwe-nonce",
-              "api/siwe-authenticate"
+              "api/onboard",
+              "api/get-wallet"
             ]
           },
           {
@@ -69,14 +60,6 @@
             ]
           },
           {
-            "group": "Wallet",
-            "pages": [
-              "api/register-wallet",
-              "api/get-wallet",
-              "api/link-exchange"
-            ]
-          },
-          {
             "group": "Orders",
             "pages": [
               "api/create-order",
@@ -90,10 +73,8 @@
             "pages": [
               "api/ping",
               "api/list-positions",
-              "api/get-balance",
-              "api/update-credentials",
-              "api/get-approvals",
-              "api/set-approvals"
+              "api/list-fills",
+              "api/get-balance"
             ]
           }
         ]
@@ -109,11 +90,14 @@
             ]
           },
           {
-            "group": "Integration",
+            "group": "User Management",
             "pages": [
-              "builders/user-management",
-              "builders/authentication",
-              "builders/order-routing"
+              "builders/onboard-user",
+              "builders/list-users",
+              "builders/get-user",
+              "builders/update-user",
+              "builders/deactivate-user",
+              "builders/qps-pool"
             ]
           },
           {
