@@ -1,11 +1,11 @@
 ---
-title: "Onboard"
-description: "Create an end-user and/or onboard them to an exchange in a single call."
+title: "Create User"
+description: "Create a new end-user for your builder application."
 ---
 
-`POST /api/v1/builder/onboard`
+`POST /api/v1/builder/users`
 
-Unified endpoint for creating end-users and onboarding them to exchanges.
+Creates a new end-user under your builder account.
 **Idempotent** — calling again with the same `external_id` returns the existing user.
 
 <Info>
@@ -14,38 +14,11 @@ the request, and the `X-Builder-Customer-Id` header identifies the end-user.
 Your users never see your builder key — authentication happens entirely on your backend.
 </Info>
 
-## Behavior
-
-| Scenario | Fields | Result |
-|----------|--------|--------|
-| **New user + onboard** | `external_id` + `exchange` + `mode` | Creates user, onboards to exchange |
-| **New user only** | `external_id` (no `exchange`/`mode`) | Creates per-request credential user |
-| **Existing user (idempotent)** | `external_id` of existing user | Returns existing user, optionally onboards |
-| **Re-onboard existing user** | `customer_id` + `exchange` + `mode` | Onboards existing user to exchange |
-
-There are three credential strategies for your end-users:
-
-| Strategy | When to use | How |
-|----------|-------------|-----|
-| **Managed** | User doesn't have a wallet — Parsec creates one | `mode: "managed"` |
-| **Self** | User has exchange API keys — Parsec stores them | `mode: "self"` |
-| **Per-request** | User manages their own keys — nothing stored | Omit `exchange`/`mode`, pass `X-Exchange-Credentials` per-request |
-
 ## Parameters
 
-### Identity (exactly one required)
-
-<ParamField body="external_id" type="string">
+<ParamField body="external_id" type="string" required>
   Your app's internal user ID. Creates a new user if not found (idempotent).
-  Either `external_id` or `customer_id` is required.
 </ParamField>
-
-<ParamField body="customer_id" type="string">
-  Parsec customer UUID of an existing end-user. Use for re-onboarding.
-  When using `customer_id`, `exchange` and `mode` are required.
-</ParamField>
-
-### User creation fields (only used with `external_id` + new user)
 
 <ParamField body="email" type="string">
   User's email (used for Privy account creation).
@@ -55,62 +28,9 @@ There are three credential strategies for your end-users:
   Per-user rate limit (must be >= 1, draws from your QPS pool).
 </ParamField>
 
-<ParamField body="wallet_address" type="string">
-  User's existing wallet address (42-char hex, `0x`-prefixed). Creates an `"external"` wallet record.
-</ParamField>
-
-### Onboard fields (optional — omit for per-request credential users)
-
-<ParamField body="exchange" type="string">
-  `polymarket` or `kalshi`. Required when using `customer_id`.
-</ParamField>
-
-<ParamField body="mode" type="string">
-  `managed` or `self`. Required when using `customer_id`.
-</ParamField>
-
-#### Managed mode fields
-
-Used when `mode: "managed"` — Parsec creates a wallet and derives exchange credentials on behalf of the user.
-
-<ParamField body="wallet_type" type="string" default="eoa">
-  `eoa` (default) or `safe`.
-</ParamField>
-
-<ParamField body="chain_id" type="number" default="137">
-  Chain ID for wallet creation. Defaults to Polygon (137).
-</ParamField>
-
-#### Self mode fields — Polymarket
-
-Used when `mode: "self"` and `exchange: "polymarket"` — you provide the user's existing CLOB credentials.
-
-<ParamField body="clob_api_key" type="string" required>
-  CLOB API key.
-</ParamField>
-
-<ParamField body="clob_api_secret" type="string" required>
-  CLOB API secret.
-</ParamField>
-
-<ParamField body="clob_api_passphrase" type="string" required>
-  CLOB API passphrase.
-</ParamField>
-
-<ParamField body="private_key" type="string">
-  Ethereum private key (`0x`-prefixed hex) for order signing. Optional — without it, only read operations (balance, positions) work.
-</ParamField>
-
-#### Self mode fields — Kalshi
-
-Used when `mode: "self"` and `exchange: "kalshi"` — you provide the user's API key and RSA private key.
-
-<ParamField body="api_key_id" type="string" required>
-  Kalshi API key ID.
-</ParamField>
-
-<ParamField body="private_key" type="string" required>
-  RSA private key in PEM format.
+<ParamField body="eoa_address" type="string">
+  User's external wallet address (42-char hex, `0x`-prefixed). Validated on create but no
+  wallet record is written — pass it again during onboard to create a Safe wallet.
 </ParamField>
 
 ## Response
@@ -119,42 +39,20 @@ Used when `mode: "self"` and `exchange: "kalshi"` — you provide the user's API
   Parsec customer UUID.
 </ResponseField>
 
+<ResponseField name="external_id" type="string">
+  Your app's internal user ID (echoed back).
+</ResponseField>
+
+<ResponseField name="api_key" type="string">
+  End-user's Parsec API key. Store this securely — it is returned on every call (idempotent).
+</ResponseField>
+
 <ResponseField name="status" type="string">
   `"complete"` on success.
 </ResponseField>
 
 <ResponseField name="linked_exchanges" type="string[]">
-  Exchanges the user is onboarded to (e.g. `["polymarket"]`).
-</ResponseField>
-
-<ResponseField name="steps_completed" type="string[]">
-  Steps completed during this call. Possible values:
-  - `user_created` — New user was created
-  - `wallet_eoa_created` — Managed: EOA wallet created
-  - `wallet_safe_created` — Managed with `wallet_type: "safe"`
-  - `exchange_linked` — Managed: CLOB credentials derived + approvals set
-  - `credentials_validated` — Self Kalshi: PEM key validated
-  - `credentials_stored` — Self: credentials stored
-</ResponseField>
-
-<ResponseField name="external_id" type="string | null">
-  Your app's internal user ID. Present when `external_id` was provided.
-</ResponseField>
-
-<ResponseField name="api_key" type="string | null">
-  End-user's Parsec API key. Present when `external_id` was provided.
-</ResponseField>
-
-<ResponseField name="exchange" type="string | null">
-  Exchange that was onboarded. Present when onboarding occurred.
-</ResponseField>
-
-<ResponseField name="mode" type="string | null">
-  `managed` or `self`. Present when onboarding occurred.
-</ResponseField>
-
-<ResponseField name="wallet_address" type="string | null">
-  Wallet address. Present for managed mode onboarding.
+  Exchanges the user is onboarded to (empty for new users).
 </ResponseField>
 
 <ResponseField name="wallet" type="object | null">
@@ -194,23 +92,258 @@ Used when `mode: "self"` and `exchange: "kalshi"` — you provide the user's API
 </ResponseField>
 
 <RequestExample>
-```bash New user + managed Polymarket
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
+```bash Create user with external wallet
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "external_id": "user_001",
     "email": "alice@example.com",
-    "exchange": "polymarket",
-    "mode": "managed"
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
   }'
 ```
-```bash New user + self Polymarket
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
+```bash Create user (no wallet)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "external_id": "user_002",
+    "email": "bob@example.com"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json New user with external wallet (201 Created)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": [],
+  "wallet": null,
+  "fee_escrow_enabled": false
+}
+```
+```json New user without wallet (201 Created)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_002",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": [],
+  "wallet": null,
+  "fee_escrow_enabled": false
+}
+```
+```json Existing user (200 OK)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": ["polymarket"],
+  "wallet": {
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+    "privy_wallet_id": "",
+    "safe_address": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "wallet_type": "safe",
+    "chain_id": 137,
+    "created_at": "2026-02-27T12:00:00Z"
+  },
+  "fee_escrow_enabled": false
+}
+```
+</ResponseExample>
+
+---
+
+## Onboard User
+
+`POST /api/v1/builder/onboard`
+
+Onboard an existing end-user to an exchange. Thin wrapper around the [trader onboard endpoint](/api/onboard) with builder ownership verification.
+
+There are three credential strategies for your end-users:
+
+| Strategy | When to use | How |
+|----------|-------------|-----|
+| **Managed** | User doesn't have a wallet — Parsec creates one | `mode: "managed"` |
+| **Self** | User has exchange API keys — Parsec stores them | `mode: "self"` |
+| **Per-request** | User manages their own keys — nothing stored | Skip onboard, pass `X-Exchange-Credentials` per-request |
+
+### Parameters
+
+<ParamField body="customer_id" type="string" required>
+  The end-user's Parsec customer UUID (must be owned by this builder).
+</ParamField>
+
+<ParamField body="exchange" type="string" required>
+  `polymarket` or `kalshi`.
+</ParamField>
+
+<ParamField body="mode" type="string" required>
+  `managed` or `self`.
+</ParamField>
+
+#### Managed mode fields
+
+Used when `mode: "managed"` — Parsec creates a wallet and derives exchange credentials on behalf of the user.
+Two mutually exclusive paths:
+- **No external wallet**: `wallet_type: "eoa"` (default) — Parsec creates an embedded EOA.
+- **External wallet**: `wallet_type: "safe"` + `eoa_address` — Parsec creates a Safe owned by the external address.
+
+<ParamField body="wallet_type" type="string" default="eoa">
+  `eoa` (default) — creates an embedded EOA wallet.
+  `safe` — creates a Safe wallet (requires `eoa_address`).
+</ParamField>
+
+<ParamField body="eoa_address" type="string">
+  External wallet address (42-char hex, `0x`-prefixed). Required when `wallet_type: "safe"`.
+  Must not be provided when `wallet_type: "eoa"`.
+</ParamField>
+
+<ParamField body="chain_id" type="number" default="137">
+  Chain ID for Safe wallet creation. Defaults to Polygon (137). Only used with `wallet_type: "safe"`.
+</ParamField>
+
+#### Self mode fields — Polymarket
+
+Used when `mode: "self"` and `exchange: "polymarket"` — you provide the user's existing CLOB credentials.
+
+<ParamField body="clob_api_key" type="string" required>
+  CLOB API key.
+</ParamField>
+
+<ParamField body="clob_api_secret" type="string" required>
+  CLOB API secret.
+</ParamField>
+
+<ParamField body="clob_api_passphrase" type="string" required>
+  CLOB API passphrase.
+</ParamField>
+
+<ParamField body="private_key" type="string">
+  Ethereum private key (`0x`-prefixed hex) for order signing. Optional — without it, only read operations (balance, positions) work.
+</ParamField>
+
+#### Self mode fields — Kalshi
+
+Used when `mode: "self"` and `exchange: "kalshi"` — you provide the user's API key and RSA private key.
+
+<ParamField body="api_key_id" type="string" required>
+  Kalshi API key ID.
+</ParamField>
+
+<ParamField body="private_key" type="string" required>
+  RSA private key in PEM format.
+</ParamField>
+
+### Response
+
+<ResponseField name="customer_id" type="string">
+  Parsec customer UUID.
+</ResponseField>
+
+<ResponseField name="exchange" type="string">
+  Exchange that was onboarded.
+</ResponseField>
+
+<ResponseField name="mode" type="string">
+  `managed` or `self`.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `"complete"` on success.
+</ResponseField>
+
+<ResponseField name="eoa_address" type="string | null">
+  EOA wallet address. Present for managed mode.
+</ResponseField>
+
+<ResponseField name="safe_address" type="string | null">
+  Safe wallet address. Present when `wallet_type: "safe"`.
+</ResponseField>
+
+<ResponseField name="linked_exchanges" type="string[]">
+  Exchanges the user is onboarded to after this call.
+</ResponseField>
+
+<ResponseField name="steps_completed" type="string[]">
+  Steps completed during this call. Possible values:
+  - `wallet_eoa_created` — Managed EOA: embedded wallet created
+  - `external_eoa_provided` — Managed Safe: external wallet address accepted
+  - `wallet_safe_created` — Managed Safe: Safe wallet created
+  - `exchange_linked` — Managed: CLOB credentials derived + approvals set
+  - `credentials_validated` — Self Kalshi: PEM key validated
+  - `credentials_stored` — Self: credentials stored
+</ResponseField>
+
+<ResponseField name="wallet" type="object | null">
+  Wallet info. Present if user has a wallet.
+  <Expandable title="properties">
+    <ResponseField name="eoa_address" type="string">
+      EOA wallet address.
+    </ResponseField>
+    <ResponseField name="privy_wallet_id" type="string">
+      Privy wallet identifier.
+    </ResponseField>
+    <ResponseField name="safe_address" type="string | null">
+      Safe wallet address. Only present for `wallet_type: "safe"`.
+    </ResponseField>
+    <ResponseField name="wallet_type" type="string">
+      `"eoa"` or `"safe"`.
+    </ResponseField>
+    <ResponseField name="chain_id" type="number | null">
+      Chain ID.
+    </ResponseField>
+    <ResponseField name="created_at" type="string | null">
+      RFC 3339 timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="fee_escrow_enabled" type="boolean">
+  Whether fee escrow is active.
+</ResponseField>
+
+<ResponseField name="fee_bps" type="number | null">
+  Fee basis points (builder-level setting).
+</ResponseField>
+
+<ResponseField name="affiliate_address" type="string | null">
+  Fee recipient address (builder-level setting).
+</ResponseField>
+
+<RequestExample>
+```bash Managed — EOA (no external wallet)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "exchange": "polymarket",
+    "mode": "managed"
+  }'
+```
+```bash Managed — Safe (external wallet)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "exchange": "polymarket",
+    "mode": "managed",
+    "wallet_type": "safe",
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
+  }'
+```
+```bash Self Polymarket
+curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "exchange": "polymarket",
     "mode": "self",
     "clob_api_key": "your-clob-api-key",
@@ -219,16 +352,7 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
     "private_key": "0xYourEthPrivateKey"
   }'
 ```
-```bash Per-request (no onboard)
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "external_id": "user_003",
-    "email": "bob@example.com"
-  }'
-```
-```bash Re-onboard existing user
+```bash Self Kalshi
 curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
@@ -243,53 +367,56 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
 </RequestExample>
 
 <ResponseExample>
-```json New user + managed onboard (201 Created)
+```json Managed EOA onboard (200 OK)
 {
   "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "complete",
-  "linked_exchanges": ["polymarket"],
-  "steps_completed": ["user_created", "wallet_eoa_created", "exchange_linked"],
-  "external_id": "user_001",
-  "api_key": "pk_live_abc123def456",
   "exchange": "polymarket",
   "mode": "managed",
-  "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "status": "complete",
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "safe_address": null,
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["wallet_eoa_created", "exchange_linked"],
   "wallet": {
     "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
     "privy_wallet_id": "wallet_abc123",
     "wallet_type": "eoa",
     "chain_id": 137,
-    "created_at": "2026-02-24T12:00:00Z"
+    "created_at": "2026-02-27T12:00:00Z"
   },
   "fee_escrow_enabled": false
 }
 ```
-```json Per-request (no onboard, 201 Created)
+```json Managed Safe onboard (200 OK)
 {
-  "customer_id": "d4e5f6a7-b8c9-0123-defg-456789abcdef",
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "exchange": "polymarket",
+  "mode": "managed",
   "status": "complete",
-  "linked_exchanges": [],
-  "steps_completed": ["user_created"],
-  "external_id": "user_003",
-  "api_key": "pk_live_xyz789",
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "safe_address": "0xabcdef1234567890abcdef1234567890abcdef12",
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["external_eoa_provided", "wallet_safe_created", "exchange_linked"],
+  "wallet": {
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+    "privy_wallet_id": "",
+    "safe_address": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "wallet_type": "safe",
+    "chain_id": 137,
+    "created_at": "2026-02-27T12:00:00Z"
+  },
   "fee_escrow_enabled": false
 }
 ```
-```json Re-onboard existing user (200 OK)
+```json Self onboard (200 OK)
 {
   "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "exchange": "kalshi",
+  "mode": "self",
   "status": "complete",
   "linked_exchanges": ["polymarket", "kalshi"],
   "steps_completed": ["credentials_validated", "credentials_stored"],
-  "exchange": "kalshi",
-  "mode": "self",
   "fee_escrow_enabled": false
 }
 ```
 </ResponseExample>
-
-<Info>
-If the onboard step fails when creating a new user, the user is still created.
-Retry onboarding by calling this endpoint again with the same `external_id`
-(idempotent) or with the `customer_id`.
-</Info>
