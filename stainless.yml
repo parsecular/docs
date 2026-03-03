@@ -85,6 +85,7 @@ resources:
   wallet:
     methods:
       retrieve: get /api/v1/wallet
+      export_key: post /api/v1/wallet/export-key
 
   polymarket_auth:
     methods:
@@ -98,6 +99,24 @@ resources:
       split: post /api/v1/polymarket/ctf/split
       merge: post /api/v1/polymarket/ctf/merge
       redeem: post /api/v1/polymarket/ctf/redeem
+
+  builder:
+    methods:
+      pool: get /api/v1/builder/pool
+    subresources:
+      users:
+        methods:
+          create: post /api/v1/builder/users
+          list: get /api/v1/builder/users
+          retrieve: get /api/v1/builder/users/{customer_id}
+          update: patch /api/v1/builder/users/{customer_id}
+          deactivate: delete /api/v1/builder/users/{customer_id}
+      onboard:
+        methods:
+          create: post /api/v1/builder/onboard
+      escrow:
+        methods:
+          config: get /api/v1/builder/escrow/config
 
 settings:
   disable_mock_tests: true

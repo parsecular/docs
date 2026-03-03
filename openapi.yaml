@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Parsec API
-  version: 0.9.0
+  version: 0.10.0
   description: |
     Parsec REST API.
 
@@ -26,6 +26,7 @@ tags:
   - name: Account
   - name: Wallet
   - name: CTF
+  - name: Builder
 paths:
   /api/v1/exchanges:
     get:
@@ -1167,6 +1168,238 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/v1/builder/users:
+    post:
+      operationId: builderCreateUser
+      tags:
+        - Builder
+      summary: Create an end-user under your builder account
+      description: |
+        Creates a new end-user with an API key. The user inherits the builder's
+        QPS pool. Optionally provide an external EOA address to skip embedded
+        wallet creation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderCreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderCreateUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    get:
+      operationId: listBuilderUsers
+      tags:
+        - Builder
+      summary: List end-users under your builder account
+      description: Returns a paginated list of end-users created by this builder.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+          description: Maximum number of users to return.
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Pagination cursor from a previous response.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderUsersListResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/builder/users/{customer_id}:
+    get:
+      operationId: getBuilderUser
+      tags:
+        - Builder
+      summary: Get a specific end-user
+      description: Returns details for a single end-user owned by this builder.
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The end-user's customer ID.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderUserResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    patch:
+      operationId: updateBuilderUser
+      tags:
+        - Builder
+      summary: Update an end-user
+      description: Updates mutable fields on an end-user (currently only qps_limit).
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The end-user's customer ID.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBuilderUserRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      operationId: deactivateBuilderUser
+      tags:
+        - Builder
+      summary: Deactivate an end-user
+      description: Deactivates the end-user, revoking their API key. This action is irreversible.
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The end-user's customer ID.
+      responses:
+        "204":
+          description: User deactivated
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/builder/onboard:
+    post:
+      operationId: builderOnboard
+      tags:
+        - Builder
+      summary: Onboard an end-user to an exchange
+      description: |
+        Sets up an end-user for trading on a specific exchange. Managed mode
+        creates wallet + exchange credentials. Self mode stores user-provided
+        credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BuilderOnboardRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderOnboardResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/builder/pool:
+    get:
+      operationId: getBuilderPool
+      tags:
+        - Builder
+      summary: Get builder QPS pool status
+      description: Returns the builder's QPS pool allocation, end-user count, and total allocated QPS.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BuilderPoolResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/builder/escrow/config:
+    get:
+      operationId: getBuilderEscrowConfig
+      tags:
+        - Builder
+      summary: Get fee escrow configuration
+      description: |
+        Returns the builder's fee escrow configuration including contract address,
+        fee rates, and treasury address. Read-only — fee escrow is configured by
+        Parsec admins during onboarding.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscrowConfigResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/v1/billing/checkout:
     post:
       operationId: createCheckoutSession
@@ -2286,6 +2519,306 @@ components:
             type: string
           description: Steps completed during this call.
 
+    BuilderCreateUserRequest:
+      type: object
+      required:
+        - external_id
+      properties:
+        external_id:
+          type: string
+          description: Your application's unique identifier for this user.
+        email:
+          type: string
+          description: Optional email address for the user.
+        qps_limit:
+          type: integer
+          description: Per-second rate limit for this user. Deducted from builder's QPS pool.
+        eoa_address:
+          type: string
+          description: External EOA address (42-char hex, 0x-prefixed). Skips embedded wallet creation.
+
+    BuilderCreateUserResponse:
+      type: object
+      required:
+        - customer_id
+        - external_id
+        - api_key
+        - status
+        - linked_exchanges
+        - fee_escrow_enabled
+      properties:
+        customer_id:
+          type: string
+          description: Parsec customer ID for the created user.
+        external_id:
+          type: string
+          description: Your application's identifier for this user.
+        api_key:
+          type: string
+          description: API key for the created user.
+        status:
+          type: string
+          description: User status ("active").
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: Exchanges linked to this user.
+        wallet:
+          $ref: "#/components/schemas/WalletInfo"
+        fee_escrow_enabled:
+          type: boolean
+          description: Whether fee escrow is enabled for this user.
+        fee_bps:
+          type:
+            - integer
+            - "null"
+          description: Fee rate in basis points.
+        affiliate_address:
+          type:
+            - string
+            - "null"
+          description: Affiliate fee recipient address.
+
+    BuilderUserResponse:
+      type: object
+      required:
+        - customer_id
+        - external_id
+        - api_key
+        - tier
+        - linked_exchanges
+        - fee_escrow_enabled
+      properties:
+        customer_id:
+          type: string
+          description: Parsec customer ID.
+        external_id:
+          type: string
+          description: Your application's identifier for this user.
+        api_key:
+          type: string
+          description: API key for this user.
+        tier:
+          type: string
+          description: User's tier.
+        qps_limit:
+          type:
+            - integer
+            - "null"
+          description: Per-second rate limit allocated from builder's pool.
+        created_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: User creation timestamp.
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: Exchanges linked to this user.
+        wallet:
+          $ref: "#/components/schemas/WalletInfo"
+        fee_escrow_enabled:
+          type: boolean
+          description: Whether fee escrow is enabled for this user.
+        fee_bps:
+          type:
+            - integer
+            - "null"
+          description: Fee rate in basis points.
+        affiliate_address:
+          type:
+            - string
+            - "null"
+          description: Affiliate fee recipient address.
+
+    BuilderUsersListResponse:
+      type: object
+      required:
+        - users
+        - count
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/BuilderUserResponse"
+          description: List of end-users.
+        next_cursor:
+          type:
+            - string
+            - "null"
+          description: Cursor for the next page. Null if no more results.
+        count:
+          type: integer
+          description: Number of users in this page.
+
+    UpdateBuilderUserRequest:
+      type: object
+      properties:
+        qps_limit:
+          type: integer
+          description: New per-second rate limit for this user.
+
+    BuilderOnboardRequest:
+      type: object
+      required:
+        - customer_id
+        - exchange
+        - mode
+      properties:
+        customer_id:
+          type: string
+          description: Parsec customer ID of the end-user to onboard.
+        exchange:
+          type: string
+          description: Exchange to onboard ("polymarket" or "kalshi").
+        mode:
+          type: string
+          enum: [managed, self]
+          description: Managed = Parsec creates wallet + credentials. Self = you provide credentials.
+        wallet_type:
+          type: string
+          default: eoa
+          description: Wallet type for managed mode ("eoa" or "safe").
+        chain_id:
+          type: integer
+          description: Chain ID for Safe wallet creation.
+        eoa_address:
+          type: string
+          description: External wallet address (required when wallet_type is "safe").
+        clob_api_key:
+          type: string
+          description: Polymarket CLOB API key (self mode).
+        clob_api_secret:
+          type: string
+          description: Polymarket CLOB API secret (self mode).
+        clob_api_passphrase:
+          type: string
+          description: Polymarket CLOB API passphrase (self mode).
+        api_key_id:
+          type: string
+          description: Kalshi API key ID (self mode).
+        private_key:
+          type: string
+          description: Kalshi RSA private key in PEM format (self mode).
+
+    BuilderOnboardResponse:
+      type: object
+      required:
+        - customer_id
+        - exchange
+        - mode
+        - status
+        - linked_exchanges
+        - steps_completed
+        - fee_escrow_enabled
+      properties:
+        customer_id:
+          type: string
+          description: Parsec customer ID of the onboarded user.
+        exchange:
+          type: string
+          description: Exchange that was onboarded.
+        mode:
+          type: string
+          description: Onboard mode used ("managed" or "self").
+        status:
+          type: string
+          description: Onboard status ("complete").
+        eoa_address:
+          type:
+            - string
+            - "null"
+          description: EOA wallet address (managed mode only).
+        safe_address:
+          type:
+            - string
+            - "null"
+          description: Safe wallet address (present when wallet_type is "safe").
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: All exchanges linked to this user.
+        steps_completed:
+          type: array
+          items:
+            type: string
+          description: Steps completed during this call.
+        wallet:
+          $ref: "#/components/schemas/WalletInfo"
+        fee_escrow_enabled:
+          type: boolean
+          description: Whether fee escrow is enabled for this user.
+        fee_bps:
+          type:
+            - integer
+            - "null"
+          description: Fee rate in basis points.
+        affiliate_address:
+          type:
+            - string
+            - "null"
+          description: Affiliate fee recipient address.
+
+    BuilderPoolResponse:
+      type: object
+      required:
+        - qps_pool
+        - end_user_count
+        - total_allocated_qps
+      properties:
+        qps_pool:
+          type: integer
+          description: Total QPS available to this builder.
+        end_user_count:
+          type: integer
+          description: Number of end-users created by this builder.
+        total_allocated_qps:
+          type: integer
+          description: Total QPS allocated to end-users.
+
+    EscrowConfigResponse:
+      type: object
+      required:
+        - fee_escrow_enabled
+        - escrow_contract_address
+        - min_fee_usdc
+        - min_fee_bps
+        - treasury_address
+        - affiliate_fee_bps
+      properties:
+        fee_escrow_enabled:
+          type: boolean
+          description: Whether fee escrow is enabled for this builder.
+        fee_bps:
+          type:
+            - integer
+            - "null"
+          description: Fee rate in basis points.
+        affiliate_address:
+          type:
+            - string
+            - "null"
+          description: Affiliate fee recipient address.
+        escrow_contract_address:
+          type: string
+          description: Escrow smart contract address.
+        min_fee_usdc:
+          type: string
+          description: Minimum fee in USDC (human-readable).
+        min_fee_bps:
+          type: integer
+          description: Minimum fee in basis points.
+        treasury_address:
+          type: string
+          description: Treasury address for fee distribution.
+        affiliate_fee_bps:
+          type: integer
+          description: Affiliate fee rate in basis points.
+
     PolymarketAuthMessageResponse:
       type: object
       required:
@@ -2472,11 +3005,38 @@ components:
             - "null"
           description: Total cost including fees (total_cost + fee_estimate). Null when fee rate is unknown.
 
+    TokenBalance:
+      type: object
+      required:
+        - token
+        - balance
+        - raw_balance
+        - decimals
+      properties:
+        token:
+          type: string
+          description: Token symbol (e.g. "USDC").
+        balance:
+          type: string
+          description: Human-readable balance (e.g. "100.50").
+        raw_balance:
+          type: string
+          description: Raw balance in smallest unit (e.g. "100500000").
+        decimals:
+          type: integer
+          description: Token decimal places.
+        contract_address:
+          type:
+            - string
+            - "null"
+          description: ERC-20 contract address. Null for native token.
+
     WalletInfo:
       type: object
       required:
         - eoa_address
         - privy_wallet_id
+        - wallet_type
       properties:
         eoa_address:
           type: string
@@ -2484,10 +3044,32 @@ components:
         privy_wallet_id:
           type: string
           description: Privy wallet identifier.
-        created_at:
+        safe_address:
+          type:
+            - string
+            - "null"
+          description: Safe wallet address (present when wallet_type is "safe").
+        wallet_type:
           type: string
+          description: Wallet type ("eoa" or "safe").
+        chain_id:
+          type:
+            - integer
+            - "null"
+          description: Chain ID for the wallet (e.g. 137 for Polygon).
+        created_at:
+          type:
+            - string
+            - "null"
           format: date-time
           description: Wallet creation timestamp.
+        balances:
+          type:
+            - array
+            - "null"
+          items:
+            $ref: "#/components/schemas/TokenBalance"
+          description: Token balances for this wallet.
 
     SessionSignerInfo:
       type: object
@@ -2524,9 +3106,17 @@ components:
 
     WalletStateResponse:
       type: object
+      required:
+        - wallets
+        - linked_exchanges
       properties:
         wallet:
           $ref: "#/components/schemas/WalletInfo"
+        wallets:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletInfo"
+          description: All wallets associated with this account.
         session_signer:
           $ref: "#/components/schemas/SessionSignerInfo"
         linked_exchanges:
