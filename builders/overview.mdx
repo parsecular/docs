@@ -29,20 +29,22 @@ fee escrow.
 ```
 Your App                     Parsec API                   Exchanges
 ────────                     ──────────                   ──────────
-1. Create + onboard    ───►  POST /builder/onboard   ───►  (user + wallet + exchange linked)
-2. Route orders        ───►  POST /orders + X-Builder-Customer-Id
-3. Collect fees        ───►  Fee escrow (on-chain)   ───►  USDC to your wallet
+1. Create user         ───►  POST /builder/users     ───►  (user + API key)
+2. Onboard exchange    ───►  POST /builder/onboard   ───►  (wallet + exchange linked)
+3. Route orders        ───►  POST /orders + X-Builder-Customer-Id
+4. Collect fees        ───►  Fee escrow (on-chain)   ───►  USDC to your wallet
 ```
 
-Create a user and onboard to an exchange in a single call:
+Create a user, then onboard them to an exchange:
 
 ```bash
+# Step 1: Create user
+POST /builder/users
+{ "external_id": "user_001", "email": "alice@example.com" }
+
+# Step 2: Onboard to exchange
 POST /builder/onboard
-{
-  "external_id": "user_001",
-  "exchange": "polymarket",
-  "mode": "managed"
-}
+{ "customer_id": "CUSTOMER_ID", "exchange": "polymarket", "mode": "managed" }
 ```
 
 ## What you get

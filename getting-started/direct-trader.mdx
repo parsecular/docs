@@ -135,7 +135,8 @@ Without it, only read operations (balance, positions) work.
   "exchange": "kalshi",
   "mode": "self",
   "status": "complete",
-  "wallet_address": null,
+  "eoa_address": null,
+  "safe_address": null,
   "linked_exchanges": ["kalshi"],
   "steps_completed": ["credentials_validated", "credentials_stored"]
 }
@@ -145,7 +146,8 @@ Without it, only read operations (balance, positions) work.
   "exchange": "polymarket",
   "mode": "self",
   "status": "complete",
-  "wallet_address": null,
+  "eoa_address": null,
+  "safe_address": null,
   "linked_exchanges": ["polymarket"],
   "steps_completed": ["credentials_stored"]
 }
@@ -157,7 +159,8 @@ Without it, only read operations (balance, positions) work.
 | `exchange` | string | Yes | Exchange that was onboarded |
 | `mode` | string | Yes | `"self"` |
 | `status` | string | Yes | `"complete"` on success |
-| `wallet_address` | string | No | Always `null` for self mode |
+| `eoa_address` | string | No | EOA wallet address (`null` for self mode) |
+| `safe_address` | string | No | Safe wallet address (`null` for self mode) |
 | `linked_exchanges` | string[] | Yes | All exchanges linked to this account |
 | `steps_completed` | string[] | Yes | Steps completed during this call |
 

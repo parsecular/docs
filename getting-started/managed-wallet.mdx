@@ -44,7 +44,7 @@ const result = await client.onboard.create({
   exchange: 'polymarket',
   mode: 'managed',
 });
-console.log(result.wallet_address);
+console.log(result.eoa_address);
 ```
 ```python Python
 from parsec_api import ParsecAPI
@@ -55,7 +55,7 @@ result = client.onboard.create(
     exchange="polymarket",
     mode="managed",
 )
-print(result.wallet_address)
+print(result.eoa_address)
 ```
 </CodeGroup>
 
@@ -65,7 +65,7 @@ print(result.wallet_address)
   "exchange": "polymarket",
   "mode": "managed",
   "status": "complete",
-  "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
   "linked_exchanges": ["polymarket"],
   "steps_completed": ["wallet_eoa_created", "exchange_linked"]
 }
@@ -93,7 +93,7 @@ curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
 
 ## Step 3: Fund your wallet
 
-Send **USDC** to your `wallet_address` on **Polygon**. Gas fees are sponsored — no POL needed.
+Send **USDC** to your `eoa_address` on **Polygon**. Gas fees are sponsored — no POL needed.
 
 ## Step 4: Trade
 
