@@ -12,6 +12,18 @@ Unified onboarding endpoint. Supports two modes:
 
 Idempotent and resumable. Re-running skips already-completed steps.
 
+### Managed mode — two wallet paths
+
+Managed mode supports two mutually exclusive wallet paths:
+
+| User type | `wallet_type` | `eoa_address` | What happens |
+|-----------|--------------|---------------|--------------|
+| No external wallet | `eoa` (default) | omit | Parsec creates an embedded EOA wallet |
+| External wallet (e.g. MetaMask) | `safe` | required | Parsec creates a Safe wallet owned by the external address |
+
+- `wallet_type: "safe"` **requires** `eoa_address` — returns 400 without it.
+- Providing `eoa_address` with `wallet_type: "eoa"` returns 400 — external wallet users must use `"safe"`.
+
 ## Parameters
 
 <ParamField body="exchange" type="string" required>
@@ -25,11 +37,18 @@ Idempotent and resumable. Re-running skips already-completed steps.
 ### Managed mode options
 
 <ParamField body="wallet_type" type="string" default="eoa">
-  `eoa` (default) or `safe`. Only applies to managed mode.
+  `eoa` (default) — Parsec creates an embedded EOA wallet.
+  `safe` — Parsec creates a Safe wallet (requires `eoa_address`).
+</ParamField>
+
+<ParamField body="eoa_address" type="string">
+  External wallet address (42-char hex, `0x`-prefixed). Required when `wallet_type: "safe"`.
+  When provided, Parsec skips embedded EOA creation and uses this address as the Safe owner.
+  Must not be provided when `wallet_type: "eoa"`.
 </ParamField>
 
 <ParamField body="chain_id" type="number" default="137">
-  Chain ID for wallet creation. Defaults to Polygon (137).
+  Chain ID for Safe wallet creation. Defaults to Polygon (137). Only used with `wallet_type: "safe"`.
 </ParamField>
 
 ### Self mode — Polymarket
@@ -75,8 +94,13 @@ Idempotent and resumable. Re-running skips already-completed steps.
   `complete` on success.
 </ResponseField>
 
-<ResponseField name="wallet_address" type="string | null">
-  Wallet address (managed mode only).
+<ResponseField name="eoa_address" type="string | null">
+  EOA wallet address. For managed EOA mode, this is the Parsec-created embedded wallet.
+  For managed Safe mode, this is the external wallet address that owns the Safe.
+</ResponseField>
+
+<ResponseField name="safe_address" type="string | null">
+  Safe wallet address. Present only when `wallet_type: "safe"`.
 </ResponseField>
 
 <ResponseField name="linked_exchanges" type="string[]">
@@ -84,17 +108,34 @@ Idempotent and resumable. Re-running skips already-completed steps.
 </ResponseField>
 
 <ResponseField name="steps_completed" type="string[]">
-  Steps completed during this call (for idempotency transparency).
+  Steps completed during this call (for idempotency transparency). Possible values:
+  - `wallet_eoa_created` — Embedded EOA wallet created (managed EOA path)
+  - `external_eoa_provided` — External wallet address accepted (managed Safe path)
+  - `wallet_safe_created` — Safe wallet created (managed Safe path)
+  - `exchange_linked` — CLOB credentials derived + approvals set (managed mode)
+  - `credentials_validated` — Credentials validated (self Kalshi)
+  - `credentials_stored` — Credentials stored (self mode)
 </ResponseField>
 
 <RequestExample>
-```bash Managed Polymarket
+```bash Managed — EOA (email user)
 curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
   -H "X-API-Key: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "exchange": "polymarket",
     "mode": "managed"
+  }'
+```
+```bash Managed — Safe (external wallet)
+curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "exchange": "polymarket",
+    "mode": "managed",
+    "wallet_type": "safe",
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
   }'
 ```
 ```bash Self Polymarket
@@ -124,14 +165,26 @@ curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
 </RequestExample>
 
 <ResponseExample>
-```json Managed
+```json Managed — EOA
 {
   "exchange": "polymarket",
   "mode": "managed",
   "status": "complete",
-  "wallet_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "safe_address": null,
   "linked_exchanges": ["polymarket"],
   "steps_completed": ["wallet_eoa_created", "exchange_linked"]
+}
+```
+```json Managed — Safe
+{
+  "exchange": "polymarket",
+  "mode": "managed",
+  "status": "complete",
+  "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+  "safe_address": "0xabcdef1234567890abcdef1234567890abcdef12",
+  "linked_exchanges": ["polymarket"],
+  "steps_completed": ["external_eoa_provided", "wallet_safe_created", "exchange_linked"]
 }
 ```
 ```json Self
@@ -139,7 +192,8 @@ curl -X POST "https://api.parsecapi.com/api/v1/onboard" \
   "exchange": "kalshi",
   "mode": "self",
   "status": "complete",
-  "wallet_address": null,
+  "eoa_address": null,
+  "safe_address": null,
   "linked_exchanges": ["kalshi"],
   "steps_completed": ["credentials_validated", "credentials_stored"]
 }

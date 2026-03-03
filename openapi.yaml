@@ -979,6 +979,38 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
+  /api/v1/wallet/export-key:
+    post:
+      operationId: exportWalletKey
+      tags:
+        - Wallet
+      summary: Export wallet private key
+      description: |
+        Exports the private key for a managed wallet. The key is retrieved via
+        HPKE-encrypted exchange with Privy and returned in hex format.
+
+        **Security:** Treat the returned key as highly sensitive. Anyone with
+        access to it has full control over the wallet and its funds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportKeyRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportKeyResponse"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/v1/exchange/polymarket/auth-message:
     get:
       operationId: polymarketAuthMessage
@@ -2185,11 +2217,20 @@ components:
         wallet_type:
           type: string
           default: eoa
-          description: Wallet type for managed mode ("eoa" or "safe").
+          description: |
+            Wallet type for managed mode. "eoa" (default) creates an embedded EOA wallet.
+            "safe" creates a Safe wallet owned by the external address in eoa_address.
+            "safe" requires eoa_address. Providing eoa_address with "eoa" returns 400.
+        eoa_address:
+          type: string
+          description: |
+            External wallet address (42-char hex, 0x-prefixed). Required when wallet_type
+            is "safe". Parsec skips embedded EOA creation and uses this address as the Safe
+            owner. Must not be provided when wallet_type is "eoa".
         chain_id:
           type: integer
           default: 137
-          description: Chain ID for wallet creation.
+          description: Chain ID for Safe wallet creation. Only used with wallet_type "safe".
         clob_api_key:
           type: string
           description: Polymarket CLOB API key (self mode).
@@ -2224,11 +2265,16 @@ components:
         status:
           type: string
           description: Onboard status ("complete").
-        wallet_address:
+        eoa_address:
           type:
             - string
             - "null"
-          description: Wallet address (managed mode only).
+          description: EOA wallet address (managed mode only).
+        safe_address:
+          type:
+            - string
+            - "null"
+          description: Safe wallet address (present when wallet_type is "safe").
         linked_exchanges:
           type: array
           items:
@@ -2487,6 +2533,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExchangeLinkInfo"
+
+    ExportKeyRequest:
+      type: object
+      properties:
+        wallet_type:
+          type: string
+          description: Type of wallet to export ("eoa" or "safe").
+          default: eoa
+          enum:
+            - eoa
+            - safe
+
+    ExportKeyResponse:
+      type: object
+      required:
+        - private_key
+      properties:
+        private_key:
+          type: string
+          description: Hex-encoded private key (0x-prefixed).
 
   parameters:
     XExchangeCredentials:

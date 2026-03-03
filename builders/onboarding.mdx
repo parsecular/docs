@@ -86,7 +86,7 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   -d '{
     "external_id": "user_001",
     "email": "alice@example.com",
-    "wallet_address": "0xUserMetaMaskAddress"
+    "eoa_address": "0xUserMetaMaskAddress"
   }'
 ```
 ```typescript TypeScript
@@ -94,7 +94,7 @@ const user = await parsec.post('/api/v1/builder/users', {
   body: {
     external_id: 'user_001',
     email: 'alice@example.com',
-    wallet_address: '0xUserMetaMaskAddress', // optional: record their external wallet
+    eoa_address: '0xUserMetaMaskAddress', // optional: record their external wallet
   },
 });
 console.log(user.customer_id, user.api_key);
@@ -108,7 +108,7 @@ resp = requests.post(
     json={
         "external_id": "user_001",
         "email": "alice@example.com",
-        "wallet_address": "0xUserMetaMaskAddress",  # optional: record their external wallet
+        "eoa_address": "0xUserMetaMaskAddress",  # optional: record their external wallet
     },
 )
 user = resp.json()

@@ -1,0 +1,157 @@
+---
+title: "Create User"
+description: "Create a new end-user for your builder application."
+---
+
+`POST /api/v1/builder/users`
+
+Creates a new end-user under your builder account.
+**Idempotent** — calling again with the same `external_id` returns the existing user.
+
+<Info>
+All builder requests use **impersonation**: your builder API key authenticates
+the request, and the `X-Builder-Customer-Id` header identifies the end-user.
+Your users never see your builder key — authentication happens entirely on your backend.
+</Info>
+
+## Parameters
+
+<ParamField body="external_id" type="string" required>
+  Your app's internal user ID. Creates a new user if not found (idempotent).
+</ParamField>
+
+<ParamField body="email" type="string">
+  User's email (used for Privy account creation).
+</ParamField>
+
+<ParamField body="qps_limit" type="number">
+  Per-user rate limit (must be >= 1, draws from your QPS pool).
+</ParamField>
+
+<ParamField body="eoa_address" type="string">
+  User's external wallet address (42-char hex, `0x`-prefixed). Validated on create but no
+  wallet record is written — pass it again during [onboard](/builders/onboard-user) to create a Safe wallet.
+</ParamField>
+
+## Response
+
+<ResponseField name="customer_id" type="string">
+  Parsec customer UUID.
+</ResponseField>
+
+<ResponseField name="external_id" type="string">
+  Your app's internal user ID (echoed back).
+</ResponseField>
+
+<ResponseField name="api_key" type="string">
+  End-user's Parsec API key. Store this securely — it is returned on every call (idempotent).
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  `"complete"` on success.
+</ResponseField>
+
+<ResponseField name="linked_exchanges" type="string[]">
+  Exchanges the user is onboarded to (empty for new users).
+</ResponseField>
+
+<ResponseField name="wallet" type="object | null">
+  Wallet info. Present if user has a wallet.
+  <Expandable title="properties">
+    <ResponseField name="eoa_address" type="string">
+      EOA wallet address.
+    </ResponseField>
+    <ResponseField name="privy_wallet_id" type="string">
+      Privy wallet identifier.
+    </ResponseField>
+    <ResponseField name="safe_address" type="string | null">
+      Safe wallet address. Only present for `wallet_type: "safe"`.
+    </ResponseField>
+    <ResponseField name="wallet_type" type="string">
+      `"eoa"` or `"safe"`.
+    </ResponseField>
+    <ResponseField name="chain_id" type="number | null">
+      Chain ID.
+    </ResponseField>
+    <ResponseField name="created_at" type="string | null">
+      RFC 3339 timestamp.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="fee_escrow_enabled" type="boolean">
+  Whether fee escrow is active.
+</ResponseField>
+
+<ResponseField name="fee_bps" type="number | null">
+  Fee basis points (builder-level setting).
+</ResponseField>
+
+<ResponseField name="affiliate_address" type="string | null">
+  Fee recipient address (builder-level setting).
+</ResponseField>
+
+<RequestExample>
+```bash Create user with external wallet
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_001",
+    "email": "alice@example.com",
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
+  }'
+```
+```bash Create user (no wallet)
+curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
+  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "external_id": "user_002",
+    "email": "bob@example.com"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json New user with external wallet (201 Created)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": [],
+  "wallet": null,
+  "fee_escrow_enabled": false
+}
+```
+```json New user without wallet (201 Created)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_002",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": [],
+  "wallet": null,
+  "fee_escrow_enabled": false
+}
+```
+```json Existing user (200 OK)
+{
+  "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_id": "user_001",
+  "api_key": "pk_live_abc123def456",
+  "status": "complete",
+  "linked_exchanges": ["polymarket"],
+  "wallet": {
+    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678",
+    "privy_wallet_id": "",
+    "safe_address": "0xabcdef1234567890abcdef1234567890abcdef12",
+    "wallet_type": "safe",
+    "chain_id": 137,
+    "created_at": "2026-02-27T12:00:00Z"
+  },
+  "fee_escrow_enabled": false
+}
+```
+</ResponseExample>
