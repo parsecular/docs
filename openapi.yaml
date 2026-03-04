@@ -122,15 +122,30 @@ paths:
           schema:
             type: number
             format: double
+        - name: include_matches
+          in: query
+          required: false
+          description: When true, each market includes a `matched_markets` array with cross-exchange same-market relations.
+          schema:
+            type: boolean
+            default: false
+        - name: include_related
+          in: query
+          required: false
+          description: When true, each market includes a `related_markets` array with co-dependent market relations.
+          schema:
+            type: boolean
+            default: false
         - name: limit
           in: query
           required: false
-          description: Results per page (default 100).
+          description: Results per page (default 100, max 100).
           schema:
             type: integer
             format: int32
             default: 100
             minimum: 1
+            maximum: 100
         - name: cursor
           in: query
           required: false
@@ -397,7 +412,7 @@ paths:
         - Events
       summary: List events (market groups) with filtering and pagination
       description: |
-        Aggregates markets by event ID from the Silver cache.
+        Aggregates markets by event ID from the DuckDB gold layer.
         Returns event summaries sorted by total volume (descending).
         Markets without an event_id are excluded.
       parameters:
@@ -506,6 +521,28 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "403":
           $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/usage:
+    get:
+      operationId: getUsage
+      tags:
+        - Account
+      summary: Get tier limits and current usage
+      description: |
+        Returns the authenticated customer's tier, billing period, rate limits,
+        and current consumption (monthly requests, WebSocket connections/subscriptions).
+        Values of 0 for limits indicate unlimited.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
         "500":
           $ref: "#/components/responses/InternalServerError"
 
@@ -800,6 +837,60 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
 
+  /api/v1/fills:
+    get:
+      operationId: listFills
+      tags:
+        - Account
+      summary: List fills (executed trades)
+      description: Returns fills (individual trade executions) for the authenticated customer on the specified exchange. A single order can produce multiple fills.
+      parameters:
+        - name: exchange
+          in: query
+          required: true
+          description: Exchange identifier (e.g., kalshi, polymarket).
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: Filter fills by a specific market ID (exchange-native).
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of fills to return.
+          schema:
+            type: integer
+            format: int32
+        - $ref: "#/components/parameters/XExchangeCredentials"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Fill"
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "429":
+          $ref: "#/components/responses/TooManyRequestsError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "501":
+          $ref: "#/components/responses/NotImplementedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
   /api/v1/balance:
     get:
       operationId: getBalance
@@ -1005,71 +1096,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExportKeyResponse"
-        "400":
-          $ref: "#/components/responses/BadRequestError"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
-  /api/v1/exchange/polymarket/auth-message:
-    get:
-      operationId: polymarketAuthMessage
-      tags:
-        - Onboarding
-      summary: Get EIP-712 typed data for Polymarket CLOB credential derivation
-      description: |
-        Returns the EIP-712 ClobAuth typed data to sign with your wallet.
-        Use the signature with POST /exchange/polymarket/auth-credentials.
-      parameters:
-        - name: address
-          in: query
-          required: true
-          description: Your Ethereum wallet address.
-          schema:
-            type: string
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PolymarketAuthMessageResponse"
-        "400":
-          $ref: "#/components/responses/BadRequestError"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-
-  /api/v1/exchange/polymarket/auth-credentials:
-    post:
-      operationId: polymarketAuthCredentials
-      tags:
-        - Onboarding
-      summary: Derive Polymarket CLOB credentials from a signed auth message
-      description: |
-        Submits a signed EIP-712 ClobAuth message and derives Polymarket CLOB API credentials.
-        Optionally stores them with ?store=true.
-      parameters:
-        - name: store
-          in: query
-          required: false
-          description: Set to true to store derived credentials for future use.
-          schema:
-            type: boolean
-            default: false
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PolymarketAuthCredentialsRequest"
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PolymarketAuthCredentialsResponse"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -1797,6 +1823,68 @@ components:
           type: string
           format: date-time
           description: Date of last data collection.
+        image_url:
+          type:
+            - string
+            - "null"
+          description: Market image URL.
+        icon_url:
+          type:
+            - string
+            - "null"
+          description: Market icon URL.
+        price_updated_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: When bid/ask/last_price was last refreshed (upgraded to now when live WS data overlays the snapshot).
+        matched_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelatedMarketLink"
+          description: Cross-exchange same-market relations. Only included when `include_matches=true`.
+        related_markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RelatedMarketLink"
+          description: Co-dependent market relations. Only included when `include_related=true`.
+
+    RelatedMarketLink:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - confidence
+        - confidence_tier
+        - source
+      properties:
+        parsec_id:
+          type: string
+          description: Parsec ID of the related market.
+        exchange:
+          type: string
+          description: Exchange of the related market.
+        confidence:
+          type: number
+          format: double
+          description: Match confidence score (0.0–1.0).
+        confidence_tier:
+          type: string
+          description: "Confidence tier: HIGH, MEDIUM, or LOW."
+        source:
+          type: string
+          description: Source of the match (e.g., embedding, llm).
+        dependency_type:
+          type:
+            - string
+            - "null"
+          description: Type of dependency (for related markets only).
+        dependency_direction:
+          type:
+            - string
+            - "null"
+          description: Direction of dependency (for related markets only).
 
     PaginationInfo:
       type: object
@@ -2085,7 +2173,6 @@ components:
         - parsec_id
         - exchange
         - outcome
-        - token_id
         - market_id
         - trades
       properties:
@@ -2096,7 +2183,10 @@ components:
         outcome:
           type: string
         token_id:
-          type: string
+          type:
+            - string
+            - "null"
+          description: Exchange-specific token/asset identifier. Null for exchanges that do not use token IDs (e.g., Kalshi).
         market_id:
           type: string
         trades:
@@ -2109,6 +2199,11 @@ components:
         next_cursor:
           type: string
           nullable: true
+        reason:
+          type:
+            - string
+            - "null"
+          description: "Explanatory field for empty results. Values: null (normal), \"no_data_yet\" (market exists but has no trade data for the requested range)."
     OrderbookSnapshotDto:
       type: object
       required:
@@ -2381,6 +2476,131 @@ components:
           type: number
         current_price:
           type: number
+
+    Fill:
+      type: object
+      required:
+        - fill_id
+        - order_id
+        - market_id
+        - outcome
+        - side
+        - price
+        - size
+        - is_taker
+        - fee
+        - created_at
+      properties:
+        fill_id:
+          type: string
+          description: Unique fill identifier.
+        order_id:
+          type: string
+          description: ID of the order that was filled.
+        market_id:
+          type: string
+          description: Market the fill occurred on (exchange-native ID).
+        outcome:
+          type: string
+          description: The outcome traded (e.g., "Yes" or "No").
+        side:
+          $ref: "#/components/schemas/OrderSide"
+        price:
+          type: number
+          description: Execution price.
+        size:
+          type: number
+          description: Number of contracts filled.
+        is_taker:
+          type: boolean
+          description: Whether this fill was a taker (market order hitting resting liquidity).
+        fee:
+          type: number
+          description: Fee charged for this fill.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of the fill (ISO 8601).
+
+    UsageResponse:
+      type: object
+      required:
+        - tier
+        - billing_period_start
+        - billing_period_end
+        - limits
+        - usage
+      properties:
+        tier:
+          type: string
+          description: Current tier (free, pro, scale).
+        billing_period_start:
+          type: integer
+          format: int64
+          description: Unix seconds — 1st of current month UTC.
+        billing_period_end:
+          type: integer
+          format: int64
+          description: Unix seconds — 1st of next month UTC.
+        limits:
+          $ref: "#/components/schemas/UsageLimits"
+        usage:
+          $ref: "#/components/schemas/UsageCurrent"
+
+    UsageLimits:
+      type: object
+      required:
+        - monthly_requests
+        - rest_qps
+        - rest_qps_burst
+        - ws_max_subscriptions
+        - ws_max_depth
+        - history_max_age_days
+      properties:
+        monthly_requests:
+          type: integer
+          format: int64
+          description: Monthly REST request cap. 0 = unlimited.
+        rest_qps:
+          type: integer
+          format: int32
+          description: REST queries per second. 0 = unlimited.
+        rest_qps_burst:
+          type: integer
+          format: int32
+          description: REST burst QPS allowance. 0 = unlimited.
+        ws_max_subscriptions:
+          type: integer
+          format: int64
+          description: Max WebSocket subscriptions across all connections. 0 = unlimited.
+        ws_max_depth:
+          type: integer
+          format: int64
+          description: Max orderbook depth per WebSocket subscription.
+        history_max_age_days:
+          type: integer
+          format: int64
+          description: Max historical data age in days. 0 = unlimited.
+
+    UsageCurrent:
+      type: object
+      required:
+        - monthly_requests
+        - ws_active_connections
+        - ws_active_subscriptions
+      properties:
+        monthly_requests:
+          type: integer
+          format: int64
+          description: REST requests consumed this billing period.
+        ws_active_connections:
+          type: integer
+          format: int64
+          description: Currently active WebSocket connections.
+        ws_active_subscriptions:
+          type: integer
+          format: int64
+          description: Currently active WebSocket subscriptions.
 
     CreateOrderRequest:
       type: object
@@ -2819,53 +3039,6 @@ components:
           type: integer
           description: Affiliate fee rate in basis points.
 
-    PolymarketAuthMessageResponse:
-      type: object
-      required:
-        - typed_data
-        - timestamp
-      properties:
-        typed_data:
-          type: object
-          description: EIP-712 typed data to sign with your wallet.
-        timestamp:
-          type: string
-          description: Timestamp used in the typed data.
-
-    PolymarketAuthCredentialsRequest:
-      type: object
-      required:
-        - address
-        - signature
-        - timestamp
-      properties:
-        address:
-          type: string
-          description: Your Ethereum wallet address.
-        signature:
-          type: string
-          description: EIP-712 signature of the ClobAuth typed data.
-        timestamp:
-          type: string
-          description: Timestamp from the auth message response.
-
-    PolymarketAuthCredentialsResponse:
-      type: object
-      required:
-        - clob_api_key
-        - clob_api_secret
-        - clob_api_passphrase
-      properties:
-        clob_api_key:
-          type: string
-          description: Polymarket CLOB API key.
-        clob_api_secret:
-          type: string
-          description: Polymarket CLOB API secret.
-        clob_api_passphrase:
-          type: string
-          description: Polymarket CLOB API passphrase.
-
     ExchangeStatus:
       type: object
       required:
@@ -2937,8 +3110,6 @@ components:
           type: boolean
         fetch_fills:
           type: boolean
-
-  # Note: fetch_fills is not yet enabled on any exchange. Listed for forward-compat.
 
     ExchangeCapability:
       type: object

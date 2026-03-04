@@ -41,7 +41,7 @@
               "api/list-markets",
               "api/get-orderbook",
               "api/get-execution-price",
-              "api/get-price-history",
+              "api/get-price",
               "api/get-trades",
               "api/list-events",
               "api/user-activity",
@@ -74,7 +74,8 @@
               "api/ping",
               "api/list-positions",
               "api/list-fills",
-              "api/get-balance"
+              "api/get-balance",
+              "api/get-usage"
             ]
           },
           {

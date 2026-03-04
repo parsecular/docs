@@ -51,8 +51,8 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
     <ResponseField name="outcome" type="string">
       The outcome for this tape.
     </ResponseField>
-    <ResponseField name="token_id" type="string">
-      Exchange-specific token/asset identifier for the requested outcome (when available).
+    <ResponseField name="token_id" type="string | null">
+      Exchange-specific token/asset identifier for the requested outcome. `null` for exchanges that do not use token IDs (e.g., Kalshi).
     </ResponseField>
     <ResponseField name="market_id" type="string">
       Exchange-specific market identifier.
@@ -104,6 +104,9 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
     <ResponseField name="next_cursor" type="string | null">
       Opaque cursor for the next page. Pass as `cursor` in the next request. `null` when there are no more pages.
     </ResponseField>
+    <ResponseField name="reason" type="string | null">
+      Explanatory field for empty results. `null` for normal responses. `"no_data_yet"` when the market exists but has no trade data for the requested range.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -124,7 +127,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS",
   "exchange": "kalshi",
   "outcome": "Yes",
-  "token_id": "KXPRESPERSON-28-GNEWS",
+  "token_id": null,
   "market_id": "KXPRESPERSON-28-GNEWS",
   "trades": [
     {

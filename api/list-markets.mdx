@@ -5,7 +5,7 @@ description: "Get available markets from one or more exchanges"
 
 `GET /api/v1/markets`
 
-Returns a paginated array of markets from the Silver cache (ClickHouse) with filtering and pagination.
+Returns a paginated array of markets from the DuckDB gold layer with filtering and pagination.
 
 ## Modes
 
@@ -46,6 +46,14 @@ The endpoint operates in two modes:
 
 <ParamField query="min_liquidity" type="number">
   Minimum liquidity filter.
+</ParamField>
+
+<ParamField query="include_matches" type="boolean" default="false">
+  When true, each market includes a `matched_markets` array with cross-exchange same-market relations.
+</ParamField>
+
+<ParamField query="include_related" type="boolean" default="false">
+  When true, each market includes a `related_markets` array with co-dependent market relations.
 </ParamField>
 
 <ParamField query="limit" type="number" default="100">
@@ -169,6 +177,61 @@ The endpoint operates in two modes:
         </ResponseField>
         <ResponseField name="last_collected" type="string">
           ISO 8601 timestamp of last data collection.
+        </ResponseField>
+        <ResponseField name="image_url" type="string | null">
+          Market image URL.
+        </ResponseField>
+        <ResponseField name="icon_url" type="string | null">
+          Market icon URL.
+        </ResponseField>
+        <ResponseField name="price_updated_at" type="string | null">
+          ISO 8601 timestamp of when bid/ask/last_price was last refreshed. Upgraded to now when live WebSocket data overlays the snapshot.
+        </ResponseField>
+        <ResponseField name="matched_markets" type="RelatedMarketLink[]">
+          Cross-exchange same-market relations. Only included when `include_matches=true`.
+          <Expandable title="RelatedMarketLink properties">
+            <ResponseField name="parsec_id" type="string">
+              Parsec ID of the related market.
+            </ResponseField>
+            <ResponseField name="exchange" type="string">
+              Exchange of the related market.
+            </ResponseField>
+            <ResponseField name="confidence" type="number">
+              Match confidence score (0.0–1.0).
+            </ResponseField>
+            <ResponseField name="confidence_tier" type="string">
+              Confidence tier: `HIGH`, `MEDIUM`, or `LOW`.
+            </ResponseField>
+            <ResponseField name="source" type="string">
+              Source of the match (e.g., `embedding`, `llm`).
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="related_markets" type="RelatedMarketLink[]">
+          Co-dependent market relations. Only included when `include_related=true`.
+          <Expandable title="RelatedMarketLink properties">
+            <ResponseField name="parsec_id" type="string">
+              Parsec ID of the related market.
+            </ResponseField>
+            <ResponseField name="exchange" type="string">
+              Exchange of the related market.
+            </ResponseField>
+            <ResponseField name="confidence" type="number">
+              Match confidence score (0.0–1.0).
+            </ResponseField>
+            <ResponseField name="confidence_tier" type="string">
+              Confidence tier: `HIGH`, `MEDIUM`, or `LOW`.
+            </ResponseField>
+            <ResponseField name="source" type="string">
+              Source of the match.
+            </ResponseField>
+            <ResponseField name="dependency_type" type="string | null">
+              Type of dependency.
+            </ResponseField>
+            <ResponseField name="dependency_direction" type="string | null">
+              Direction of dependency.
+            </ResponseField>
+          </Expandable>
         </ResponseField>
       </Expandable>
     </ResponseField>
