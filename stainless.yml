@@ -73,11 +73,16 @@ resources:
     methods:
       list: get /api/v1/positions
 
+  fills:
+    methods:
+      list: get /api/v1/fills
+
   account:
     methods:
       balance: get /api/v1/balance
       ping: get /api/v1/ping
       user_activity: get /api/v1/user-activity
+      usage: get /api/v1/usage
   onboard:
     methods:
       create: post /api/v1/onboard
@@ -86,11 +91,6 @@ resources:
     methods:
       retrieve: get /api/v1/wallet
       export_key: post /api/v1/wallet/export-key
-
-  polymarket_auth:
-    methods:
-      message: get /api/v1/exchange/polymarket/auth-message
-      credentials: post /api/v1/exchange/polymarket/auth-credentials
 
   ctf:
     models:
