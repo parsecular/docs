@@ -1,0 +1,91 @@
+---
+title: "Get Usage"
+description: "Get your tier limits and current consumption"
+---
+
+`GET /api/v1/usage`
+
+Returns your current tier, billing period, rate limits, and usage counters (monthly requests, WebSocket connections/subscriptions). Use this to monitor quota consumption and understand your tier's capabilities.
+
+A value of `0` for any limit field means **unlimited**.
+
+## Response
+
+<ResponseField name="tier" type="string">
+  Current tier: `free`, `pro`, or `scale`.
+</ResponseField>
+
+<ResponseField name="billing_period_start" type="integer">
+  Unix seconds — 1st of current month UTC.
+</ResponseField>
+
+<ResponseField name="billing_period_end" type="integer">
+  Unix seconds — 1st of next month UTC.
+</ResponseField>
+
+<ResponseField name="limits" type="object">
+  <Expandable title="properties">
+    <ResponseField name="monthly_requests" type="integer">
+      Monthly REST request cap. 0 = unlimited.
+    </ResponseField>
+    <ResponseField name="rest_qps" type="integer">
+      REST queries per second. 0 = unlimited.
+    </ResponseField>
+    <ResponseField name="rest_qps_burst" type="integer">
+      REST burst QPS allowance. 0 = unlimited.
+    </ResponseField>
+    <ResponseField name="ws_max_subscriptions" type="integer">
+      Max WebSocket subscriptions across all connections. 0 = unlimited.
+    </ResponseField>
+    <ResponseField name="ws_max_depth" type="integer">
+      Max orderbook depth per WebSocket subscription.
+    </ResponseField>
+    <ResponseField name="history_max_age_days" type="integer">
+      Max historical data age in days. 0 = unlimited.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="usage" type="object">
+  <Expandable title="properties">
+    <ResponseField name="monthly_requests" type="integer">
+      REST requests consumed this billing period.
+    </ResponseField>
+    <ResponseField name="ws_active_connections" type="integer">
+      Currently active WebSocket connections.
+    </ResponseField>
+    <ResponseField name="ws_active_subscriptions" type="integer">
+      Currently active WebSocket subscriptions.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/usage"
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "tier": "pro",
+  "billing_period_start": 1772524800,
+  "billing_period_end": 1775203200,
+  "limits": {
+    "monthly_requests": 100000,
+    "rest_qps": 10,
+    "rest_qps_burst": 20,
+    "ws_max_subscriptions": 50,
+    "ws_max_depth": 20,
+    "history_max_age_days": 30
+  },
+  "usage": {
+    "monthly_requests": 4237,
+    "ws_active_connections": 2,
+    "ws_active_subscriptions": 8
+  }
+}
+```
+</ResponseExample>
