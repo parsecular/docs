@@ -75,12 +75,12 @@ curl "https://api.parsecapi.com/api/v1/wallet" \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 ```typescript TypeScript
-const state = await client.wallet.get();
+const state = await client.wallet.retrieve();
 console.log(state.wallet?.eoa_address);
 console.log(state.linked_exchanges);
 ```
 ```python Python
-state = client.wallet.get()
+state = client.wallet.retrieve()
 print(state.wallet.eoa_address if state.wallet else "No wallet")
 print(state.linked_exchanges)
 ```

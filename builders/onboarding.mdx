@@ -90,29 +90,20 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   }'
 ```
 ```typescript TypeScript
-const user = await parsec.post('/api/v1/builder/users', {
-  body: {
-    external_id: 'user_001',
-    email: 'alice@example.com',
-    eoa_address: '0xUserMetaMaskAddress', // optional: record their external wallet
-  },
+const user = await parsec.builder.users.create({
+  external_id: 'user_001',
+  email: 'alice@example.com',
+  eoa_address: '0xUserMetaMaskAddress', // optional: record their external wallet
 });
 console.log(user.customer_id, user.api_key);
 ```
 ```python Python
-import requests
-
-resp = requests.post(
-    "https://api.parsecapi.com/api/v1/builder/users",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-    json={
-        "external_id": "user_001",
-        "email": "alice@example.com",
-        "eoa_address": "0xUserMetaMaskAddress",  # optional: record their external wallet
-    },
+user = parsec.builder.users.create(
+    external_id="user_001",
+    email="alice@example.com",
+    eoa_address="0xUserMetaMaskAddress",  # optional: record their external wallet
 )
-user = resp.json()
-print(user["customer_id"], user["api_key"])
+print(user.customer_id, user.api_key)
 ```
 </CodeGroup>
 

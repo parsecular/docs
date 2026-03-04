@@ -172,11 +172,11 @@ curl -H "X-API-Key: pk_live_YOUR_KEY" \
   "https://api.parsecapi.com/api/v1/ping?exchange=kalshi"
 ```
 ```typescript TypeScript
-const result = await client.ping.list({ exchange: 'kalshi' });
+const result = await client.account.ping({ exchange: 'kalshi' });
 console.log(result); // [{ exchange: "kalshi", authenticated: true, ... }]
 ```
 ```python Python
-result = client.ping.list(exchange="kalshi")
+result = client.account.ping(exchange="kalshi")
 print(result)  # [PingResponse(exchange="kalshi", authenticated=True, ...)]
 ```
 </CodeGroup>
