@@ -17,8 +17,14 @@ Returns `204 No Content`.
 </ParamField>
 
 <RequestExample>
-```bash
+```bash curl
 curl -X DELETE "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+await client.builder.users.deactivate('CUSTOMER_ID');
+```
+```python Python
+client.builder.users.deactivate("CUSTOMER_ID")
 ```
 </RequestExample>

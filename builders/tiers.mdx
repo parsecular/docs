@@ -122,34 +122,20 @@ curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
 ```
 ```typescript TypeScript
-const pool = await fetch(
-  'https://api.parsecapi.com/api/v1/builder/pool',
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
-
-const escrow = await fetch(
-  'https://api.parsecapi.com/api/v1/builder/escrow/config',
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
+const pool = await client.builder.pool();
+const escrow = await client.builder.escrow.config();
 
 console.log('Users:', pool.end_user_count);
 console.log('QPS:', pool.qps_pool);
 console.log('Fee BPS:', escrow.fee_bps);
 ```
 ```python Python
-pool = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/pool",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-).json()
+pool = client.builder.pool()
+escrow = client.builder.escrow.config()
 
-escrow = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/escrow/config",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-).json()
-
-print(f"Users: {pool['end_user_count']}")
-print(f"QPS pool: {pool['qps_pool']}")
-print(f"Fee BPS: {escrow['fee_bps']}")
+print(f"Users: {pool.end_user_count}")
+print(f"QPS pool: {pool.qps_pool}")
+print(f"Fee BPS: {escrow.fee_bps}")
 ```
 </CodeGroup>
 

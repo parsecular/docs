@@ -92,7 +92,7 @@ Your users never see your builder key — authentication happens entirely on you
 </ResponseField>
 
 <RequestExample>
-```bash Create user with external wallet
+```bash curl
 curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
@@ -102,14 +102,21 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
     "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
   }'
 ```
-```bash Create user (no wallet)
-curl -X POST "https://api.parsecapi.com/api/v1/builder/users" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "external_id": "user_002",
-    "email": "bob@example.com"
-  }'
+```typescript TypeScript
+const user = await client.builder.users.create({
+  external_id: 'user_001',
+  email: 'alice@example.com',
+  eoa_address: '0x1234567890abcdef1234567890abcdef12345678',
+});
+console.log(user.customer_id, user.api_key);
+```
+```python Python
+user = client.builder.users.create(
+    external_id="user_001",
+    email="alice@example.com",
+    eoa_address="0x1234567890abcdef1234567890abcdef12345678",
+)
+print(user.customer_id, user.api_key)
 ```
 </RequestExample>
 

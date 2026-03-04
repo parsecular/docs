@@ -31,7 +31,8 @@
             "group": "Onboarding",
             "pages": [
               "api/onboard",
-              "api/get-wallet"
+              "api/get-wallet",
+              "api/export-key"
             ]
           },
           {

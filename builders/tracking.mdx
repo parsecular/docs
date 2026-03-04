@@ -20,22 +20,14 @@ curl "https://api.parsecapi.com/api/v1/builder/pool" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
 ```
 ```typescript TypeScript
-const pool = await fetch(
-  'https://api.parsecapi.com/api/v1/builder/pool',
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
-
+const pool = await client.builder.pool();
 console.log(`Users: ${pool.end_user_count}`);
 console.log(`QPS used: ${pool.total_allocated_qps} / ${pool.qps_pool}`);
 ```
 ```python Python
-resp = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/pool",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-)
-pool = resp.json()
-print(f"Users: {pool['end_user_count']}")
-print(f"QPS: {pool['total_allocated_qps']} / {pool['qps_pool']}")
+pool = client.builder.pool()
+print(f"Users: {pool.end_user_count}")
+print(f"QPS: {pool.total_allocated_qps} / {pool.qps_pool}")
 ```
 </CodeGroup>
 
@@ -73,16 +65,10 @@ curl "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
 ```
 ```typescript TypeScript
-const user = await fetch(
-  `https://api.parsecapi.com/api/v1/builder/users/${customerId}`,
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
+const user = await client.builder.users.retrieve(customerId);
 ```
 ```python Python
-resp = requests.get(
-    f"https://api.parsecapi.com/api/v1/builder/users/{customer_id}",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-)
+user = client.builder.users.retrieve(customer_id)
 ```
 </CodeGroup>
 
@@ -120,16 +106,10 @@ curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
 ```
 ```typescript TypeScript
-const config = await fetch(
-  'https://api.parsecapi.com/api/v1/builder/escrow/config',
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
+const config = await client.builder.escrow.config();
 ```
 ```python Python
-resp = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/escrow/config",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-)
+config = client.builder.escrow.config()
 ```
 </CodeGroup>
 

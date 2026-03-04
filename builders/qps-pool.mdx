@@ -20,9 +20,17 @@ description: "Monitor your QPS allocation across end-users."
 </ResponseField>
 
 <RequestExample>
-```bash
+```bash curl
 curl "https://api.parsecapi.com/api/v1/builder/pool" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const pool = await client.builder.pool();
+console.log(pool.qps_pool, pool.end_user_count, pool.total_allocated_qps);
+```
+```python Python
+pool = client.builder.pool()
+print(pool.qps_pool, pool.end_user_count, pool.total_allocated_qps)
 ```
 </RequestExample>
 

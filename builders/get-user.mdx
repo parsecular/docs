@@ -14,8 +14,16 @@ Returns the same response shape as the [create user endpoint](/builders/create-u
 </ParamField>
 
 <RequestExample>
-```bash
+```bash curl
 curl "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const user = await client.builder.users.retrieve('CUSTOMER_ID');
+console.log(user.external_id, user.linked_exchanges);
+```
+```python Python
+user = client.builder.users.retrieve("CUSTOMER_ID")
+print(user.external_id, user.linked_exchanges)
 ```
 </RequestExample>

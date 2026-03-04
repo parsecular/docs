@@ -18,10 +18,20 @@ Returns the updated user (same shape as the [create user response](/builders/cre
 </ParamField>
 
 <RequestExample>
-```bash
+```bash curl
 curl -X PATCH "https://api.parsecapi.com/api/v1/builder/users/CUSTOMER_ID" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
   -d '{ "qps_limit": 20 }'
+```
+```typescript TypeScript
+const user = await client.builder.users.update('CUSTOMER_ID', {
+  qps_limit: 20,
+});
+console.log(user.qps_limit);
+```
+```python Python
+user = client.builder.users.update("CUSTOMER_ID", qps_limit=20)
+print(user.qps_limit)
 ```
 </RequestExample>

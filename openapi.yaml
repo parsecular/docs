@@ -2631,6 +2631,17 @@ components:
             - `order_type`: Order time-in-force. Values: `gtc` (default), `ioc`, `fok`. Unsupported types return 501 per exchange.
         credentials:
           $ref: "#/components/schemas/RequestCredentials"
+        fee_auth:
+          $ref: "#/components/schemas/FeeAuthorization"
+        payer_address:
+          type: string
+          description: End-user's wallet address (fee escrow payer). Builder-only.
+        signer_address:
+          type: string
+          description: End-user's signing wallet address. Builder-only.
+        affiliate:
+          type: string
+          description: Affiliate address override. Builder-only.
 
     RequestCredentials:
       type: object
@@ -2653,6 +2664,33 @@ components:
         clob_api_passphrase:
           type: string
           description: Polymarket CLOB API passphrase.
+
+    FeeAuthorization:
+      type: object
+      description: EIP-712 fee authorization signed by the end-user's wallet. Required to collect fees via fee escrow. Builder-only.
+      required:
+        - order_id
+        - payer
+        - fee_amount
+        - deadline
+        - signature
+      properties:
+        order_id:
+          type: string
+          description: 0x-prefixed hex bytes32 order identifier.
+        payer:
+          type: string
+          description: 0x-prefixed payer wallet address.
+        fee_amount:
+          type: string
+          description: Fee in USDC base units (6 decimals), as a string.
+        deadline:
+          type: integer
+          format: int64
+          description: Unix timestamp after which the authorization expires.
+        signature:
+          type: string
+          description: 0x-prefixed hex EIP-712 signature.
 
     OnboardRequest:
       type: object

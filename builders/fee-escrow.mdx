@@ -53,16 +53,12 @@ curl "https://api.parsecapi.com/api/v1/builder/escrow/config" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
 ```
 ```typescript TypeScript
-const config = await fetch(
-  'https://api.parsecapi.com/api/v1/builder/escrow/config',
-  { headers: { 'X-API-Key': BUILDER_KEY } },
-).then(r => r.json());
+const config = await client.builder.escrow.config();
+console.log(config.fee_escrow_enabled, config.fee_bps);
 ```
 ```python Python
-resp = requests.get(
-    "https://api.parsecapi.com/api/v1/builder/escrow/config",
-    headers={"X-API-Key": "pk_live_YOUR_BUILDER_KEY"},
-)
+config = client.builder.escrow.config()
+print(config.fee_escrow_enabled, config.fee_bps)
 ```
 </CodeGroup>
 
@@ -179,58 +175,44 @@ curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   }'
 ```
 ```typescript TypeScript
-const order = await fetch(
-  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
-  {
-    method: 'POST',
-    headers: {
-      'X-API-Key': BUILDER_KEY,
-      'X-Builder-Customer-Id': customerId,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      market_id: '0x1234abcd',
-      outcome: 'Yes',
-      side: 'buy',
-      price: 0.55,
-      size: 100,
-      fee_auth: {
-        order_id: orderId,
-        payer: userWalletAddress,
-        fee_amount: feeBaseUnits.toString(),
-        deadline,
-        signature,
-      },
-      payer_address: userWalletAddress,
-      signer_address: userWalletAddress,
-    }),
+const order = await client.orders.create({
+  exchange: 'polymarket',
+  market_id: '0x1234abcd',
+  outcome: 'Yes',
+  side: 'buy',
+  price: 0.55,
+  size: 100,
+  fee_auth: {
+    order_id: orderId,
+    payer: userWalletAddress,
+    fee_amount: feeBaseUnits.toString(),
+    deadline,
+    signature,
   },
-);
+  payer_address: userWalletAddress,
+  signer_address: userWalletAddress,
+}, {
+  headers: { 'X-Builder-Customer-Id': customerId },
+});
 ```
 ```python Python
-resp = requests.post(
-    "https://api.parsecapi.com/api/v1/orders",
-    headers={
-        "X-API-Key": BUILDER_KEY,
-        "X-Builder-Customer-Id": customer_id,
+order = client.orders.create(
+    exchange="polymarket",
+    market_id="0x1234abcd",
+    outcome="Yes",
+    side="buy",
+    price=0.55,
+    size=100,
+    fee_auth={
+        "order_id": order_id,
+        "payer": user_wallet,
+        "fee_amount": str(fee_base_units),
+        "deadline": deadline,
+        "signature": signature,
     },
-    params={"exchange": "polymarket"},
-    json={
-        "market_id": "0x1234abcd",
-        "outcome": "Yes",
-        "side": "buy",
-        "price": 0.55,
-        "size": 100,
-        "fee_auth": {
-            "order_id": order_id,
-            "payer": user_wallet,
-            "fee_amount": str(fee_base_units),
-            "deadline": deadline,
-            "signature": signature,
-        },
-        "payer_address": user_wallet,
-        "signer_address": user_wallet,
-    },
+    payer_address=user_wallet,
+    signer_address=user_wallet,
+    extra_headers={"X-Builder-Customer-Id": customer_id},
 )
 ```
 </CodeGroup>

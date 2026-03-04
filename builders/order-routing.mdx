@@ -117,40 +117,26 @@ curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   }'
 ```
 ```typescript TypeScript
-const order = await fetch(
-  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
-  {
-    method: 'POST',
-    headers: {
-      'X-API-Key': BUILDER_KEY,
-      'X-Builder-Customer-Id': customerId,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      market_id: '0x1234abcd',
-      outcome: 'Yes',
-      side: 'buy',
-      price: 0.55,
-      size: 100,
-    }),
-  },
-);
+const order = await client.orders.create({
+  exchange: 'polymarket',
+  market_id: '0x1234abcd',
+  outcome: 'Yes',
+  side: 'buy',
+  price: 0.55,
+  size: 100,
+}, {
+  headers: { 'X-Builder-Customer-Id': customerId },
+});
 ```
 ```python Python
-resp = requests.post(
-    "https://api.parsecapi.com/api/v1/orders",
-    headers={
-        "X-API-Key": BUILDER_KEY,
-        "X-Builder-Customer-Id": customer_id,
-    },
-    params={"exchange": "polymarket"},
-    json={
-        "market_id": "0x1234abcd",
-        "outcome": "Yes",
-        "side": "buy",
-        "price": 0.55,
-        "size": 100,
-    },
+order = client.orders.create(
+    exchange="polymarket",
+    market_id="0x1234abcd",
+    outcome="Yes",
+    side="buy",
+    price=0.55,
+    size=100,
+    extra_headers={"X-Builder-Customer-Id": customer_id},
 )
 ```
 </RequestExample>
@@ -216,16 +202,16 @@ curl "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   -H "X-Builder-Customer-Id: CUSTOMER_ID"
 ```
 ```typescript TypeScript
-const orders = await fetch(
-  'https://api.parsecapi.com/api/v1/orders?exchange=polymarket',
-  { headers: builderHeaders(customerId) },
-);
+const orders = await client.orders.list({
+  exchange: 'polymarket',
+}, {
+  headers: { 'X-Builder-Customer-Id': customerId },
+});
 ```
 ```python Python
-resp = requests.get(
-    "https://api.parsecapi.com/api/v1/orders",
-    headers=parsec_headers(customer_id),
-    params={"exchange": "polymarket"},
+orders = client.orders.list(
+    exchange="polymarket",
+    extra_headers={"X-Builder-Customer-Id": customer_id},
 )
 ```
 </RequestExample>
@@ -260,16 +246,17 @@ curl -X DELETE "https://api.parsecapi.com/api/v1/orders/ORDER_ID?exchange=polyma
   -H "X-Builder-Customer-Id: CUSTOMER_ID"
 ```
 ```typescript TypeScript
-const cancelled = await fetch(
-  `https://api.parsecapi.com/api/v1/orders/${orderId}?exchange=polymarket`,
-  { method: 'DELETE', headers: builderHeaders(customerId) },
-);
+const cancelled = await client.orders.cancel(orderId, {
+  exchange: 'polymarket',
+}, {
+  headers: { 'X-Builder-Customer-Id': customerId },
+});
 ```
 ```python Python
-resp = requests.delete(
-    f"https://api.parsecapi.com/api/v1/orders/{order_id}",
-    headers=parsec_headers(customer_id),
-    params={"exchange": "polymarket"},
+cancelled = client.orders.cancel(
+    order_id,
+    exchange="polymarket",
+    extra_headers={"X-Builder-Customer-Id": customer_id},
 )
 ```
 </RequestExample>

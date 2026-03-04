@@ -160,7 +160,7 @@ Used when `mode: "self"` and `exchange: "kalshi"` — you provide the user's API
 </ResponseField>
 
 <RequestExample>
-```bash Managed — EOA (no external wallet)
+```bash curl
 curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
   -H "Content-Type: application/json" \
@@ -170,43 +170,21 @@ curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
     "mode": "managed"
   }'
 ```
-```bash Managed — Safe (external wallet)
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "exchange": "polymarket",
-    "mode": "managed",
-    "wallet_type": "safe",
-    "eoa_address": "0x1234567890abcdef1234567890abcdef12345678"
-  }'
+```typescript TypeScript
+const result = await client.builder.onboard.create({
+  customer_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  exchange: 'polymarket',
+  mode: 'managed',
+});
+console.log(result.status, result.linked_exchanges);
 ```
-```bash Self Polymarket
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "exchange": "polymarket",
-    "mode": "self",
-    "clob_api_key": "your-clob-api-key",
-    "clob_api_secret": "your-clob-api-secret",
-    "clob_api_passphrase": "your-clob-passphrase",
-    "private_key": "0xYourEthPrivateKey"
-  }'
-```
-```bash Self Kalshi
-curl -X POST "https://api.parsecapi.com/api/v1/builder/onboard" \
-  -H "X-API-Key: pk_live_YOUR_BUILDER_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "customer_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "exchange": "kalshi",
-    "mode": "self",
-    "api_key_id": "kalshi_key_id",
-    "private_key": "-----BEGIN RSA PRIVATE KEY-----\n..."
-  }'
+```python Python
+result = client.builder.onboard.create(
+    customer_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    exchange="polymarket",
+    mode="managed",
+)
+print(result.status, result.linked_exchanges)
 ```
 </RequestExample>
 

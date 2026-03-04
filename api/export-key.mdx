@@ -1,0 +1,49 @@
+---
+title: "Export Wallet Key"
+description: "Export the private key of your Parsec-managed wallet."
+---
+
+`POST /api/v1/wallet/export-key`
+
+Exports the private key of your Parsec-managed wallet. This is a destructive action — once exported, you are responsible for securing the key.
+
+<Warning>
+Store exported keys securely. Parsec cannot recover funds if a private key is compromised.
+</Warning>
+
+## Parameters
+
+<ParamField body="wallet_type" type="string" default="eoa">
+  Which wallet to export: `"eoa"` (default) or `"safe"`.
+</ParamField>
+
+## Response
+
+<ResponseField name="private_key" type="string">
+  Hex-encoded private key (`0x`-prefixed).
+</ResponseField>
+
+<RequestExample>
+```bash curl
+curl -X POST "https://api.parsecapi.com/api/v1/wallet/export-key" \
+  -H "X-API-Key: pk_live_YOUR_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "wallet_type": "eoa" }'
+```
+```typescript TypeScript
+const result = await client.wallet.exportKey({ wallet_type: 'eoa' });
+console.log(result.private_key);
+```
+```python Python
+result = client.wallet.export_key(wallet_type="eoa")
+print(result.private_key)
+```
+</RequestExample>
+
+<ResponseExample>
+```json
+{
+  "private_key": "0x1234567890abcdef..."
+}
+```
+</ResponseExample>

@@ -30,9 +30,17 @@ description: "List all end-users in your builder account."
 </ResponseField>
 
 <RequestExample>
-```bash
+```bash curl
 curl "https://api.parsecapi.com/api/v1/builder/users?limit=20" \
   -H "X-API-Key: pk_live_YOUR_BUILDER_KEY"
+```
+```typescript TypeScript
+const result = await client.builder.users.list({ limit: 20 });
+console.log(result.users, result.count);
+```
+```python Python
+result = client.builder.users.list(limit=20)
+print(result.users, result.count)
 ```
 </RequestExample>
 
