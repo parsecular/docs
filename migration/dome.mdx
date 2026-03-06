@@ -1,0 +1,330 @@
+---
+title: "Migrating from Dome API to Parsec"
+description: "Step-by-step guide to migrate your Dome API integration to Parsec"
+---
+
+## Why Migrate?
+
+Dome API is being sunset. Parsec offers a unified prediction market API with significant advantages:
+
+- **5 exchanges in one API** — Polymarket, Kalshi, Opinion, Limitless, and Predict.fun through a single interface
+- **Unified order routing** — Place orders across exchanges with one endpoint
+- **Managed wallets** — No need to manage your own keys
+- **Real-time WebSocket feeds** — Low-latency orderbook and trade streams
+- **Builder program** — Build apps on top of Parsec with user management, fee sharing, and QPS pools
+- **CTF operations** — Split, merge, and redeem conditional tokens
+
+## Quick Start
+
+### 1. Run the automatic migration tool
+
+```bash
+npx dome-to-parsec ./src
+```
+
+This transforms your Dome SDK code to Parsec SDK equivalents and flags areas needing manual review.
+
+### 2. Install the Parsec SDK
+
+<CodeGroup>
+```bash TypeScript
+npm install parsec-api
+```
+
+```bash Python
+pip install parsec-api
+```
+</CodeGroup>
+
+### 3. Set your API key
+
+```bash
+export PARSEC_API_KEY="your_parsec_api_key"
+```
+
+Get your API key at [parsecapi.com](https://parsecapi.com).
+
+### 4. Review TODOs
+
+Search your codebase for `TODO(dome-to-parsec)` comments and resolve each one. Common items:
+- Converting `token_id` to `parsec_id` format (`polymarket:TOKEN_ID`)
+- WebSocket subscription model changes
+- Response shape differences
+
+---
+
+## Automatic Migration Tool
+
+The `dome-to-parsec` CLI handles the mechanical parts of migration:
+
+```bash
+# Transform all files in a directory
+npx dome-to-parsec ./src
+
+# Transform a single file
+npx dome-to-parsec ./src/trading.ts
+```
+
+**What it transforms:**
+- Import statements and package names
+- `DomeClient` constructor to `ParsecAPI`
+- Method chains (e.g. `dome.polymarket.markets.getMarkets()` to `client.markets.list()`)
+- Parameter names (`token_id` to `parsec_id`, `pagination_key` to `cursor`)
+- Status values (`'open'` to `'active'`)
+
+**What it flags for manual review:**
+- `parsec_id` format conversion (requires `{exchange}:{native_id}` format)
+- WebSocket migration (different subscription model)
+- Response shape differences
+
+**What it removes (with warnings):**
+- `wallet.getPnL()` — not exposed in Parsec
+- `sports.*` — not available in Parsec
+- `binancePrices.*` / `chainlinkPrices.*` — not in Parsec scope
+
+---
+
+## Endpoint Mapping
+
+### Market Data
+
+| Dome Endpoint | Parsec Equivalent | Notes |
+|---|---|---|
+| `dome.polymarket.markets.getMarkets({...})` | `client.markets.list({ exchanges: ['polymarket'] })` | Parsec supports filtering by multiple exchanges |
+| `dome.kalshi.markets.getMarkets({...})` | `client.markets.list({ exchanges: ['kalshi'] })` | Same unified endpoint |
+| `dome.polymarket.markets.getMarketPrice({ token_id })` | `client.price.retrieve({ parsec_id: 'polymarket:TOKEN_ID' })` | Use `parsec_id` format |
+| `dome.kalshi.markets.getMarketPrice({ ticker })` | `client.price.retrieve({ parsec_id: 'kalshi:TICKER' })` | Use `parsec_id` format |
+| `dome.polymarket.events.list({...})` | `client.events.list({ exchanges: ['polymarket'] })` | |
+
+### Orderbook & Trades
+
+| Dome Endpoint | Parsec Equivalent | Notes |
+|---|---|---|
+| `dome.polymarket.orderbook.getHistory({...})` | `client.orderbook.retrieve({ parsec_id, start_ts, end_ts })` | Historical mode via `start_ts` |
+| `dome.polymarket.trades.getHistory({...})` | `client.trades.list({ parsec_id })` | |
+| `dome.polymarket.candlesticks.get({...})` | `client.price.retrieve({ parsec_id, interval })` | Pass `interval` param |
+
+### Orders & Account
+
+| Dome Endpoint | Parsec Equivalent | Notes |
+|---|---|---|
+| `dome.polymarket.placeOrder({...})` | `client.orders.create({ exchange: 'polymarket', ... })` | |
+| `dome.polymarket.positions.get({...})` | `client.positions.list({ exchange: 'polymarket' })` | |
+| `dome.polymarket.wallet.get({...})` | `client.wallet.retrieve()` | |
+| `dome.polymarket.activity.get({...})` | `client.account.user_activity({ address })` | Different response shape |
+
+---
+
+## SDK Migration Examples
+
+### Market Data
+
+<CodeGroup>
+```typescript Dome (TypeScript)
+import { DomeClient } from '@dome-api/sdk';
+
+const dome = new DomeClient({ apiKey: 'DOME_KEY' });
+
+// Get Polymarket markets
+const markets = await dome.polymarket.markets.getMarkets({
+  status: 'open',
+  limit: 50,
+});
+
+// Get market price
+const price = await dome.polymarket.markets.getMarketPrice({
+  token_id: 'abc123',
+});
+```
+
+```typescript Parsec (TypeScript)
+import ParsecAPI from 'parsec-api';
+
+const client = new ParsecAPI({ apiKey: process.env.PARSEC_API_KEY });
+
+// Get Polymarket markets (or any exchange)
+const markets = await client.markets.list({
+  exchanges: ['polymarket'],
+  status: 'active',
+  limit: 50,
+});
+
+// Get market price
+const price = await client.price.retrieve({
+  parsec_id: 'polymarket:abc123',
+});
+```
+</CodeGroup>
+
+<CodeGroup>
+```python Dome (Python)
+from dome_api_sdk import DomeClient
+
+dome = DomeClient(api_key="DOME_KEY")
+
+markets = dome.polymarket.markets.get_markets(
+    status="open",
+    limit=50,
+)
+
+price = dome.polymarket.markets.get_market_price(
+    token_id="abc123",
+)
+```
+
+```python Parsec (Python)
+from parsec_api import ParsecAPI
+
+client = ParsecAPI(api_key=os.environ["PARSEC_API_KEY"])
+
+markets = client.markets.list(
+    exchanges=["polymarket"],
+    status="active",
+    limit=50,
+)
+
+price = client.price.retrieve(
+    parsec_id="polymarket:abc123",
+)
+```
+</CodeGroup>
+
+### Placing Orders
+
+<CodeGroup>
+```typescript Dome (TypeScript)
+const order = await dome.polymarket.placeOrder({
+  token_id: 'abc123',
+  side: 'buy',
+  price: 0.65,
+  size: 100,
+});
+```
+
+```typescript Parsec (TypeScript)
+const order = await client.orders.create({
+  exchange: 'polymarket',
+  parsec_id: 'polymarket:abc123',
+  side: 'buy',
+  price: 0.65,
+  size: 100,
+});
+```
+</CodeGroup>
+
+### WebSocket
+
+<CodeGroup>
+```typescript Dome (TypeScript)
+// Dome: manual WS connection with API key in URL
+const ws = new WebSocket('wss://ws.domeapi.io/DOME_KEY');
+ws.send(JSON.stringify({
+  action: 'subscribe',
+  type: 'orders',
+  filters: { users: ['0xabc...'] },
+}));
+```
+
+```typescript Parsec (TypeScript)
+// Parsec: SDK-managed connection, subscribe by market
+const ws = client.ws();
+ws.subscribe({
+  parsecId: 'polymarket:abc123',
+  channels: ['orderbook', 'trades'],
+});
+ws.on('orderbook', (data) => { /* ... */ });
+```
+</CodeGroup>
+
+<Warning>
+  Parsec WebSocket uses a different subscription model. Dome subscribes by user/wallet address, while Parsec subscribes by market (`parsec_id`). You will need to restructure your WS handling logic. See the [WebSocket documentation](/websocket/overview) for details.
+</Warning>
+
+---
+
+## Parameter Mapping
+
+| Dome Parameter | Parsec Parameter | Notes |
+|---|---|---|
+| `token_id` | `parsec_id` | Format: `polymarket:{token_id}` |
+| `ticker` | `parsec_id` | Format: `kalshi:{ticker}` |
+| `condition_id` | `parsec_id` | Format: `polymarket:{condition_id}` |
+| `status: 'open'` | `status: 'active'` | Automatic transform |
+| `pagination_key` | `cursor` | Automatic transform |
+| `limit` | `limit` | Same |
+| `start_ts` | `start_ts` | Same (unix seconds) |
+| `end_ts` | `end_ts` | Same (unix seconds) |
+
+---
+
+## Key Differences
+
+### Unified `parsec_id`
+
+Dome uses exchange-specific identifiers (`token_id` for Polymarket, `ticker` for Kalshi). Parsec uses a unified `parsec_id` format:
+
+```
+{exchange}:{native_id}
+```
+
+Examples:
+- `polymarket:abc123def` (Polymarket token ID)
+- `kalshi:KXBTC-24MAR14` (Kalshi ticker)
+- `opinion:12345` (Opinion market ID)
+
+### Unified Endpoints
+
+Dome namespaces endpoints by exchange (`dome.polymarket.markets.*`, `dome.kalshi.markets.*`). Parsec uses unified endpoints with an `exchange` filter:
+
+```typescript
+// Dome: separate calls per exchange
+const polyMarkets = await dome.polymarket.markets.getMarkets({});
+const kalshiMarkets = await dome.kalshi.markets.getMarkets({});
+
+// Parsec: one call, multiple exchanges
+const allMarkets = await client.markets.list({
+  exchanges: ['polymarket', 'kalshi'],
+});
+```
+
+### Authentication
+
+| | Dome | Parsec |
+|---|---|---|
+| Header | `X-Dome-Api-Key` | `Authorization: Bearer PARSEC_API_KEY` |
+| Env var | `DOME_API_KEY` | `PARSEC_API_KEY` |
+| SDK | `new DomeClient({ apiKey })` | `new ParsecAPI({ apiKey })` (reads `PARSEC_API_KEY` from env by default) |
+
+---
+
+## Features Only in Parsec
+
+These capabilities are available in Parsec but have no Dome equivalent:
+
+- **Multi-exchange support** — 5 exchanges (Polymarket, Kalshi, Opinion, Limitless, Predict.fun)
+- **Cross-exchange market discovery** — Search across all exchanges at once
+- **Execution price estimation** — Preview fill price before placing orders
+- **CTF operations** — Split, merge, and redeem conditional tokens
+- **Managed wallets** — Parsec manages keys and signing
+- **Builder program** — Create users, manage QPS pools, earn fee revenue
+
+## Dome Features Not in Parsec
+
+These Dome features do not have Parsec equivalents:
+
+| Feature | Status |
+|---|---|
+| P&L analysis (`wallet.getPnL`) | Not available |
+| Binance price feeds | Not in scope |
+| Chainlink price feeds | Not in scope |
+| Sports matching | Not available |
+| WS subscribe by wallet address | Parsec subscribes by market |
+
+---
+
+## Getting Help
+
+- [Parsec API Reference](/api/overview)
+- [WebSocket Documentation](/websocket/overview)
+- [Builder Program](/builders/overview)
+- Email: support@parsecapi.com

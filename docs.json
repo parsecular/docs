@@ -126,6 +126,17 @@
         "pages": [
           "websocket/overview"
         ]
+      },
+      {
+        "tab": "Migration",
+        "groups": [
+          {
+            "group": "From Other APIs",
+            "pages": [
+              "migration/dome"
+            ]
+          }
+        ]
       }
     ]
   },
