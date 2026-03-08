@@ -56,69 +56,121 @@ paths:
         - Markets
       summary: List unified markets with filtering and pagination
       description: |
-        Provide either `exchanges` (CSV) or `parsec_ids` (CSV).
-        When `parsec_ids` is provided, other filters are not allowed.
+        Query markets using one of four scopes:
+
+        - **`list`** (default) — Browse markets with optional filters. Pass `exchanges` to restrict to specific exchanges.
+        - **`market`** — Fetch a single market by `parsec_id` or by `exchange` + `exchange_market_id`.
+        - **`market_batch`** — Fetch up to 100 markets by `parsec_ids` or `external_market_keys`.
+        - **`event`** — Fetch all markets in an event by `event_id` or by `exchange` + `exchange_group_id`.
+
+        Each scope accepts a different set of parameters; see parameter descriptions for details.
       parameters:
+        - name: scope
+          in: query
+          required: false
+          description: |
+            Query scope. Determines which parameters are valid and how results are returned.
+            One of: `list` (default), `market`, `market_batch`, `event`.
+          schema:
+            type: string
+            enum: [list, market, market_batch, event]
+            default: list
         - name: exchanges
           in: query
           required: false
           description: |
-            Exchanges to query. In SDKs this is typically an array encoded as CSV on the wire.
-            Required unless `parsec_ids` is provided.
+            Comma-separated exchange IDs to query (e.g., `polymarket,kalshi`).
+            Only valid for `scope=list`. In SDKs this is typically an array encoded as CSV on the wire.
           style: form
           explode: false
           schema:
             type: array
             items:
               type: string
+        - name: parsec_id
+          in: query
+          required: false
+          description: |
+            Single canonical parsec ID for direct lookup (format: `{exchange}:{native_id}`).
+            Only valid for `scope=market`. Mutually exclusive with `exchange` + `exchange_market_id`.
+          schema:
+            type: string
         - name: parsec_ids
           in: query
           required: false
           description: |
-            Parsec market IDs to fetch directly (format: `{exchange}:{native_id}`).
+            Comma-separated parsec IDs for batch lookup (format: `{exchange}:{native_id}`).
+            Only valid for `scope=market_batch`. Max 100 IDs. Mutually exclusive with `external_market_keys`.
             In SDKs this is typically an array encoded as CSV on the wire.
-            Required unless `exchanges` is provided.
           style: form
           explode: false
           schema:
             type: array
             items:
               type: string
+        - name: exchange
+          in: query
+          required: false
+          description: |
+            Exchange selector for external-ID lookups.
+            Used with `exchange_market_id` for `scope=market`, or with `exchange_group_id` for `scope=event`.
+          schema:
+            type: string
+        - name: exchange_market_id
+          in: query
+          required: false
+          description: |
+            Exchange-native market ID. Must be paired with `exchange` for `scope=market`.
+            Mutually exclusive with `parsec_id`.
+          schema:
+            type: string
+        - name: external_market_keys
+          in: query
+          required: false
+          description: |
+            Comma-separated external market keys in format `{exchange}:{exchange_market_id}`.
+            Only valid for `scope=market_batch`. Mutually exclusive with `parsec_ids`.
+          schema:
+            type: string
+        - name: exchange_group_id
+          in: query
+          required: false
+          description: |
+            Exchange-native event/group ID. Must be paired with `exchange` for `scope=event`.
+            Mutually exclusive with `event_id`.
+          schema:
+            type: string
         - name: status
           in: query
           required: false
-          description: "Status filter (e.g., active, closed, resolved, archived)."
+          description: "Status filter (e.g., active, closed, resolved, archived). Defaults to `active` for `scope=list`."
           schema:
             type: string
         - name: search
           in: query
           required: false
-          description: Keyword search in question/description (case-insensitive).
-          schema:
-            type: string
-        - name: group_id
-          in: query
-          required: false
-          description: Source-native exchange event/group ID filter (exact match).
+          description: Keyword search in question/description (case-insensitive). Only valid for `scope=list`.
           schema:
             type: string
         - name: event_id
           in: query
           required: false
-          description: Canonical Parsec event ID filter (exact match).
+          description: |
+            Canonical Parsec event ID (exact match). Used for `scope=event`.
+            Mutually exclusive with `exchange` + `exchange_group_id`.
           schema:
             type: string
         - name: min_volume
           in: query
           required: false
-          description: Minimum volume filter.
+          description: Minimum volume filter. Only valid for `scope=list`.
           schema:
             type: number
             format: double
         - name: min_liquidity
           in: query
           required: false
-          description: Minimum liquidity filter.
+          description: Minimum liquidity filter. Only valid for `scope=list`.
           schema:
             type: number
             format: double
@@ -149,7 +201,7 @@ paths:
         - name: cursor
           in: query
           required: false
-          description: Pagination cursor (offset-based).
+          description: Pagination cursor (offset-based). Only valid for `scope=list`.
           schema:
             type: string
       responses:
@@ -163,6 +215,8 @@ paths:
           $ref: "#/components/responses/BadRequestError"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
         "500":
           $ref: "#/components/responses/InternalServerError"
         "503":
@@ -1965,15 +2019,54 @@ components:
     MarketsResponse:
       type: object
       required:
+        - scope
         - markets
         - pagination
       properties:
+        scope:
+          type: string
+          description: "Query scope that produced this response: `list`, `market`, `market_batch`, or `event`."
+          enum: [list, market, market_batch, event]
         markets:
           type: array
           items:
             $ref: "#/components/schemas/Market"
         pagination:
           $ref: "#/components/schemas/PaginationInfo"
+        event:
+          $ref: "#/components/schemas/MarketsEventContext"
+          description: Event context. Only present when `scope=event`.
+        duplicate_ids:
+          type: array
+          items:
+            type: string
+          description: IDs that appeared more than once in the request. Only present for `scope=market_batch`.
+        not_found_ids:
+          type: array
+          items:
+            type: string
+          description: IDs that were not found in any data layer. Only present for `scope=market_batch`.
+
+    MarketsEventContext:
+      type: object
+      required:
+        - event_id
+        - title
+        - market_count
+        - exchange_count
+      properties:
+        event_id:
+          type: string
+          description: Canonical Parsec event ID.
+        title:
+          type: string
+          description: Event title.
+        market_count:
+          type: integer
+          description: Total number of markets in this event.
+        exchange_count:
+          type: integer
+          description: Number of exchanges covering this event.
 
     BalanceResponse:
       type: object

@@ -5,47 +5,25 @@ description: "Get available markets from one or more exchanges"
 
 `GET /api/v1/markets`
 
-Returns a paginated array of markets from the DuckDB gold layer with filtering and pagination.
+Returns markets from the gold layer with filtering and pagination. The `scope` parameter controls the query mode.
 
-## Modes
+## Scopes
 
-The endpoint operates in two modes:
+The endpoint operates in four scopes controlled by the `scope` query parameter:
 
-- **Exchanges mode** — pass `exchanges` to browse markets with optional filters.
-- **Parsec IDs mode** — pass `parsec_ids` for direct lookup. No other filters allowed.
+| Scope | Purpose | Required Parameters |
+|-------|---------|---------------------|
+| `list` (default) | Browse markets with filters | None (optionally `exchanges`) |
+| `market` | Fetch a single market | `parsec_id` OR `exchange` + `exchange_market_id` |
+| `market_batch` | Fetch up to 100 markets | `parsec_ids` OR `external_market_keys` |
+| `event` | Fetch all markets in an event | `event_id` OR `exchange` + `exchange_group_id` |
 
 ## Parameters
 
-<ParamField query="exchanges" type="string">
-  Comma-separated exchange IDs: `polymarket`, `kalshi`, `limitless`, `opinion`, `predictfun`. Required unless `parsec_ids` is provided.
-</ParamField>
+### Common
 
-<ParamField query="parsec_ids" type="string">
-  Comma-separated parsec IDs for direct lookup (format: `{exchange}:{market_id}`). When provided, no other filters are allowed.
-</ParamField>
-
-<ParamField query="status" type="string">
-  Filter by market status: `active`, `closed`, or `resolved`.
-</ParamField>
-
-<ParamField query="search" type="string">
-  Case-insensitive keyword search across title, description, and question.
-</ParamField>
-
-<ParamField query="group_id" type="string">
-  Filter by source-native exchange event/group ID (exact match).
-</ParamField>
-
-<ParamField query="event_id" type="string">
-  Filter by canonical Parsec event ID (exact match). Prefer this for cross-exchange event queries.
-</ParamField>
-
-<ParamField query="min_volume" type="number">
-  Minimum volume filter.
-</ParamField>
-
-<ParamField query="min_liquidity" type="number">
-  Minimum liquidity filter.
+<ParamField query="scope" type="string" default="list">
+  Query scope: `list`, `market`, `market_batch`, or `event`.
 </ParamField>
 
 <ParamField query="include_matches" type="boolean" default="false">
@@ -56,18 +34,81 @@ The endpoint operates in two modes:
   When true, each market includes a `related_markets` array with co-dependent market relations.
 </ParamField>
 
+### scope=list
+
+<ParamField query="exchanges" type="string">
+  Comma-separated exchange IDs: `polymarket`, `kalshi`, `limitless`, `opinion`, `predictfun`.
+</ParamField>
+
+<ParamField query="status" type="string" default="active">
+  Filter by market status: `active`, `closed`, `resolved`, or `archived`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Case-insensitive keyword search across title, description, and question.
+</ParamField>
+
+<ParamField query="min_volume" type="number">
+  Minimum volume filter (USDC).
+</ParamField>
+
+<ParamField query="min_liquidity" type="number">
+  Minimum liquidity filter (USDC).
+</ParamField>
+
 <ParamField query="limit" type="number" default="100">
-  Results per page.
+  Results per page (max 100).
 </ParamField>
 
 <ParamField query="cursor" type="string">
   Pagination cursor from a previous response.
 </ParamField>
 
+### scope=market
+
+<ParamField query="parsec_id" type="string">
+  Single canonical parsec ID (format: `{exchange}:{native_id}`). Mutually exclusive with `exchange` + `exchange_market_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange identifier for external-ID lookup. Must be paired with `exchange_market_id`.
+</ParamField>
+
+<ParamField query="exchange_market_id" type="string">
+  Exchange-native market ID. Must be paired with `exchange`.
+</ParamField>
+
+### scope=market_batch
+
+<ParamField query="parsec_ids" type="string">
+  Comma-separated parsec IDs (format: `{exchange}:{native_id}`). Max 100. Mutually exclusive with `external_market_keys`.
+</ParamField>
+
+<ParamField query="external_market_keys" type="string">
+  Comma-separated external keys (format: `{exchange}:{exchange_market_id}`). Max 100. Mutually exclusive with `parsec_ids`.
+</ParamField>
+
+### scope=event
+
+<ParamField query="event_id" type="string">
+  Canonical Parsec event ID (exact match). Mutually exclusive with `exchange` + `exchange_group_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange identifier. Must be paired with `exchange_group_id`.
+</ParamField>
+
+<ParamField query="exchange_group_id" type="string">
+  Exchange-native event/group ID. Must be paired with `exchange`.
+</ParamField>
+
 ## Response
 
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
+    <ResponseField name="scope" type="string">
+      Query scope that produced this response: `list`, `market`, `market_batch`, or `event`.
+    </ResponseField>
     <ResponseField name="markets" type="Market[]">
       Array of markets matching the query.
       <Expandable title="Market properties">
@@ -251,32 +292,68 @@ The endpoint operates in two modes:
         </ResponseField>
       </Expandable>
     </ResponseField>
+    <ResponseField name="event" type="object">
+      Event context. Only present when `scope=event`.
+      <Expandable title="properties">
+        <ResponseField name="event_id" type="string">
+          Canonical Parsec event ID.
+        </ResponseField>
+        <ResponseField name="title" type="string">
+          Event title.
+        </ResponseField>
+        <ResponseField name="market_count" type="number">
+          Total markets in this event.
+        </ResponseField>
+        <ResponseField name="exchange_count" type="number">
+          Number of exchanges covering this event.
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="duplicate_ids" type="string[]">
+      IDs that appeared more than once in the request. Only present for `scope=market_batch`.
+    </ResponseField>
+    <ResponseField name="not_found_ids" type="string[]">
+      IDs not found in any data layer. Only present for `scope=market_batch`.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
 <RequestExample>
 ```bash
-# Browse active Polymarket markets
+# scope=list (default) — Browse active Polymarket markets
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&status=active&limit=10"
 
-# Search across multiple exchanges
+# scope=list — Search across multiple exchanges
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
 
-# Canonical event query (cross-exchange abstraction)
+# scope=market — Single market by parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&event_id=ev:us-pres-election-winner-2028"
+  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=polymarket:572473"
 
-# Direct lookup by parsec IDs
+# scope=market — Single market by exchange + native ID
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?parsec_ids=polymarket:572473,kalshi:KXPRESPERSON-28-GNEWS"
+  "https://api.parsecapi.com/api/v1/markets?scope=market&exchange=kalshi&exchange_market_id=KXPRESPERSON-28-GNEWS"
+
+# scope=market_batch — Batch lookup by parsec IDs
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market_batch&parsec_ids=polymarket:572473,kalshi:KXPRESPERSON-28-GNEWS"
+
+# scope=event — All markets in an event by canonical event ID
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=event&event_id=ev:us-pres-election-winner-2028"
+
+# scope=event — All markets in an event by exchange + native group ID
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=event&exchange=polymarket&exchange_group_id=event_572470"
 ```
 </RequestExample>
 
 <ResponseExample>
 ```json
 {
+  "scope": "list",
   "markets": [
     {
       "parsec_id": "polymarket:572473",
