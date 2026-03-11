@@ -581,25 +581,6 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
 
-  /api/v1/usage:
-    get:
-      operationId: getUsage
-      tags:
-        - Account
-      summary: Get current tier limits and usage
-      description: Returns REST + WebSocket limits for the authenticated customer along with current-period usage.
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UsageResponse"
-        "401":
-          $ref: "#/components/responses/UnauthorizedError"
-        "500":
-          $ref: "#/components/responses/InternalServerError"
-
   /api/v1/ws/usage:
     get:
       operationId: getWsUsage
@@ -1930,12 +1911,6 @@ components:
         url:
           type: string
           description: Direct URL to the market on the exchange.
-        image_url:
-          type: string
-          description: Primary market image URL when provided by the exchange.
-        icon_url:
-          type: string
-          description: Exchange or market icon URL when provided by the exchange.
         question:
           type: string
           description: Market question text.
@@ -2077,6 +2052,9 @@ components:
         source:
           type: string
           description: Source of the match (e.g., embedding, llm).
+        status:
+          type: string
+          description: Counterpart market status (e.g., active, closed, archived).
         dependency_type:
           type:
             - string
@@ -2187,41 +2165,6 @@ components:
         source:
           type: string
           description: Event match source label from the matching pipeline.
-
-    RelatedMarketLink:
-      type: object
-      required:
-        - parsec_id
-        - exchange
-        - confidence
-        - confidence_tier
-        - source
-      properties:
-        parsec_id:
-          type: string
-          description: Canonical parsec_id of the counterpart market.
-        exchange:
-          type: string
-          description: Counterpart exchange.
-        confidence:
-          type: number
-          format: double
-          description: Match confidence score.
-        confidence_tier:
-          type: string
-          description: Confidence bucket metadata for this relation.
-        source:
-          type: string
-          description: Relation source label from the matching pipeline.
-        status:
-          type: string
-          description: Counterpart market status. Common values are `active`, `closed`, or `archived`.
-        dependency_type:
-          type: string
-          description: Optional dependency classification for `co_dependent` relations.
-        dependency_direction:
-          type: string
-          description: Optional directionality metadata for `co_dependent` relations.
 
     EventsResponse:
       type: object
@@ -2768,42 +2711,6 @@ components:
           type:
             - string
             - "null"
-          format: date-time
-
-    Fill:
-      type: object
-      required:
-        - fill_id
-        - order_id
-        - market_id
-        - outcome
-        - side
-        - price
-        - size
-        - is_taker
-        - fee
-        - created_at
-      properties:
-        fill_id:
-          type: string
-        order_id:
-          type: string
-        market_id:
-          type: string
-        outcome:
-          type: string
-        side:
-          $ref: "#/components/schemas/OrderSide"
-        price:
-          type: number
-        size:
-          type: number
-        is_taker:
-          type: boolean
-        fee:
-          type: number
-        created_at:
-          type: string
           format: date-time
 
     Position:
@@ -3389,86 +3296,6 @@ components:
         total_allocated_qps:
           type: integer
           description: Total QPS allocated to end-users.
-
-    UsageResponse:
-      type: object
-      required:
-        - tier
-        - billing_period_start
-        - billing_period_end
-        - limits
-        - usage
-      properties:
-        tier:
-          type: string
-          description: Current authenticated tier.
-        billing_period_start:
-          type: integer
-          format: int64
-          description: Unix seconds for the start of the current billing period.
-        billing_period_end:
-          type: integer
-          format: int64
-          description: Unix seconds for the end of the current billing period.
-        limits:
-          $ref: "#/components/schemas/UsageLimits"
-        usage:
-          $ref: "#/components/schemas/UsageCurrent"
-
-    UsageLimits:
-      type: object
-      required:
-        - monthly_requests
-        - rest_qps
-        - rest_qps_burst
-        - ws_max_subscriptions
-        - ws_max_depth
-        - history_max_age_days
-      properties:
-        monthly_requests:
-          type: integer
-          format: int64
-          description: Monthly REST request cap. `0` means unlimited.
-        rest_qps:
-          type: integer
-          format: int32
-          description: Sustained REST QPS cap. `0` means unlimited.
-        rest_qps_burst:
-          type: integer
-          format: int32
-          description: Burst REST QPS cap. `0` means unlimited.
-        ws_max_subscriptions:
-          type: integer
-          format: int64
-          description: Max WebSocket subscriptions across all connections. `0` means unlimited.
-        ws_max_depth:
-          type: integer
-          format: int64
-          description: Max orderbook depth per subscription.
-        history_max_age_days:
-          type: integer
-          format: int64
-          description: Max historical data age in days. `0` means unlimited.
-
-    UsageCurrent:
-      type: object
-      required:
-        - monthly_requests
-        - ws_active_connections
-        - ws_active_subscriptions
-      properties:
-        monthly_requests:
-          type: integer
-          format: int64
-          description: Requests used in the current billing period.
-        ws_active_connections:
-          type: integer
-          format: int64
-          description: Active WebSocket connections for the current customer.
-        ws_active_subscriptions:
-          type: integer
-          format: int64
-          description: Active WebSocket subscriptions for the current customer.
 
     EscrowConfigResponse:
       type: object
