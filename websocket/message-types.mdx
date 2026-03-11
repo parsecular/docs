@@ -1,0 +1,262 @@
+---
+title: "Message Types"
+description: "Orderbook snapshots, deltas, activity events, and connection-level WebSocket messages."
+---
+
+## Orderbook Snapshot
+
+Sent on initial subscription and after a resync. `type: "orderbook"`.
+
+<ResponseField name="parsec_id" type="string">
+  Canonical market identifier.
+</ResponseField>
+
+<ResponseField name="exchange" type="string">
+  Exchange identifier.
+</ResponseField>
+
+<ResponseField name="outcome" type="string">
+  Outcome label.
+</ResponseField>
+
+<ResponseField name="token_id" type="string">
+  Exchange-specific token or contract identifier.
+</ResponseField>
+
+<ResponseField name="market_id" type="string">
+  Exchange-native market ID.
+</ResponseField>
+
+<ResponseField name="tick_size" type="number">
+  Minimum price increment.
+</ResponseField>
+
+<ResponseField name="min_order_size" type="number | null">
+  Minimum order size when available.
+</ResponseField>
+
+<ResponseField name="kind" type="string">
+  Always `"snapshot"`.
+</ResponseField>
+
+<ResponseField name="title" type="string | null">
+  Market title when available from the market index.
+</ResponseField>
+
+<ResponseField name="bids" type="[price, size][]">
+  Bid levels sorted by price descending.
+</ResponseField>
+
+<ResponseField name="asks" type="[price, size][]">
+  Ask levels sorted by price ascending.
+</ResponseField>
+
+<ResponseField name="book_state" type="string">
+  `fresh`, `stale`, or `needs_refresh`.
+</ResponseField>
+
+<ResponseField name="server_seq" type="number">
+  Monotonic sequence number for this subscription.
+</ResponseField>
+
+<ResponseField name="feed_state" type="string">
+  `healthy`, `degraded`, or `disconnected`.
+</ResponseField>
+
+<ResponseField name="stale_after_ms" type="number">
+  Milliseconds after which the client should consider the book stale.
+</ResponseField>
+
+<ResponseField name="exchange_ts_ms" type="number | null">
+  Upstream exchange event timestamp in milliseconds when available.
+</ResponseField>
+
+<ResponseField name="ingest_ts_ms" type="number | null">
+  Server ingest timestamp in milliseconds.
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "type": "orderbook",
+  "parsec_id": "polymarket:572473",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "token_id": "50310842821...",
+  "market_id": "572473",
+  "tick_size": 0.001,
+  "min_order_size": 1.0,
+  "kind": "snapshot",
+  "bids": [[0.65, 1000.0], [0.64, 2500.0]],
+  "asks": [[0.66, 800.0], [0.67, 1500.0]],
+  "book_state": "fresh",
+  "server_seq": 1234,
+  "feed_state": "healthy",
+  "stale_after_ms": 5000
+}
+```
+</ResponseExample>
+
+## Orderbook Delta
+
+`type: "orderbook_delta"` uses absolute replacement semantics:
+
+- `size > 0` means set that level to the new size
+- `size == 0` means remove that level
+
+<ResponseField name="changes" type="object[]">
+  Price-level updates.
+</ResponseField>
+
+<ResponseField name="server_seq" type="number">
+  Monotonic sequence number for this subscription.
+</ResponseField>
+
+<ResponseField name="feed_state" type="string">
+  `healthy`, `degraded`, or `disconnected`.
+</ResponseField>
+
+<ResponseField name="book_state" type="string">
+  `fresh`, `stale`, or `needs_refresh`.
+</ResponseField>
+
+<ResponseField name="stale_after_ms" type="number">
+  Milliseconds after which the client should consider the book stale.
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "type": "orderbook_delta",
+  "parsec_id": "polymarket:572473",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "token_id": "50310842821...",
+  "market_id": "572473",
+  "changes": [
+    { "side": "bid", "price": 0.65, "size": 900.0 },
+    { "side": "ask", "price": 0.66, "size": 0.0 }
+  ],
+  "server_seq": 1235,
+  "feed_state": "healthy",
+  "book_state": "fresh",
+  "stale_after_ms": 5000
+}
+```
+</ResponseExample>
+
+## Activity Events
+
+Trades and fills share `type: "activity"` with a `kind` discriminator.
+
+<ResponseField name="kind" type="string">
+  `"trade"` for public trades or `"fill"` for your own fills.
+</ResponseField>
+
+<ResponseField name="price" type="number">
+  Execution price.
+</ResponseField>
+
+<ResponseField name="size" type="number">
+  Execution size.
+</ResponseField>
+
+<ResponseField name="trade_id" type="string | null">
+  Present on trade events.
+</ResponseField>
+
+<ResponseField name="fill_id" type="string | null">
+  Present on fill events.
+</ResponseField>
+
+<ResponseField name="order_id" type="string | null">
+  Present on fill events.
+</ResponseField>
+
+<ResponseField name="side" type="string | null">
+  Buy or sell side when available.
+</ResponseField>
+
+<ResponseField name="aggressor_side" type="string | null">
+  Aggressor side for trades when available.
+</ResponseField>
+
+<ResponseField name="liquidity_role" type="string | null">
+  `"maker"` or `"taker"` for fills when available.
+</ResponseField>
+
+<ResponseField name="source_channel" type="string">
+  Upstream channel or feed label that produced the event.
+</ResponseField>
+
+<ResponseField name="exchange_ts_ms" type="number | null">
+  Upstream exchange event timestamp in milliseconds when available.
+</ResponseField>
+
+<ResponseField name="ingest_ts_ms" type="number | null">
+  Server ingest timestamp in milliseconds.
+</ResponseField>
+
+<ResponseExample>
+```json Trade
+{
+  "type": "activity",
+  "parsec_id": "polymarket:572473",
+  "exchange": "polymarket",
+  "outcome": "Yes",
+  "kind": "trade",
+  "price": 0.65,
+  "size": 100.0,
+  "trade_id": "trade_123",
+  "side": "buy",
+  "aggressor_side": "buy",
+  "server_seq": 1236,
+  "feed_state": "healthy",
+  "source_channel": "polymarket_last_trade_price"
+}
+```
+```json Fill
+{
+  "type": "activity",
+  "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS",
+  "exchange": "kalshi",
+  "outcome": "Yes",
+  "kind": "fill",
+  "price": 0.62,
+  "size": 50.0,
+  "fill_id": "fill_456",
+  "order_id": "order_789",
+  "side": "buy",
+  "liquidity_role": "maker",
+  "server_seq": 1237,
+  "feed_state": "healthy",
+  "source_channel": "kalshi_user_fill"
+}
+```
+</ResponseExample>
+
+## Connection-Level Messages
+
+### Heartbeat
+
+```json
+{ "type": "heartbeat", "ts_ms": 1708123456400 }
+```
+
+### Resync Required
+
+```json
+{ "type": "resync_required", "parsec_id": "polymarket:572473", "outcome": "Yes" }
+```
+
+### Slow Reader
+
+```json
+{ "type": "slow_reader", "parsec_id": "polymarket:572473", "outcome": "Yes" }
+```
+
+### Error
+
+```json
+{ "type": "error", "code": 2001, "message": "invalid message", "parsec_id": "polymarket:572473" }
+```

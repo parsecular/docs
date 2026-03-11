@@ -1,0 +1,51 @@
+---
+title: "Changelog"
+description: "Public release notes for the Parsec API, trading surface, matching data, and MCP integrations."
+icon: "clock-rotate-left"
+mode: "center"
+---
+
+This page is the public release-notes surface for Parsec.
+
+We group changes into:
+
+- `API` for REST and schema changes
+- `Trading` for onboarding, order routing, and account flows
+- `Data` for market coverage, matching, and WebSocket behavior
+- `MCP` for AI-client integration changes
+- `Docs` for major documentation restructures
+
+<Note>
+Older changes are not backfilled yet. This page starts with the current public docs
+and contract cleanup work.
+</Note>
+
+## 2026-03-10
+
+### API
+
+- Clarified the `/markets` contract around `scope=list|market|market_batch|event`
+- Documented `include_matches`, `include_related`, `matched_markets`, `related_markets`, and `matched_events`
+- Updated identifier guidance so discovery starts with `/markets` before downstream requests
+
+### Trading
+
+- Added a dedicated [Trading Setup](/getting-started/trading-setup) chooser page for `self`, `managed`, and `per-request` credentials
+- Tightened the trader flow in [Order Router](/order-router/overview) with a first-trade checklist
+
+### Data
+
+- Expanded the public explanation of `same_market` and `co_dependent` relation retrieval
+- Added explicit warnings to verify market wording and settlement terms on source exchanges before trading
+- Added a full end-to-end example to the WebSocket overview
+
+### MCP
+
+- Added a dedicated MCP docs section covering install, tool categories, trading safety, and example prompts
+- Added setup coverage for Codex and Claude Code alongside Claude Desktop, Cursor, VS Code, Windsurf, and Cline
+
+### Docs
+
+- Reworked the public docs to make builder and trader paths easier to follow
+- Split WebSocket docs into smaller task-oriented pages
+- Removed deprecated dead-end pages from the public docs surface

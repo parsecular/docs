@@ -1,0 +1,56 @@
+---
+title: "Connect & Authenticate"
+description: "How to authenticate a WebSocket connection and interpret the initial auth responses."
+---
+
+## Endpoint
+
+```text
+wss://api.parsecapi.com/ws
+```
+
+Send an auth message immediately after connecting. Authentication must complete
+within **15 seconds**.
+
+## Client Auth Messages
+
+<ParamField body="type" type="string" required>
+  `auth` for API-key auth, or `auth_terminal` for terminal-token auth.
+</ParamField>
+
+<ParamField body="api_key" type="string">
+  Your Parsec API key. Required when `type` is `auth`.
+</ParamField>
+
+<ParamField body="token" type="string">
+  Terminal token. Required when `type` is `auth_terminal`.
+</ParamField>
+
+<RequestExample>
+```json API key auth
+{ "type": "auth", "api_key": "pk_live_YOUR_KEY" }
+```
+```json Terminal token auth
+{ "type": "auth_terminal", "token": "your_terminal_token" }
+```
+</RequestExample>
+
+## Server Responses
+
+<ResponseExample>
+```json Success
+{ "type": "auth_ok", "customer_id": "cust_abc123" }
+```
+```json Failure
+{ "type": "auth_error", "code": 1002, "message": "invalid api key" }
+```
+</ResponseExample>
+
+After `auth_ok`, you can send subscription messages immediately.
+
+## Notes
+
+- Sending a second auth message on the same connection returns a normal
+  `error` frame with code `1001` and message `already authenticated`.
+- Connection-level auth failures do not include a market identifier.
+- If the auth window expires, reconnect and authenticate again.

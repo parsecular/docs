@@ -91,7 +91,8 @@ Managed mode supports two mutually exclusive wallet paths:
 </ResponseField>
 
 <ResponseField name="status" type="string">
-  `complete` on success.
+  `complete` on success, or `already_linked` when managed Polymarket onboarding
+  is re-run for an account that is already linked.
 </ResponseField>
 
 <ResponseField name="eoa_address" type="string | null">
@@ -115,6 +116,7 @@ Managed mode supports two mutually exclusive wallet paths:
   - `exchange_linked` — CLOB credentials derived + approvals set (managed mode)
   - `credentials_validated` — Credentials validated (self Kalshi)
   - `credentials_stored` — Credentials stored (self mode)
+  When `status` is `already_linked`, this list is empty.
 </ResponseField>
 
 <RequestExample>

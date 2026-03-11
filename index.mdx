@@ -1,22 +1,130 @@
 ---
-title: "Getting Started"
-description: "One API, every prediction market."
+title: "Parsec API"
+description: "Discover, normalize, and stream prediction market data across exchanges from one API."
+icon: "house"
 ---
 
 ## What is Parsec?
 
-One API, every prediction market. Parsec gives you a unified REST API and
-WebSocket feed for prediction markets. Trade on **Polymarket** and **Kalshi**,
-with market data across Limitless, Opinion, and Predict.fun.
+Parsec gives you one contract for prediction market discovery, pricing, streaming,
+and cross-exchange matching. Start by finding a market with `/markets`, then reuse
+the returned identifiers everywhere else.
 
-## Choose your path
-
-<CardGroup cols={2}>
-  <Card title="Read Market Data" icon="chart-line" href="/api/overview">
-    Fetch markets, orderbooks, prices, and trades — no exchange account needed.
+<CardGroup cols={3}>
+  <Card title="Market Data API" icon="book-open" href="/api/overview">
+    Browse the REST endpoints, identifier model, and response conventions.
   </Card>
-  <Card title="Builder Program" icon="hammer" href="/builders/overview">
-    Build prediction market apps on Parsec. Manage users, route orders, earn revenue.
+  <Card title="Trading Setup" icon="wallet" href="/getting-started/trading-setup">
+    Choose managed, self, or per-request credentials for trading flows.
+  </Card>
+  <Card title="Builder Program" icon="blocks" href="/builders/overview">
+    Build for end-users with impersonation, onboarding, and fee routing.
   </Card>
 </CardGroup>
 
+## Choose your path
+
+<CardGroup cols={3}>
+  <Card title="Explore Markets" icon="magnifying-glass-chart" href="/api/list-markets">
+    Use Parsec as one market-data layer across exchanges.
+  </Card>
+  <Card title="Trade Your Account" icon="arrow-right-arrow-left" href="/getting-started/trading-setup">
+    Connect credentials or a managed wallet, then place orders through one router.
+  </Card>
+  <Card title="Build for Users" icon="users" href="/builders/overview">
+    Create end-users, impersonate requests, and collect fees as a builder.
+  </Card>
+</CardGroup>
+
+## Quickstart
+
+### 1. Get an API key
+
+Create an account at [parsecapi.com](https://parsecapi.com), then copy your key from
+the dashboard.
+
+```bash
+export PARSEC_API_KEY="pk_live_YOUR_KEY"
+```
+
+### 2. Find a market first
+
+Use `/markets` for discovery. The response gives you all of the identifiers you need
+for downstream endpoints:
+
+```bash
+curl -H "X-API-Key: $PARSEC_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=kalshi&search=bitcoin&limit=1"
+```
+
+```json
+{
+  "markets": [
+    {
+      "parsec_id": "kalshi:KXBTC-26MAR10",
+      "exchange": "kalshi",
+      "exchange_market_id": "KXBTC-26MAR10",
+      "question": "Will Bitcoin close above $85,000 on March 10?"
+    }
+  ],
+  "pagination": {
+    "count": 1,
+    "total": 1,
+    "has_more": false
+  }
+}
+```
+
+`parsec_id` is Parsec's standard market ID. It is just
+`{exchange}:{exchange_market_id}`, so you can either use it directly or derive
+it from the exchange-native ID you just found.
+
+### 3. Reuse either selector form on market-data endpoints
+
+The data endpoints accept either `parsec_id` or `exchange + market_id`:
+
+```bash
+# Canonical selector
+curl -H "X-API-Key: $PARSEC_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=kalshi:KXBTC-26MAR10&outcome=yes"
+
+# Equivalent native selector
+curl -H "X-API-Key: $PARSEC_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?exchange=kalshi&market_id=KXBTC-26MAR10&outcome=yes"
+```
+
+### 4. Pull cross-exchange matches
+
+Once you have a market, ask for the published `same_market` links:
+
+```bash
+curl -H "X-API-Key: $PARSEC_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?parsec_ids=kalshi:KXBTC-26MAR10&include_matches=true"
+```
+
+Matched counterparts are returned on each market as `matched_markets`, including
+the counterpart exchange, confidence metadata, and counterpart `status`
+(`active`, `closed`, or `archived`).
+
+### 5. Stream live updates when polling is not enough
+
+Use the WebSocket API for live orderbooks, trades, and fills:
+
+```json
+{ "type": "auth", "api_key": "pk_live_YOUR_KEY" }
+```
+
+```json
+{
+  "type": "subscribe",
+  "markets": [{ "parsec_id": "kalshi:KXBTC-26MAR10", "outcome": "Yes", "depth": 10 }]
+}
+```
+
+See [WebSocket Overview](/websocket/overview) for the connection flow and protocol docs.
+
+<Note>
+Ready to trade? Start with [Trading Setup](/getting-started/trading-setup) to
+choose `self`, `managed`, or `per-request` credentials before you use the
+[Order Router](/order-router/overview).
+</Note>

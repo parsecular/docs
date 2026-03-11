@@ -1,197 +1,170 @@
 ---
 title: "API Overview"
-description: "Complete reference for the Parsec REST API"
+description: "Base URL, authentication, identifiers, pagination, and endpoint conventions for the Parsec REST API."
+icon: "book-open"
 ---
 
 ## Base URL
 
-```
+```bash
 https://api.parsecapi.com/api/v1
 ```
 
 ## Authentication
 
-All API requests require an API key passed via the `X-API-Key` header:
+All REST requests require an API key in the `X-API-Key` header:
 
 ```bash
-curl -H "X-API-Key: YOUR_API_KEY" https://api.parsecapi.com/api/v1/markets?exchanges=polymarket
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket"
 ```
 
 ### Getting an API key
 
 | Method | Description | Guide |
 |--------|-------------|-------|
-| **Web signup** | Sign up at [parsecapi.com](https://parsecapi.com) | [Direct trader](/getting-started/direct-trader) |
-| **Builder program** | Get a builder key with user management capabilities | [Builder onboarding](/builders/onboarding) |
+| Web signup | Standard market-data and trading access | [Self credentials](/getting-started/direct-trader) |
+| Builder program | Builder API key plus user-management capabilities | [Builder onboarding](/builders/onboarding) |
 
-## Quick Start
+## Identifier Model
 
-Every market in Parsec has a **`parsec_id`** in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`). Use `/markets` to find a market, then pass its `parsec_id` to any data endpoint.
+Parsec normalizes each market to a canonical `parsec_id`:
 
-```bash
-# 1. Find a market
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&search=btc&limit=3"
-# → Returns markets with parsec_id, e.g. "polymarket:572473"
-
-# 2. Get live orderbook
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes"
-
-# 3. Get current price (last 7 days of hourly candles)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/price?parsec_id=polymarket:572473&interval=1h"
-
-# 4. Get historical trades (timestamps are Unix seconds)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&start_ts=1771545600&end_ts=1771632000"
-
-# 5. Get historical orderbook snapshots (1h window)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&start_ts=1771581600&end_ts=1771585200"
+```text
+parsec_id = {exchange}:{exchange_market_id}
 ```
 
+Examples:
+
+- `polymarket:572473`
+- `kalshi:KXBTC-26MAR10`
+
+The intended workflow is:
+
+1. find a market with [`/markets`](/api/list-markets)
+2. read the returned `parsec_id`, `exchange`, and `exchange_market_id`
+3. reuse either selector form on downstream endpoints
+
 <Tip>
-**Timestamps** are Unix seconds (not milliseconds). Add `start_ts` to any data endpoint to switch from live to historical mode. Use `cursor` to paginate through large result sets.
+[`/orderbook`](/api/get-orderbook), [`/price`](/api/get-price),
+[`/trades`](/api/get-trades), and [`/execution-price`](/api/get-execution-price)
+accept either `parsec_id` or `exchange + market_id`. Responses always use
+`parsec_id` as the normalized identifier.
 </Tip>
 
-## Response Format
+## Common Response Shapes
 
-Single-resource endpoints return the object directly. List endpoints return a wrapper with pagination:
+Single-resource endpoints return the object directly. List endpoints return a
+wrapper with pagination metadata:
 
 ```json
 {
-  "markets": [{ ... }],
-  "pagination": { "count": 100, "total": 12345, "has_more": true, "next_cursor": "100" }
+  "markets": [{ "...": "..." }],
+  "pagination": {
+    "count": 1,
+    "total": 25,
+    "has_more": true,
+    "next_cursor": "1"
+  }
 }
 ```
 
-On error:
+Errors use a consistent JSON shape:
 
 ```json
-{ "error": "human-readable message", "code": "machine_readable_code", "retryable": false }
+{
+  "error": "human-readable message",
+  "code": "machine_readable_code",
+  "retryable": false,
+  "validation_errors": ["optional detail"]
+}
 ```
 
-See [Error Handling](/errors/overview) for the full list of error codes.
+See [Error Handling](/errors/overview) for the full error-code and rate-limit reference.
 
-## Available Endpoints
+## Endpoint Families
 
-### Onboarding & Wallets
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | [`/onboard`](/api/onboard) | Set up an exchange (managed or self mode) |
-| `GET` | [`/wallet`](/api/get-wallet) | Get wallet state and linked exchanges |
-
-### Market Data
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | [`/exchanges`](/api/list-exchanges) | List available exchanges |
-| `GET` | [`/markets`](/api/list-markets) | List markets from one or more exchanges |
-| `GET` | [`/orderbook`](/api/get-orderbook) | Get live or historical L2 orderbook |
-| `GET` | [`/execution-price`](/api/get-execution-price) | Estimate VWAP and slippage |
-| `GET` | [`/price`](/api/get-price-history) | Get OHLCV candlestick data + point-in-time price |
+| `GET` | [`/exchanges`](/api/list-exchanges) | List supported exchanges and capabilities |
+| `GET` | [`/markets`](/api/list-markets) | Discover markets or run scoped market and event lookups |
+| `GET` | [`/events`](/api/list-events) | Browse normalized events and matched event links |
+| `GET` | [`/orderbook`](/api/get-orderbook) | Get the live L2 orderbook for a market |
+| `GET` | [`/execution-price`](/api/get-execution-price) | Estimate VWAP and slippage for a hypothetical order |
+| `GET` | [`/price`](/api/get-price) | Get OHLCV candles or a point-in-time price |
 | `GET` | [`/trades`](/api/get-trades) | Get recent or historical trades |
-| `GET` | [`/events`](/api/list-events) | List events (market groups) |
-
-### Orders
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | [`/orders`](/api/create-order) | Create a new order |
+| `POST` | [`/onboard`](/api/onboard) | Configure exchange credentials or managed access |
+| `GET` | [`/wallet`](/api/get-wallet) | Inspect linked exchanges and wallet state |
+| `POST` | [`/orders`](/api/create-order) | Create an order |
 | `GET` | [`/orders`](/api/list-orders) | List open orders |
-| `GET` | [`/orders/:id`](/api/get-order) | Get order details |
-| `DELETE` | [`/orders/:id`](/api/cancel-order) | Cancel an order |
-
-### Account
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | [`/ping`](/api/ping) | Check exchange connectivity |
+| `GET` | [`/orders/:id`](/api/get-order) | Get one order |
+| `DELETE` | [`/orders/:id`](/api/cancel-order) | Cancel one order |
 | `GET` | [`/positions`](/api/list-positions) | List positions |
-| `GET` | [`/fills`](/api/list-fills) | List fills (trade history) |
+| `GET` | [`/fills`](/api/list-fills) | List fills |
 | `GET` | [`/balance`](/api/get-balance) | Get account balance |
 | `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
+| `GET` | [`/ws/usage`](/api/ws-usage) | Inspect WebSocket usage |
 
-### WebSocket
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | [`/ws/usage`](/api/ws-usage) | Get WebSocket usage stats |
+## Pagination
 
-## Multi-Exchange Semantics
+List endpoints use cursor-based pagination:
 
-Some endpoints accept multiple exchanges at once (CSV on the wire):
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&limit=100"
+```
 
-- `/markets?exchanges=polymarket,kalshi`
+If `has_more=true`, pass `next_cursor` back on the next request:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&limit=100&cursor=100"
+```
 
 ## Rate Limiting
 
-All API requests are rate limited per API key using a token bucket algorithm. Limits depend on your tier:
+REST requests are rate-limited per API key using a token bucket. Current public tiers:
 
 | Tier | Sustained (req/sec) | Burst | Monthly Requests |
 |------|---------------------|-------|------------------|
-| Free | 10 | 10 | 50,000 |
+| Free | 5 | 5 | 10,000 |
 | Pro | 60 | 120 | 5,000,000 |
 | Scale | 200 | 400 | Unlimited |
 
-When rate limited, you'll receive a `429 Too Many Requests` response with a `Retry-After` header.
-Builder impersonation requests include additional headers: `x-ratelimit-user-limit`, `x-ratelimit-user-remaining`, `x-ratelimit-pool-limit`, `x-ratelimit-pool-remaining`.
+Successful responses may include:
 
-```
-HTTP/1.1 429 Too Many Requests
-Retry-After: 1
-Content-Type: application/json
+- `x-parsec-tier`
+- `x-ratelimit-monthly-limit`
+- `x-ratelimit-monthly-remaining`
+- `x-ratelimit-monthly-reset`
 
-{ "error": "rate limit exceeded", "code": "rate_limit_exceeded", "retryable": true, "tier": "free", "limit_qps": 10 }
-```
+Rate-limited responses also include `Retry-After`.
 
-The SDKs handle 429 responses automatically with 2 retries and exponential backoff.
+## Historical Data Windows
 
-## Historical Data Limits
-
-Historical data endpoints (`/trades`, `/price`, `/orderbook` with `start_ts`) are limited by tier:
+Historical endpoints are tier-gated:
 
 | Tier | Max Lookback |
-|------|-------------|
+|------|--------------|
 | Free | 5 days |
 | Pro | 30 days |
 | Scale | Unlimited |
 
-Requests for data older than your tier allows return a `400` error with a descriptive message. The error includes the tier name and allowed lookback window.
-
-## Pagination
-
-Endpoints that return lists support cursor-based pagination:
-
-```bash
-# First request
-GET /markets?exchanges=polymarket&limit=100
-
-# Response includes cursor
-{
-  "markets": [{ "...": "..." }],
-  "pagination": {
-    "count": 100,
-    "total": 12345,
-    "has_more": true,
-    "next_cursor": "100"
-  }
-}
-
-# Next page
-GET /markets?exchanges=polymarket&limit=100&cursor=100
-```
+Requests older than your tier allows return `400 bad_request` with a descriptive message.
 
 ## Next Steps
 
 <CardGroup cols={2}>
   <Card title="List Markets" icon="list" href="/api/list-markets">
-    Fetch markets from multiple exchanges with unified format support.
+    Start with market discovery, batch lookups, and event-scoped queries.
   </Card>
-  <Card title="Create Order" icon="plus" href="/api/create-order">
-    Place orders on prediction markets.
+  <Card title="List Events" icon="calendar" href="/api/list-events">
+    Browse normalized events and their matched counterparts.
   </Card>
-  <Card title="User Activity" icon="user" href="/api/user-activity">
-    Get portfolio data across all exchanges.
+  <Card title="WebSocket" icon="signal" href="/websocket/overview">
+    Stream orderbooks, trades, and fills.
   </Card>
   <Card title="Error Handling" icon="triangle-exclamation" href="/errors/overview">
-    HTTP status codes and error responses.
+    Review HTTP status codes, error codes, and rate-limit headers.
   </Card>
 </CardGroup>

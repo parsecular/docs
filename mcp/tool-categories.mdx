@@ -1,0 +1,87 @@
+---
+title: "Tool Categories"
+description: "What the Parsec MCP tools do and which ones to start with."
+---
+
+## Start with composite tools
+
+These tools are the best default entry points because they handle multi-step work
+for the client:
+
+| Tool | Description |
+|------|-------------|
+| `parsec.market.find_market` | Search for markets by keyword, `parsec_id`, or exchange-native ID |
+| `parsec.market.get_market_snapshot` | Get metadata, orderbook, and recent trades together |
+| `parsec.trade.preview_order` | Estimate execution with account context before placing a live order |
+| `parsec.account.get_trading_setup_status` | Check whether the account is ready to trade |
+| `parsec.stream.open_market_feed` | Open a real-time market feed in one step |
+
+## Market data
+
+Use these for discovery and read-only research:
+
+- `parsec.market.list_exchanges`
+- `parsec.market.list_markets`
+- `parsec.market.get_orderbook`
+- `parsec.market.get_execution_price`
+- `parsec.market.get_price`
+- `parsec.market.list_trades`
+- `parsec.market.list_events`
+
+## Trading
+
+Use these once you are ready to place or manage live orders:
+
+- `parsec.trade.create_order`
+- `parsec.trade.cancel_order`
+- `parsec.trade.list_orders`
+- `parsec.trade.get_order`
+- `parsec.trade.list_positions`
+- `parsec.trade.list_fills`
+- `parsec.trade.get_balance`
+
+## Real-time streaming
+
+Use these when the client needs explicit control over the WebSocket session:
+
+- `parsec.stream.connect`
+- `parsec.stream.auth`
+- `parsec.stream.subscribe`
+- `parsec.stream.unsubscribe`
+- `parsec.stream.resync`
+- `parsec.stream.read`
+- `parsec.stream.close`
+
+For most clients, `parsec.stream.open_market_feed` is the easier starting point.
+
+## Account and wallet
+
+- `parsec.account.ping`
+- `parsec.account.get_usage`
+- `parsec.account.get_ws_usage`
+- `parsec.account.get_user_activity`
+- `parsec.account.onboard`
+- `parsec.wallet.get_state`
+- `parsec.wallet.export_key`
+
+## Builder tools
+
+Use these if you are building for end-users instead of trading only for yourself:
+
+- `parsec.builder.create_user`
+- `parsec.builder.list_users`
+- `parsec.builder.get_user`
+- `parsec.builder.update_user`
+- `parsec.builder.delete_user`
+- `parsec.builder.onboard_user`
+- `parsec.builder.get_pool`
+- `parsec.builder.get_escrow_config`
+
+## Polymarket CTF tools
+
+These are advanced conditional-token operations. Most users should stay on the
+regular trading tools unless they specifically need token splits, merges, or redemption:
+
+- `parsec.ctf.split`
+- `parsec.ctf.merge`
+- `parsec.ctf.redeem`

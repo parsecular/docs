@@ -1,6 +1,7 @@
 ---
 title: "Self Credentials"
 description: "Store your own exchange credentials on Parsec and trade through a single API."
+icon: "key"
 ---
 
 ## Overview
@@ -10,6 +11,11 @@ them securely. All subsequent API calls use these stored credentials — no
 per-request auth needed beyond your Parsec API key.
 
 **Best for:** Traders who already have exchange accounts and API keys.
+
+<Tip>
+Not sure which mode to use? Start with [Trading Setup](/getting-started/trading-setup)
+to compare `self`, `managed`, and `per-request`.
+</Tip>
 
 ```
 Your App ───► POST /onboard { mode: "self", credentials... } ───► Parsec stores credentials
@@ -115,17 +121,13 @@ private key (`0x`-prefixed hex) enables order signing so you can place and cance
 Without it, only read operations (balance, positions) work.
 </Info>
 
-### Onboard fields reference
+### Required fields by exchange
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `exchange` | string | **Yes** | `"polymarket"` or `"kalshi"` |
-| `mode` | string | **Yes** | `"self"` |
-| `clob_api_key` | string | Polymarket | CLOB API key |
-| `clob_api_secret` | string | Polymarket | CLOB API secret |
-| `clob_api_passphrase` | string | Polymarket | CLOB API passphrase |
-| `private_key` | string | Kalshi (required), Polymarket (optional) | Kalshi: RSA private key (PEM). Polymarket: Ethereum private key (`0x`-prefixed hex) for order signing |
-| `api_key_id` | string | Kalshi | Kalshi API key ID |
+- Kalshi: `exchange`, `mode`, `api_key_id`, and `private_key`
+- Polymarket: `exchange`, `mode`, `clob_api_key`, `clob_api_secret`, and `clob_api_passphrase`
+- Polymarket trading and order cancellation also need `private_key` for signing
+
+Use the [Onboard API reference](/api/onboard) for the full request schema.
 
 ### Response
 
@@ -154,15 +156,8 @@ Without it, only read operations (balance, positions) work.
 ```
 </ResponseExample>
 
-| Field | Type | Always present | Description |
-|-------|------|----------------|-------------|
-| `exchange` | string | Yes | Exchange that was onboarded |
-| `mode` | string | Yes | `"self"` |
-| `status` | string | Yes | `"complete"` on success |
-| `eoa_address` | string | No | EOA wallet address (`null` for self mode) |
-| `safe_address` | string | No | Safe wallet address (`null` for self mode) |
-| `linked_exchanges` | string[] | Yes | All exchanges linked to this account |
-| `steps_completed` | string[] | Yes | Steps completed during this call |
+On success, `status` is `complete`, `linked_exchanges` shows the exchanges on
+your account, and `steps_completed` shows what happened during that call.
 
 ## Step 3: Verify connectivity
 

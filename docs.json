@@ -7,12 +7,16 @@
     "light": "#66AAFF",
     "dark": "#2266DD"
   },
+  "icons": {
+    "library": "fontawesome"
+  },
   "favicon": "/favicon.svg",
   "openapi": "openapi.yaml",
   "navigation": {
     "tabs": [
       {
         "tab": "Getting Started",
+        "icon": "rocket",
         "groups": [
           {
             "group": "Overview",
@@ -21,11 +25,21 @@
               "api/overview",
               "errors/overview"
             ]
+          },
+          {
+            "group": "Trading Setup",
+            "pages": [
+              "getting-started/trading-setup",
+              "getting-started/direct-trader",
+              "getting-started/managed-wallet",
+              "getting-started/per-request-credentials"
+            ]
           }
         ]
       },
       {
         "tab": "API Reference",
+        "icon": "book-open",
         "groups": [
           {
             "group": "Onboarding",
@@ -53,6 +67,7 @@
       },
       {
         "tab": "Order Router",
+        "icon": "arrow-right-arrow-left",
         "groups": [
           {
             "group": "Overview",
@@ -73,6 +88,7 @@
             "group": "Account",
             "pages": [
               "api/ping",
+              "api/get-usage",
               "api/list-positions",
               "api/list-fills",
               "api/get-balance",
@@ -91,19 +107,28 @@
       },
       {
         "tab": "Builders",
+        "icon": "blocks",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Start Here",
             "pages": [
               "builders/overview",
-              "builders/onboarding"
+              "builders/onboarding",
+              "builders/authentication"
             ]
           },
           {
-            "group": "User Management",
+            "group": "Users & Trading",
             "pages": [
+              "builders/user-management",
               "builders/create-user",
               "builders/onboard-user",
+              "builders/order-routing"
+            ]
+          },
+          {
+            "group": "User Directory",
+            "pages": [
               "builders/list-users",
               "builders/get-user",
               "builders/update-user",
@@ -122,9 +147,57 @@
         ]
       },
       {
+        "tab": "MCP",
+        "icon": "robot",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "mcp/overview",
+              "mcp/install-and-connect"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "mcp/tool-categories",
+              "mcp/trading-and-safety",
+              "mcp/example-prompts"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "WebSocket",
-        "pages": [
-          "websocket/overview"
+        "icon": "plug",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "websocket/overview",
+              "websocket/connect-and-authenticate",
+              "websocket/subscribe-to-markets"
+            ]
+          },
+          {
+            "group": "Protocol",
+            "pages": [
+              "websocket/message-types",
+              "websocket/reliability-resync-and-limits"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "icon": "clock-rotate-left",
+        "groups": [
+          {
+            "group": "Release Notes",
+            "pages": [
+              "changelog/overview"
+            ]
+          }
         ]
       },
       {

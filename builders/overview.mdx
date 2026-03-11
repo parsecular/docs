@@ -1,6 +1,7 @@
 ---
 title: "Builders"
 description: "Build prediction market apps on Parsec. One integration, every exchange."
+icon: "blocks"
 ---
 
 ## What is the Builder Program?
@@ -46,6 +47,15 @@ POST /builder/users
 POST /builder/onboard
 { "customer_id": "CUSTOMER_ID", "exchange": "polymarket", "mode": "managed" }
 ```
+
+## Recommended path
+
+1. Start with [Onboarding](/builders/onboarding) to get a builder key and fee settings.
+2. Read [Authentication](/builders/authentication) so your backend sends impersonated requests correctly.
+3. Create the end-user with [Create User](/builders/create-user).
+4. Link the user to an exchange with [Onboard User](/builders/onboard-user).
+5. Place and monitor orders with [Order Routing](/builders/order-routing).
+6. Add revenue controls later with [Fee Escrow](/builders/fee-escrow) and [Tracking](/builders/tracking).
 
 ## What you get
 

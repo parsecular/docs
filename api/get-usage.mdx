@@ -1,6 +1,6 @@
 ---
 title: "Get Usage"
-description: "Get your tier limits and current consumption"
+description: "Inspect your current tier limits and in-period REST and WebSocket usage."
 ---
 
 `GET /api/v1/usage`
@@ -24,29 +24,31 @@ A value of `0` for any limit field means **unlimited**.
 </ResponseField>
 
 <ResponseField name="limits" type="object">
+  Tier limits for this account.
   <Expandable title="properties">
     <ResponseField name="monthly_requests" type="integer">
-      Monthly REST request cap. 0 = unlimited.
+      Monthly REST request cap. `0` means unlimited.
     </ResponseField>
     <ResponseField name="rest_qps" type="integer">
-      REST queries per second. 0 = unlimited.
+      Sustained REST queries per second. `0` means unlimited.
     </ResponseField>
     <ResponseField name="rest_qps_burst" type="integer">
-      REST burst QPS allowance. 0 = unlimited.
+      REST burst QPS allowance. `0` means unlimited.
     </ResponseField>
     <ResponseField name="ws_max_subscriptions" type="integer">
-      Max WebSocket subscriptions across all connections. 0 = unlimited.
+      Max WebSocket subscriptions across all connections. `0` means unlimited.
     </ResponseField>
     <ResponseField name="ws_max_depth" type="integer">
       Max orderbook depth per WebSocket subscription.
     </ResponseField>
     <ResponseField name="history_max_age_days" type="integer">
-      Max historical data age in days. 0 = unlimited.
+      Max historical data age in days. `0` means unlimited.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 <ResponseField name="usage" type="object">
+  Current measured usage for this billing period.
   <Expandable title="properties">
     <ResponseField name="monthly_requests" type="integer">
       REST requests consumed this billing period.
@@ -89,3 +91,8 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 }
 ```
 </ResponseExample>
+
+<Tip>
+Use [`/api/v1/ws/usage`](/api/ws-usage) when you need the more detailed
+WebSocket telemetry breakdown by market or customer scope.
+</Tip>

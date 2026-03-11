@@ -29,7 +29,7 @@ in your frontend             contract                  to affiliate + treasury
 | Field | Value |
 |-------|-------|
 | **Network** | Polygon (chain ID 137) |
-| **Contract** | `0xbd25057b4d3252ca1ec26e1e5efb6480315ba142` |
+| **Contract** | Query `GET /api/v1/builder/escrow/config` for the current `escrow_contract_address` |
 | **Token** | USDC (6 decimals) |
 
 ## Setup
@@ -46,6 +46,10 @@ To change your fee escrow settings, reach out on
 ### Check your config
 
 `GET /api/v1/builder/escrow/config`
+
+This is the source of truth for your live fee-escrow settings. Contract address,
+minimum fee thresholds, treasury routing, and affiliate split are environment
+configurations and may change between environments.
 
 <CodeGroup>
 ```bash curl
@@ -68,11 +72,11 @@ print(config.fee_escrow_enabled, config.fee_bps)
   "fee_escrow_enabled": true,
   "fee_bps": 25,
   "affiliate_address": "0xYourWalletAddress",
-  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142",
+  "escrow_contract_address": "0xCurrentEscrowContract",
   "min_fee_usdc": "100000",
-  "min_fee_bps": 10,
+  "min_fee_bps": 1,
   "treasury_address": "0x...",
-  "affiliate_fee_bps": 5000
+  "affiliate_fee_bps": 2000
 }
 ```
 </ResponseExample>
@@ -84,11 +88,11 @@ print(config.fee_escrow_enabled, config.fee_bps)
 | `fee_escrow_enabled` | boolean | Whether fee escrow is active for your account |
 | `fee_bps` | number | Fee in basis points (1-10000). 25 = 0.25% |
 | `affiliate_address` | string | Your Ethereum address receiving fee payouts |
-| `escrow_contract_address` | string | The escrow smart contract address on Polygon |
-| `min_fee_usdc` | string | Minimum fee in USDC base units (6 decimals). `"100000"` = $0.10 |
-| `min_fee_bps` | number | Minimum fee rate in basis points |
+| `escrow_contract_address` | string | Current escrow smart contract address on Polygon |
+| `min_fee_usdc` | string | Current minimum fee in USDC base units (6 decimals) |
+| `min_fee_bps` | number | Current minimum fee rate in basis points |
 | `treasury_address` | string | Parsec treasury address receiving the platform share |
-| `affiliate_fee_bps` | number | Affiliate share in basis points (e.g. 5000 = 50%) |
+| `affiliate_fee_bps` | number | Current affiliate share in basis points |
 
 ## Collecting fees on orders
 
@@ -111,7 +115,9 @@ const feeBaseUnits = Math.ceil(feeUsdc * 1e6); // 137500
 
 ### Step 2: Get the user's EIP-712 signature
 
-The end-user's wallet signs a `PullFee` authorization:
+The end-user's wallet signs a `PullFee` authorization. Pull the current escrow
+contract address from `GET /api/v1/builder/escrow/config` before constructing
+the EIP-712 domain:
 
 ```typescript
 // EIP-712 domain
@@ -119,7 +125,7 @@ const domain = {
   name: 'ParsecFeeEscrow',
   version: '1',
   chainId: 137,
-  verifyingContract: '0xbd25057b4d3252ca1ec26e1e5efb6480315ba142',
+  verifyingContract: config.escrow_contract_address,
 };
 
 // EIP-712 type

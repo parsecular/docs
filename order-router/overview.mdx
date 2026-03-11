@@ -1,13 +1,14 @@
 ---
 title: "Order Router"
 description: "How Parsec routes orders across prediction markets."
+icon: "arrow-right-arrow-left"
 ---
 
 ## How it works
 
-The order router is a unified interface for placing, managing, and tracking
-orders across every supported exchange. You specify the exchange as a query
-parameter — Parsec handles authentication, signing, and protocol differences.
+The order router is the shared trading surface for both traders and builders.
+You use the same order endpoints either way. The only builder-specific delta is
+impersonation and optional fee escrow on create-order requests.
 
 ## Authentication modes
 
@@ -29,6 +30,20 @@ parameter — Parsec handles authentication, signing, and protocol differences.
     Pass credentials with each request.
   </Card>
 </CardGroup>
+
+## First trade checklist
+
+1. Pick an auth mode from [Trading Setup](/getting-started/trading-setup).
+2. Onboard the exchange first if you are using stored or managed credentials.
+3. Find the market with [`/markets`](/api/list-markets), then inspect liquidity with [`/execution-price`](/api/get-execution-price) or [`/orderbook`](/api/get-orderbook).
+4. Place the order with [`POST /orders`](/api/create-order).
+5. Monitor status with [`/orders`](/api/list-orders), [`/fills`](/api/list-fills), and [`/positions`](/api/list-positions).
+
+## For Traders
+
+If you are trading your own account, pick one credential mode from
+[Trading Setup](/getting-started/trading-setup), onboard if needed, then use
+the normal order endpoints directly with your API key.
 
 ## Order lifecycle
 
@@ -64,7 +79,7 @@ Credentials can be stored via `POST /onboard` (Polymarket and Kalshi) or passed 
 
 Use `GET /exchanges` to see the full capability matrix at runtime.
 
-## Builder impersonation
+## For Builders
 
 Builders route orders on behalf of end-users by adding the
 `X-Builder-Customer-Id` header. All order endpoints work the same — Parsec
@@ -78,12 +93,20 @@ curl -X POST "https://api.parsecapi.com/api/v1/orders?exchange=polymarket" \
   -d '{ "market_id": "0x...", "outcome": "Yes", "side": "buy", "price": 0.55, "size": 100 }'
 ```
 
-Read-only endpoints (`/markets`, `/orderbook`, `/trades`, `/price`, `/events`)
-do **not** require `X-Builder-Customer-Id`.
+Read-only endpoints such as [`/markets`](/api/list-markets),
+[`/orderbook`](/api/get-orderbook), [`/trades`](/api/get-trades),
+[`/price`](/api/get-price), and [`/events`](/api/list-events) do **not**
+require `X-Builder-Customer-Id`.
 
 For fee collection on builder orders, include the `fee_auth` object in the
 create order request. See [Fee Escrow](/builders/fee-escrow) and the
 [Create Order](/api/create-order) reference for the full field list.
+
+For the full builder flow, use:
+
+- [Builders Overview](/builders/overview)
+- [Builder Authentication](/builders/authentication)
+- [Builder Order Routing](/builders/order-routing)
 
 ## Pre-trade checks
 

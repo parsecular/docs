@@ -49,7 +49,10 @@ Places a new order on the specified exchange.
 
   **Kalshi:** `{ "api_key_id": "...", "private_key": "..." }`
 
-  **Polymarket:** `{ "clob_api_key": "...", "clob_api_secret": "...", "clob_api_passphrase": "..." }`
+  **Polymarket:** `{ "clob_api_key": "...", "clob_api_secret": "...", "clob_api_passphrase": "...", "private_key": "0x..." }`
+
+  For Polymarket transient sessions, `private_key` is required. The CLOB API
+  fields are optional.
 </ParamField>
 
 ### Builder fields (optional)

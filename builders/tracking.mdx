@@ -98,7 +98,8 @@ user = client.builder.users.retrieve(customer_id)
 
 `GET /api/v1/builder/escrow/config`
 
-Check your fee escrow settings and contract parameters.
+Check your fee escrow settings and current contract parameters. Treat the values
+returned here as the live source of truth for your environment.
 
 <CodeGroup>
 ```bash curl
@@ -119,11 +120,11 @@ config = client.builder.escrow.config()
   "fee_escrow_enabled": true,
   "fee_bps": 25,
   "affiliate_address": "0xYourWallet...",
-  "escrow_contract_address": "0xbd25057b4d3252ca1ec26e1e5efb6480315ba142",
+  "escrow_contract_address": "0xCurrentEscrowContract",
   "min_fee_usdc": "100000",
-  "min_fee_bps": 10,
+  "min_fee_bps": 1,
   "treasury_address": "0x...",
-  "affiliate_fee_bps": 5000
+  "affiliate_fee_bps": 2000
 }
 ```
 </ResponseExample>

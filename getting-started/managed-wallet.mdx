@@ -1,16 +1,27 @@
 ---
 title: "Managed Credentials"
 description: "Parsec creates a wallet, derives exchange credentials, and signs transactions for you."
+icon: "shield-halved"
 ---
 
 ## Overview
 
-With managed credentials, Parsec handles everything: wallet creation, credential
-derivation, token approvals, and transaction signing. You don't manage private keys
-or hold gas tokens.
+With managed credentials, Parsec handles wallet creation, credential
+derivation, token approvals, and transaction signing. You do not manage private
+keys or hold gas tokens.
 
-**Best for:** Traders who want the fastest setup, and builders onboarding users
-who don't have existing wallets.
+**Best for:** Traders who want the fastest path from signup to first order.
+
+<Tip>
+Not sure which mode to use? Start with [Trading Setup](/getting-started/trading-setup)
+to compare `self`, `managed`, and `per-request`.
+</Tip>
+
+<Info>
+Builders can also use managed mode for end-users who do not bring their own wallet,
+but the builder-specific flow lives under [Builders](/builders/overview) and
+[Onboard User](/builders/onboard-user).
+</Info>
 
 ```
 Your App ───► POST /onboard { mode: "managed" } ───► Parsec creates wallet + credentials

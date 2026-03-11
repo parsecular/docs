@@ -1,0 +1,71 @@
+---
+title: "Trading Setup"
+description: "Choose the right Parsec trading credential strategy: self, managed, or per-request."
+icon: "wallet"
+---
+
+If you want to trade through Parsec, start here. The three credential strategies
+support different workflows, security models, and setup time.
+
+## Compare the options
+
+| Mode | Best for | Where credentials live | Onboarding required | Supported exchanges for trading | Live orders |
+|------|----------|------------------------|---------------------|----------------------------------|-------------|
+| **Self credentials** | You already have exchange API keys and want a stable setup | Stored on Parsec after onboarding | Yes | Polymarket, Kalshi | Yes |
+| **Managed credentials** | You want the fastest path from signup to first trade | Managed by Parsec | Yes | Polymarket | Yes |
+| **Per-request credentials** | You do not want credentials stored on Parsec | Only in each request | No | Polymarket, Kalshi | Yes |
+
+## Pick this if...
+
+### Self credentials
+
+Pick [Self Credentials](/getting-started/direct-trader) if:
+
+- you already have Kalshi API keys or Polymarket CLOB credentials
+- you want to onboard once, then trade repeatedly
+- you are comfortable storing exchange credentials with Parsec
+
+### Managed credentials
+
+Pick [Managed Credentials](/getting-started/managed-wallet) if:
+
+- you want the shortest path to trading on Polymarket
+- you do not want to manage wallet creation or signing infrastructure
+- you are starting from scratch and want Parsec to handle the wallet flow
+
+### Per-request credentials
+
+Pick [Per-Request Credentials](/getting-started/per-request-credentials) if:
+
+- you do not want Parsec to store exchange credentials
+- you prefer ephemeral auth on each private request
+- you are building a stricter security flow for yourself or your users
+
+## Fastest path to first trade
+
+1. Choose a setup mode from the three guides above.
+2. If the mode requires onboarding, complete it first.
+3. Find a market with [`/markets`](/api/list-markets).
+4. Check liquidity with [`/execution-price`](/api/get-execution-price) or [`/orderbook`](/api/get-orderbook).
+5. Place the order through the [Order Router](/order-router/overview).
+
+## Verification checklist
+
+Before placing a live order, verify:
+
+- the target exchange is linked and ready
+- you can read [`/balance`](/api/get-balance) or [`/ping`](/api/ping) successfully
+- you know the exact market ID or `parsec_id`
+- you have checked price, size, and liquidity
+
+<CardGroup cols={3}>
+  <Card title="Self Credentials" icon="key" href="/getting-started/direct-trader">
+    Onboard your own exchange credentials once and keep trading through Parsec.
+  </Card>
+  <Card title="Managed Credentials" icon="shield-halved" href="/getting-started/managed-wallet">
+    Let Parsec create the wallet and manage the Polymarket setup for you.
+  </Card>
+  <Card title="Per-Request Credentials" icon="bolt" href="/getting-started/per-request-credentials">
+    Pass credentials only when you make a private request.
+  </Card>
+</CardGroup>

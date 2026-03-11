@@ -1,41 +1,55 @@
 ---
 title: "Get Trades"
-description: "Fetch recent public trades for a specific market outcome"
+description: "Fetch recent or historical public trades for a market outcome."
 ---
 
 `GET /api/v1/trades`
 
-Returns recent public trades ("tape") for a market identified by its `parsec_id`.
+Returns the public trade tape for a market outcome, using either the normalized or
+exchange-native selector.
+
+<Tip>
+If you do not know the IDs yet, start with [`/markets`](/api/list-markets). This
+endpoint accepts either `parsec_id` or `exchange + market_id`.
+</Tip>
 
 ## Error Semantics
 
 - `403` means your API key is not authorized for the request.
-- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
+- `503` means the upstream exchange is temporarily unavailable.
 
 ## Parameters
 
-<ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `kalshi:KXPRESPERSON-28-GNEWS`).
+<ParamField query="parsec_id" type="string">
+  Canonical selector. Provide either `parsec_id` or both `exchange + market_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Exchange-native market ID used with `exchange`.
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
-  Outcome selector. For binary markets this is typically `yes` or `no` (case-insensitive). Required for categorical markets.
+  Outcome selector, typically `yes` or `no` for binary markets.
 </ParamField>
 
 <ParamField query="limit" type="number" default="200">
-  Max number of trades to return. Range: 1–500.
+  Max trades to return. Range: 1-500.
 </ParamField>
 
 <ParamField query="start_ts" type="number">
-  Unix seconds start timestamp (inclusive). Historical data is tier-gated: Free: 5 days, Pro: 30 days, Scale: unlimited. Requests beyond your limit return `400`.
+  Historical start timestamp in Unix seconds.
 </ParamField>
 
 <ParamField query="end_ts" type="number">
-  Unix seconds end timestamp (inclusive).
+  Historical end timestamp in Unix seconds.
 </ParamField>
 
 <ParamField query="cursor" type="string">
-  Opaque pagination cursor from a previous response. Pass `next_cursor` from the previous page to fetch the next page of trades.
+  Pagination cursor from the previous response.
 </ParamField>
 
 ## Response
@@ -43,66 +57,28 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="parsec_id" type="string">
-      The requested market identifier.
+      Canonical market identifier.
     </ResponseField>
     <ResponseField name="exchange" type="string">
-      Exchange name.
+      Exchange identifier.
     </ResponseField>
     <ResponseField name="outcome" type="string">
-      The outcome for this tape.
+      Selected outcome.
     </ResponseField>
     <ResponseField name="token_id" type="string | null">
       Exchange-specific token/asset identifier for the requested outcome. `null` for exchanges that do not use token IDs (e.g., Kalshi).
     </ResponseField>
     <ResponseField name="market_id" type="string">
-      Exchange-specific market identifier.
+      Exchange-native market ID.
     </ResponseField>
     <ResponseField name="trades" type="MarketTrade[]">
-      Array of recent trades, newest-first. Prices are normalized to 0.0–1.0.
-      <Expandable title="properties">
-        <ResponseField name="id" type="string">
-          Exchange-specific trade identifier (when available).
-        </ResponseField>
-        <ResponseField name="price" type="number">
-          Trade price, normalized to 0.0–1.0.
-        </ResponseField>
-        <ResponseField name="size" type="number">
-          Trade size in contracts.
-        </ResponseField>
-        <ResponseField name="side" type="string">
-          Trade side: `buy` or `sell` (when available).
-        </ResponseField>
-        <ResponseField name="aggressor_side" type="string">
-          Aggressor side: `buy` or `sell` (when available).
-        </ResponseField>
-        <ResponseField name="timestamp" type="string">
-          Trade timestamp (ISO 8601 / RFC 3339).
-        </ResponseField>
-        <ResponseField name="source_channel" type="string">
-          Data source channel identifier.
-        </ResponseField>
-        <ResponseField name="outcome" type="string | null">
-          Trade outcome side (e.g. `"Yes"`, `"No"`). Present when the exchange provides this.
-        </ResponseField>
-        <ResponseField name="yes_price" type="number | null">
-          YES-side price from exchange data (never derived). May be `null` if the trade was on the NO side.
-        </ResponseField>
-        <ResponseField name="no_price" type="number | null">
-          NO-side price from exchange data (never derived). May be `null` if the trade was on the YES side.
-        </ResponseField>
-        <ResponseField name="tx_hash" type="string | null">
-          Transaction hash (Polymarket only).
-        </ResponseField>
-        <ResponseField name="taker_address" type="string | null">
-          Taker wallet address (Polymarket `proxy_wallet`). `null` for exchanges that don't expose this.
-        </ResponseField>
-      </Expandable>
+      Trade rows ordered newest-first.
     </ResponseField>
     <ResponseField name="has_more" type="boolean">
-      `true` if there are more trades beyond this page. Use `next_cursor` to fetch the next page.
+      Whether more rows are available.
     </ResponseField>
     <ResponseField name="next_cursor" type="string | null">
-      Opaque cursor for the next page. Pass as `cursor` in the next request. `null` when there are no more pages.
+      Cursor for the next page.
     </ResponseField>
     <ResponseField name="reason" type="string | null">
       Explanatory field for empty results. `null` for normal responses. `"no_data_yet"` when the market exists but has no trade data for the requested range.
@@ -112,12 +88,14 @@ Returns recent public trades ("tape") for a market identified by its `parsec_id`
 
 ## Examples
 
-### Recent trades (default)
-
 <RequestExample>
-```bash
+```bash Using parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/trades?parsec_id=kalshi:KXPRESPERSON-28-GNEWS&outcome=yes&limit=5"
+```
+```bash Using exchange + market_id
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/trades?exchange=kalshi&market_id=KXPRESPERSON-28-GNEWS&outcome=yes&limit=5"
 ```
 </RequestExample>
 
@@ -136,13 +114,11 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "size": 112.0,
       "side": "buy",
       "aggressor_side": "buy",
-      "timestamp": "2026-02-12T07:18:18.845367Z",
+      "timestamp": "2026-03-10T07:18:18.845367Z",
       "source_channel": "kalshi_rest_trade",
       "outcome": "Yes",
       "yes_price": 0.21,
-      "no_price": null,
-      "tx_hash": null,
-      "taker_address": null
+      "no_price": null
     }
   ],
   "has_more": true,
@@ -150,22 +126,5 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 }
 ```
 </ResponseExample>
-
-### Trades in a time window
-
-```bash
-# Fetch trades from a time window (24h example)
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&outcome=yes&start_ts=1771545600&end_ts=1771632000&limit=100"
-  # start_ts = Feb 20 2026 00:00 UTC, end_ts = Feb 21 2026 00:00 UTC
-```
-
-### Paginate through trades
-
-```bash
-# Fetch the next page using the cursor from the previous response
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/trades?parsec_id=polymarket:572473&outcome=yes&start_ts=1771545600&end_ts=1771632000&limit=100&cursor=eyJ0cyI6MTczOTM1MDY5OH0"
-```
 
 For real-time streaming, use the [WebSocket API](/websocket/overview).

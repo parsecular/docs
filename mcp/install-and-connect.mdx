@@ -1,0 +1,122 @@
+---
+title: "Install & Connect"
+description: "Configure the Parsec MCP server in supported clients and verify that it is running."
+icon: "plug"
+---
+
+## Quick start
+
+```bash
+PARSEC_API_KEY=pk_live_... npx parsec-mcp serve
+```
+
+Get your API key at [parsecapi.com](https://parsecapi.com).
+
+<Info>
+The current Parsec MCP server uses a local `stdio` transport. It works well with
+desktop and CLI MCP clients that launch a local process. It is not yet documented
+here as a hosted remote MCP server over HTTP or SSE.
+</Info>
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PARSEC_API_KEY` | Yes | Your Parsec API key |
+| `PARSEC_API_BASE_URL` | No | Override API base URL. Default: `https://api.parsecapi.com` |
+| `PARSEC_DISABLE_WALLET_EXPORT` | No | Set to `1` to disable the wallet export tool |
+| `PARSEC_MCP_ENABLE_RAW` | No | Set to `1` to enable the advanced raw API escape hatch |
+
+## Supported clients
+
+| Client | Supported here | Setup style |
+|--------|----------------|-------------|
+| Claude Desktop | Yes | local `stdio` config file |
+| Claude Code | Yes | `claude mcp add` |
+| Cursor | Yes | `.cursor/mcp.json` |
+| VS Code / Copilot | Yes | `.vscode/mcp.json` |
+| Windsurf / Cline | Yes | MCP config JSON |
+| Codex | Yes | `codex mcp add` |
+| ChatGPT hosted connectors | Not yet | requires remote MCP transport |
+
+## Codex
+
+Add Parsec as a global MCP server:
+
+```bash
+codex mcp add --env PARSEC_API_KEY=pk_live_... parsec -- npx -y parsec-mcp serve
+```
+
+Then verify it appears:
+
+```bash
+codex mcp list
+```
+
+## Claude Code
+
+Add Parsec to the current project:
+
+```bash
+claude mcp add -s project -e PARSEC_API_KEY=pk_live_... parsec -- npx -y parsec-mcp serve
+```
+
+This writes a local `.mcp.json` entry for the project.
+
+## JSON config clients
+
+These clients all launch the same local `stdio` command. The only difference is
+where the JSON lives and whether the top-level key is `mcpServers` or `servers`.
+
+| Client | Config file | Top-level key |
+|--------|-------------|---------------|
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` | `mcpServers` |
+| Cursor | `.cursor/mcp.json` | `mcpServers` |
+| VS Code / Copilot | `.vscode/mcp.json` | `servers` |
+| Windsurf / Cline | your MCP config JSON | `mcpServers` |
+
+Use this shape for Claude Desktop, Cursor, Windsurf, and Cline:
+
+```json
+{
+  "mcpServers": {
+    "parsec": {
+      "command": "npx",
+      "args": ["-y", "parsec-mcp", "serve"],
+      "env": {
+        "PARSEC_API_KEY": "pk_live_..."
+      }
+    }
+  }
+}
+```
+
+For VS Code / Copilot, use the same block under `servers` instead:
+
+```json
+{
+  "servers": {
+    "parsec": {
+      "command": "npx",
+      "args": ["-y", "parsec-mcp", "serve"],
+      "env": {
+        "PARSEC_API_KEY": "pk_live_..."
+      }
+    }
+  }
+}
+```
+
+## Verify the server is working
+
+Once the server is connected in your client, try a simple read-only prompt:
+
+- "What prediction markets are available about Bitcoin?"
+- "Am I set up to trade?"
+- "Show me the orderbook for the top Bitcoin market"
+
+If the tools do not appear, restart the MCP client and confirm that
+`npx parsec-mcp serve` runs successfully in a terminal.
+
+If you need a safer first pass, stay on read-only tools before using any live
+trading tool. See [Trading & Safety](/mcp/trading-and-safety).

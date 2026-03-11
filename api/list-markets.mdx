@@ -1,24 +1,59 @@
 ---
 title: "List Markets"
-description: "Get available markets from one or more exchanges"
+description: "Discover markets, fetch exact market batches, and query event-scoped market sets."
+icon: "magnifying-glass-chart"
 ---
 
 `GET /api/v1/markets`
 
-Returns markets from the gold layer with filtering and pagination. The `scope` parameter controls the query mode.
+Returns markets from the gold layer with filtering and pagination. Use this endpoint to search across exchanges, fetch exact markets, or pull every market in one event. Start here when you do not yet know the IDs you need.
+
+## Find the IDs You Need
+
+Use a discovery query first:
+
+```bash
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?exchanges=kalshi&search=bitcoin&limit=1"
+```
+
+The response gives you:
+
+- `parsec_id` — Parsec's standard market ID
+- `exchange` — source exchange
+- `exchange_market_id` — native market ID on that exchange
+- `parsec_group_id` / `exchange_group_id` — event identifiers
+
+You can then reuse either `parsec_id` or `exchange + exchange_market_id` on
+[`/orderbook`](/api/get-orderbook), [`/price`](/api/get-price),
+[`/trades`](/api/get-trades), and [`/execution-price`](/api/get-execution-price).
 
 ## Scopes
 
-The endpoint operates in four scopes controlled by the `scope` query parameter:
+`/markets` supports four scopes:
 
-| Scope | Purpose | Required Parameters |
-|-------|---------|---------------------|
-| `list` (default) | Browse markets with filters | None (optionally `exchanges`) |
-| `market` | Fetch a single market | `parsec_id` OR `exchange` + `exchange_market_id` |
-| `market_batch` | Fetch up to 100 markets | `parsec_ids` OR `external_market_keys` |
-| `event` | Fetch all markets in an event | `event_id` OR `exchange` + `exchange_group_id` |
+| Scope | Use it for | Required selector |
+|------|------------|-------------------|
+| `list` | discovery, search, filters, pagination | `exchanges` optional |
+| `market` | one exact market lookup | `parsec_id` or `exchange + exchange_market_id` |
+| `market_batch` | many exact lookups in one request | `parsec_ids` or `external_market_keys` |
+| `event` | all markets for one event | `event_id` or `exchange + exchange_group_id` |
 
-## Parameters
+If you omit `scope` and pass `parsec_ids`, the server automatically treats the
+request as `scope=market_batch`.
+
+## Most Common Request Shapes
+
+| Task | Scope | What to send |
+|------|-------|--------------|
+| Search and filter markets | `list` | `search`, `exchanges`, `status`, `limit` |
+| Fetch one exact market | `market` | `parsec_id` or `exchange + exchange_market_id` |
+| Fetch many exact markets | `market_batch` | `parsec_ids` or `external_market_keys` |
+| Fetch all markets in one event | `event` | `event_id` or `exchange + exchange_group_id` |
+
+## Query Reference
+
+### Discovery: `scope=list` (default)
 
 ### Common
 
@@ -37,15 +72,15 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
 ### scope=list
 
 <ParamField query="exchanges" type="string">
-  Comma-separated exchange IDs: `polymarket`, `kalshi`, `limitless`, `opinion`, `predictfun`.
+  Comma-separated exchange IDs: `polymarket`, `kalshi`, `limitless`, `opinion`, `predictfun`. Omit to search across all exchanges.
 </ParamField>
 
 <ParamField query="status" type="string" default="active">
-  Filter by market status: `active`, `closed`, `resolved`, or `archived`.
+  Filter by market status: `active`, `closed`, `resolved`, or `archived`. `scope=list` defaults to `active` when omitted.
 </ParamField>
 
 <ParamField query="search" type="string">
-  Case-insensitive keyword search across title, description, and question.
+  Case-insensitive keyword search across question and description fields.
 </ParamField>
 
 <ParamField query="min_volume" type="number">
@@ -61,7 +96,7 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
 </ParamField>
 
 <ParamField query="cursor" type="string">
-  Pagination cursor from a previous response.
+  Cursor from the previous response.
 </ParamField>
 
 ### scope=market
@@ -81,7 +116,7 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
 ### scope=market_batch
 
 <ParamField query="parsec_ids" type="string">
-  Comma-separated parsec IDs (format: `{exchange}:{native_id}`). Max 100. Mutually exclusive with `external_market_keys`.
+  Comma-separated parsec IDs (format: `{exchange}:{native_id}`). Max 100. Mutually exclusive with `external_market_keys`. If `scope` is omitted, the server auto-infers `market_batch`.
 </ParamField>
 
 <ParamField query="external_market_keys" type="string">
@@ -102,6 +137,37 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
   Exchange-native event/group ID. Must be paired with `exchange`.
 </ParamField>
 
+## Cross-Exchange Relation Expansions
+
+Use relation expansions when you want cross-exchange links returned alongside
+each market row:
+
+- `include_matches=true` returns `matched_markets`, which represent published `same_market` links
+- `include_related=true` returns `related_markets`, which represent published `co_dependent` links
+- you can request both in the same call
+
+<RequestExample>
+```bash Fetch same_market links
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=kalshi:KXBTC-26MAR10&include_matches=true"
+```
+```bash Fetch co_dependent links
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=kalshi:KXBTC-26MAR10&include_related=true"
+```
+```bash Fetch both relation types
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=kalshi:KXBTC-26MAR10&include_matches=true&include_related=true"
+```
+</RequestExample>
+
+<Warning>
+Relation links are precomputed match links. They are decision support, not
+ground truth. Before trading, verify the market question, resolution terms,
+timing window, and settlement source directly on the source exchange. Links can
+still be wrong or incomplete.
+</Warning>
+
 ## Response
 
 <ResponseField name="(root)" type="object">
@@ -110,114 +176,31 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
       Query scope that produced this response: `list`, `market`, `market_batch`, or `event`.
     </ResponseField>
     <ResponseField name="markets" type="Market[]">
-      Array of markets matching the query.
-      <Expandable title="Market properties">
+      Array of markets matching the query or selector.
+      <Expandable title="Market fields worth knowing first">
         <ResponseField name="parsec_id" type="string">
-          Primary key: `{exchange}:{native_id}`.
+          Parsec's standard market ID: `{exchange}:{exchange_market_id}`.
         </ResponseField>
         <ResponseField name="parsec_group_id" type="string">
-          Canonical Parsec event ID for cross-exchange grouping.
+          Parsec's standard event ID for cross-exchange grouping.
         </ResponseField>
         <ResponseField name="exchange" type="string">
           Exchange identifier.
         </ResponseField>
         <ResponseField name="exchange_market_id" type="string">
-          Native exchange market ID.
-        </ResponseField>
-        <ResponseField name="exchange_group_id" type="string">
-          Source-native exchange event/group ID.
-        </ResponseField>
-        <ResponseField name="slug" type="string">
-          URL-friendly identifier.
-        </ResponseField>
-        <ResponseField name="url" type="string">
-          Direct link to the market on the exchange.
+          Native market ID on that exchange.
         </ResponseField>
         <ResponseField name="question" type="string">
           Market question.
         </ResponseField>
-        <ResponseField name="description" type="string">
-          Full description.
-        </ResponseField>
-        <ResponseField name="rules" type="string">
-          Resolution rules.
-        </ResponseField>
-        <ResponseField name="group_title" type="string">
-          Title of the parent event/group.
-        </ResponseField>
         <ResponseField name="status" type="string">
-          Market status (e.g., `active`, `closed`, `resolved`).
+          Market status. Common values are `active`, `closed`, `resolved`, or `archived`.
         </ResponseField>
-        <ResponseField name="market_type" type="string">
-          Market type (e.g., `binary`, `categorical`).
+        <ResponseField name="matched_markets" type="RelatedMarketLink[]">
+          Published `same_market` counterparts when `include_matches=true`.
         </ResponseField>
-        <ResponseField name="outcome_count" type="number">
-          Number of outcomes.
-        </ResponseField>
-        <ResponseField name="outcomes" type="Outcome[]">
-          Array of outcome objects.
-          <Expandable title="Outcome properties">
-            <ResponseField name="name" type="string">
-              Outcome label (e.g., `"Yes"`, `"No"`).
-            </ResponseField>
-            <ResponseField name="price" type="number">
-              Last known price for this outcome.
-            </ResponseField>
-            <ResponseField name="token_id" type="string">
-              Token ID for orderbook subscriptions.
-            </ResponseField>
-          </Expandable>
-        </ResponseField>
-        <ResponseField name="best_bid" type="number">
-          Best bid price.
-        </ResponseField>
-        <ResponseField name="best_ask" type="number">
-          Best ask price.
-        </ResponseField>
-        <ResponseField name="last_price" type="number">
-          Last traded price.
-        </ResponseField>
-        <ResponseField name="volume_total" type="number">
-          Total lifetime volume.
-        </ResponseField>
-        <ResponseField name="volume_24h" type="number">
-          24-hour trading volume.
-        </ResponseField>
-        <ResponseField name="liquidity" type="number">
-          Current liquidity.
-        </ResponseField>
-        <ResponseField name="open_interest" type="number">
-          Current open interest.
-        </ResponseField>
-        <ResponseField name="min_order_size" type="number">
-          Minimum order size in contracts. Varies per market on Polymarket (e.g. 5, 15); typically 1 on Kalshi.
-        </ResponseField>
-        <ResponseField name="tick_size" type="number">
-          Minimum price increment for orders on this market.
-        </ResponseField>
-        <ResponseField name="created_at" type="string">
-          ISO 8601 creation time.
-        </ResponseField>
-        <ResponseField name="updated_at" type="string">
-          ISO 8601 last update time.
-        </ResponseField>
-        <ResponseField name="end_date" type="string">
-          ISO 8601 market close/end time.
-        </ResponseField>
-        <ResponseField name="event_start_time" type="string">
-          ISO 8601 event start time.
-        </ResponseField>
-        <ResponseField name="condition_id" type="string">
-          Condition ID for CTF markets.
-        </ResponseField>
-        <ResponseField name="xref" type="object">
-          Cross-reference data (exchange-specific metadata).
-        </ResponseField>
-        <ResponseField name="collection_date" type="string">
-          ISO 8601 date when this record was collected.
-        </ResponseField>
-        <ResponseField name="last_collected" type="string">
-          ISO 8601 timestamp of last data collection.
+        <ResponseField name="related_markets" type="RelatedMarketLink[]">
+          Published `co_dependent` counterparts when `include_related=true`.
         </ResponseField>
         <ResponseField name="image_url" type="string | null">
           Market image URL.
@@ -276,21 +259,14 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
         </ResponseField>
       </Expandable>
     </ResponseField>
+    <ResponseField name="duplicate_ids" type="string[]">
+      Input IDs that were repeated in a `market_batch` request.
+    </ResponseField>
+    <ResponseField name="not_found_ids" type="string[]">
+      Input IDs that did not resolve to a market in a `market_batch` request.
+    </ResponseField>
     <ResponseField name="pagination" type="object">
-      <Expandable title="properties">
-        <ResponseField name="count" type="number">
-          Markets in this page.
-        </ResponseField>
-        <ResponseField name="total" type="number">
-          Total markets matching filters.
-        </ResponseField>
-        <ResponseField name="has_more" type="boolean">
-          Whether more results are available.
-        </ResponseField>
-        <ResponseField name="next_cursor" type="string">
-          Cursor for the next page.
-        </ResponseField>
-      </Expandable>
+      Cursor metadata for discovery and event queries that return multiple results.
     </ResponseField>
     <ResponseField name="event" type="object">
       Event context. Only present when `scope=event`.
@@ -318,89 +294,130 @@ The endpoint operates in four scopes controlled by the `scope` query parameter:
   </Expandable>
 </ResponseField>
 
+## Relation Link Shape
+
+When relation expansions are enabled, each link includes:
+
+<ResponseField name="RelatedMarketLink" type="object">
+  <Expandable title="properties">
+    <ResponseField name="parsec_id" type="string">
+      Counterpart market identifier.
+    </ResponseField>
+    <ResponseField name="exchange" type="string">
+      Counterpart exchange.
+    </ResponseField>
+    <ResponseField name="confidence" type="number">
+      Matching confidence score.
+    </ResponseField>
+    <ResponseField name="confidence_tier" type="string">
+      Pipeline confidence bucket metadata.
+    </ResponseField>
+    <ResponseField name="source" type="string">
+      Matching pipeline source label.
+    </ResponseField>
+    <ResponseField name="status" type="string | null">
+      Counterpart market status when available: `active`, `closed`, or `archived`.
+    </ResponseField>
+    <ResponseField name="dependency_type" type="string | null">
+      Optional dependency classification for `co_dependent` relations.
+    </ResponseField>
+    <ResponseField name="dependency_direction" type="string | null">
+      Optional directionality metadata for `co_dependent` relations.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+### 1. Discovery search (`scope=list`)
+
 <RequestExample>
-```bash
+```bash scope=list (default) — Browse active markets
 # scope=list (default) — Browse active Polymarket markets
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket&status=active&limit=10"
+  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000&limit=10"
+```
+</RequestExample>
 
-# scope=list — Search across multiple exchanges
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?exchanges=polymarket,kalshi&search=bitcoin&min_volume=1000"
+### 2. Single market lookup (`scope=market`)
 
-# scope=market — Single market by parsec_id
+<RequestExample>
+```bash Using parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=polymarket:572473"
+  "https://api.parsecapi.com/api/v1/markets?scope=market&parsec_id=kalshi:KXBTC-26MAR10&include_matches=true"
+```
+```bash Using exchange-native selector
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market&exchange=kalshi&exchange_market_id=KXBTC-26MAR10"
+```
+</RequestExample>
 
-# scope=market — Single market by exchange + native ID
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?scope=market&exchange=kalshi&exchange_market_id=KXPRESPERSON-28-GNEWS"
+### 3. Batch lookup (`scope=market_batch`)
 
-# scope=market_batch — Batch lookup by parsec IDs
+<RequestExample>
+```bash Using parsec_ids
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?scope=market_batch&parsec_ids=polymarket:572473,kalshi:KXPRESPERSON-28-GNEWS"
+  "https://api.parsecapi.com/api/v1/markets?parsec_ids=kalshi:KXBTC-26MAR10,polymarket:572473&include_matches=true"
+```
+```bash Using external_market_keys
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=market_batch&external_market_keys=kalshi:KXBTC-26MAR10,polymarket:572473"
+```
+</RequestExample>
 
-# scope=event — All markets in an event by canonical event ID
-curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?scope=event&event_id=ev:us-pres-election-winner-2028"
+### 4. Event-scoped lookup (`scope=event`)
 
-# scope=event — All markets in an event by exchange + native group ID
+<RequestExample>
+```bash Using event_id
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/markets?scope=event&exchange=polymarket&exchange_group_id=event_572470"
+  "https://api.parsecapi.com/api/v1/markets?scope=event&event_id=ev:btc-above-85000-mar-10&include_related=true"
+```
+```bash Using exchange-native event selector
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/markets?scope=event&exchange=kalshi&exchange_group_id=KXBTC-26MAR10"
 ```
 </RequestExample>
 
 <ResponseExample>
 ```json
 {
-  "scope": "list",
+  "scope": "market_batch",
   "markets": [
     {
-      "parsec_id": "polymarket:572473",
-      "parsec_group_id": "polymarket:event_572470",
-      "exchange": "polymarket",
-      "exchange_market_id": "572473",
-      "exchange_group_id": "event_572470",
-      "slug": "will-trump-nominate-judy-shelton-as-the-next-fed-chair",
-      "url": "https://polymarket.com/event/will-trump-nominate-judy-shelton",
-      "question": "Will Trump nominate Judy Shelton as the next Fed chair?",
-      "description": "Resolves Yes if Trump nominates Judy Shelton...",
-      "rules": "Market resolves Yes if...",
-      "group_title": "Fed Chair Nomination",
+      "parsec_id": "kalshi:KXBTC-26MAR10",
+      "exchange": "kalshi",
+      "exchange_market_id": "KXBTC-26MAR10",
+      "question": "Will Bitcoin close above $85,000 on March 10?",
       "status": "active",
-      "market_type": "binary",
-      "outcome_count": 2,
-      "outcomes": [
-        { "name": "Yes", "price": 0.65, "token_id": "50310842821..." },
-        { "name": "No", "price": 0.35, "token_id": "78204195637..." }
+      "matched_markets": [
+        {
+          "parsec_id": "polymarket:572473",
+          "exchange": "polymarket",
+          "confidence": 0.97,
+          "confidence_tier": "HIGH",
+          "source": "hierarchical",
+          "status": "active"
+        }
       ],
-      "best_bid": 0.64,
-      "best_ask": 0.66,
-      "last_price": 0.65,
-      "volume_total": 500000.0,
-      "volume_24h": 12500.0,
-      "liquidity": 75000.0,
-      "open_interest": 30000.0,
-      "min_order_size": 15.0,
-      "tick_size": 0.01,
-      "created_at": "2026-01-15T00:00:00Z",
-      "updated_at": "2026-02-22T12:00:00Z",
-      "end_date": "2026-06-30T23:59:59Z",
-      "condition_id": "0xdd22472e552920b8438..."
+      "related_markets": [
+        {
+          "parsec_id": "kalshi:KXBTCRANGE-26MAR10-80K-90K",
+          "exchange": "kalshi",
+          "confidence": 0.94,
+          "confidence_tier": "HIGH",
+          "source": "deterministic_graph",
+          "status": "active"
+        }
+      ]
     }
   ],
+  "duplicate_ids": [],
+  "not_found_ids": [],
   "pagination": {
     "count": 1,
-    "total": 150,
-    "has_more": true,
-    "next_cursor": "1"
+    "total": 1,
+    "has_more": false
   }
 }
 ```
 </ResponseExample>
-
-## Pagination
-
-1. Make an initial request without a cursor
-2. Check `pagination.has_more` — if `true`, pass `pagination.next_cursor` as `cursor` in the next request
-3. Repeat until `has_more` is `false`

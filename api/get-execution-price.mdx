@@ -1,20 +1,34 @@
 ---
 title: "Get Execution Price"
-description: "Estimate VWAP and slippage for a hypothetical order"
+description: "Estimate VWAP and slippage for a hypothetical order without placing it."
 ---
 
 `GET /api/v1/execution-price`
 
-Walks the orderbook to estimate the volume-weighted average price (VWAP) for a hypothetical order of the given size. Does not place an order.
+Walks the live orderbook to estimate the average fill price, cost, and slippage for
+a hypothetical order.
+
+<Tip>
+If you do not know the market identifiers yet, start with [`/markets`](/api/list-markets).
+You can call this endpoint with either `parsec_id` or `exchange + market_id`.
+</Tip>
 
 ## Parameters
 
-<ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`).
+<ParamField query="parsec_id" type="string">
+  Canonical selector. Provide either `parsec_id` or both `exchange + market_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Exchange-native market ID used with `exchange`.
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
-  Outcome selector. For binary markets this is typically `yes` or `no`. Required for categorical markets.
+  Outcome selector. For binary markets this is usually `yes` or `no`.
 </ParamField>
 
 <ParamField query="side" type="string" required>
@@ -30,39 +44,43 @@ Walks the orderbook to estimate the volume-weighted average price (VWAP) for a h
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="avg_price" type="number | null">
-      Volume-weighted average execution price. Null if no liquidity.
+      Volume-weighted average execution price.
     </ResponseField>
     <ResponseField name="total_cost" type="number">
       Total cost of the filled portion.
     </ResponseField>
     <ResponseField name="filled_amount" type="number">
-      Number of contracts that would be filled.
+      Contracts that would be filled.
     </ResponseField>
     <ResponseField name="fully_filled" type="boolean">
-      True if the entire requested amount can be filled.
+      Whether the full requested amount can be filled.
     </ResponseField>
     <ResponseField name="slippage" type="number | null">
-      Price impact vs best price. Null if no liquidity.
+      Price impact versus the best available price.
     </ResponseField>
     <ResponseField name="levels_consumed" type="integer">
-      Number of orderbook levels consumed.
+      Number of book levels consumed by the estimate.
     </ResponseField>
     <ResponseField name="worst_price" type="number | null">
-      Price of the last consumed orderbook level (worst fill price). Null if no liquidity.
+      Price of the last consumed level.
     </ResponseField>
     <ResponseField name="fee_estimate" type="number | null">
-      Estimated exchange fee. Null when fee rate is unknown.
+      Estimated exchange fee when available.
     </ResponseField>
     <ResponseField name="net_cost" type="number | null">
-      Total cost including fees (`total_cost + fee_estimate`). Null when fee rate is unknown.
+      Estimated total cost including fees when fee data is available.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 <RequestExample>
-```bash
+```bash Using parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/execution-price?parsec_id=polymarket:572473&outcome=yes&side=buy&amount=100"
+```
+```bash Using exchange + market_id
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/execution-price?exchange=polymarket&market_id=572473&outcome=yes&side=buy&amount=100"
 ```
 </RequestExample>
 

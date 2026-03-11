@@ -1,36 +1,38 @@
 ---
 title: "List Events"
-description: "List events (market groups) with filtering and pagination"
+description: "List normalized events with pagination, optional market expansion, and matched event links."
 ---
 
 `GET /api/v1/events`
 
-Aggregates markets by event ID from the Silver cache. Returns event summaries sorted by total volume (descending). Markets without an `event_id` are excluded.
+Aggregates normalized markets into event summaries keyed by canonical `event_id`.
+Use this endpoint when you want event-level browsing first, then optional market
+expansion and published `matched_events` context.
 
 ## Error Semantics
 
-- `503` means the Silver cache is not yet populated (retry after startup completes).
+- `503` means the market snapshot has not finished loading yet.
 
 ## Parameters
 
 <ParamField query="exchanges" type="string">
-  Comma-separated exchange IDs to include (e.g., `kalshi,polymarket`). Defaults to all exchanges in the cache.
+  Comma-separated exchange IDs to include. Omit to query all exchanges in the current snapshot.
 </ParamField>
 
 <ParamField query="search" type="string">
-  Keyword search in event title (case-insensitive).
+  Keyword search in event titles.
 </ParamField>
 
 <ParamField query="status" type="string">
-  Status filter: `active`, `closed`, or `resolved`.
+  Event status filter such as `active`, `closed`, or `resolved`.
 </ParamField>
 
 <ParamField query="min_volume" type="number">
-  Minimum total volume across all markets in event.
+  Minimum total volume across all markets in the event.
 </ParamField>
 
 <ParamField query="include_markets" type="boolean" default="false">
-  Include constituent markets in the response.
+  Include constituent markets directly in the response.
 </ParamField>
 
 <ParamField query="limit" type="number" default="50">
@@ -38,7 +40,7 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
 </ParamField>
 
 <ParamField query="cursor" type="string">
-  Pagination cursor (offset-based). Use `next_cursor` from the previous response.
+  Cursor from a previous response.
 </ParamField>
 
 ## Response
@@ -46,49 +48,39 @@ Aggregates markets by event ID from the Silver cache. Returns event summaries so
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="events" type="EventSummary[]">
-      Array of event summaries, sorted by total volume descending.
+      Event summaries sorted by total volume descending.
       <Expandable title="properties">
         <ResponseField name="event_id" type="string">
           Canonical Parsec event ID.
         </ResponseField>
         <ResponseField name="title" type="string">
-          Event title (derived from shortest constituent market title).
+          Event title.
         </ResponseField>
         <ResponseField name="market_count" type="number">
-          Number of markets in this event.
+          Number of markets in the event.
         </ResponseField>
         <ResponseField name="total_volume" type="number">
-          Sum of volume across all markets in this event.
+          Sum of volume across all markets in the event.
         </ResponseField>
         <ResponseField name="exchanges" type="string[]">
-          Deduplicated list of exchanges with markets in this event.
+          Exchanges represented in the event.
         </ResponseField>
         <ResponseField name="status" type="string">
-          Derived status: `active` if any market is active, else `closed` if any closed, else `resolved`.
+          Derived event status.
         </ResponseField>
         <ResponseField name="close_time" type="string">
-          Earliest close time across constituent markets (ISO 8601).
+          Earliest close time across constituent markets.
         </ResponseField>
         <ResponseField name="markets" type="Market[]">
-          Constituent markets (only included when `include_markets=true`).
+          Constituent markets, only included when `include_markets=true`.
+        </ResponseField>
+        <ResponseField name="matched_events" type="MatchedEventLink[]">
+          Published `same_event` counterparts for this event.
         </ResponseField>
       </Expandable>
     </ResponseField>
     <ResponseField name="pagination" type="object">
-      <Expandable title="properties">
-        <ResponseField name="count" type="number">
-          Number of events in this page.
-        </ResponseField>
-        <ResponseField name="total" type="number">
-          Total number of matching events.
-        </ResponseField>
-        <ResponseField name="has_more" type="boolean">
-          Whether more pages are available.
-        </ResponseField>
-        <ResponseField name="next_cursor" type="string">
-          Cursor for the next page (pass as `cursor` query parameter).
-        </ResponseField>
-      </Expandable>
+      Cursor metadata for the result set.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -109,9 +101,28 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "title": "Super Bowl LX",
       "market_count": 12,
       "total_volume": 4500000,
-      "exchanges": ["kalshi"],
+      "exchanges": ["kalshi", "polymarket"],
       "status": "active",
-      "close_time": "2026-02-09T00:00:00Z"
+      "close_time": "2026-02-09T00:00:00Z",
+      "matched_events": [
+        {
+          "event_id": "ev:super-bowl-lx-winner",
+          "title": "Super Bowl LX Winner",
+          "exchanges": ["polymarket"],
+          "confidence": 0.96,
+          "confidence_tier": "HIGH",
+          "source": "tier1_exact"
+        }
+      ],
+      "markets": [
+        {
+          "parsec_id": "kalshi:KXSB-26-CHI",
+          "exchange": "kalshi",
+          "exchange_market_id": "KXSB-26-CHI",
+          "question": "Will Chicago win Super Bowl LX?",
+          "status": "active"
+        }
+      ]
     }
   ],
   "pagination": {

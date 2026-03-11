@@ -1,30 +1,46 @@
 ---
 title: "Get Orderbook"
-description: "Fetch live or historical orderbook data for a specific market"
+description: "Fetch the live L2 orderbook or historical orderbook snapshots for a market."
 ---
 
 `GET /api/v1/orderbook`
 
-Returns orderbook data (bids and asks) for a market identified by its `parsec_id`.
+Returns the current live orderbook snapshot for a market, or historical
+orderbook snapshots when you pass a time range.
 
 Supports two modes:
 
 1. **Live snapshot** (default): Returns the current orderbook from the exchange.
 2. **Historical snapshots** (`start_ts`): Returns a paginated series of L2 orderbook snapshots over a time range from S3 Parquet files. Historical data is tier-gated (Free: 5 days, Pro: 30 days, Scale: unlimited).
 
+<Tip>
+If you do not know the market identifiers yet, start with [`/markets`](/api/list-markets).
+The response gives you `parsec_id`, `exchange`, and `exchange_market_id`, and you can
+reuse either selector form here.
+</Tip>
+
 ## Error Semantics
 
 - `403` means your API key is not authorized for the request.
-- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
+- `501` means historical snapshots are not configured on this server.
+- `503` means the upstream exchange is temporarily unavailable.
 
 ## Parameters
 
-<ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `polymarket:572473`).
+<ParamField query="parsec_id" type="string">
+  Canonical selector. Provide either `parsec_id` or both `exchange + market_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Exchange-native market ID used with `exchange`.
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
-  Outcome to fetch: `yes` or `no`. Required for categorical markets.
+  Outcome to fetch, typically `yes` or `no` for binary markets.
 </ParamField>
 
 <ParamField query="limit" type="number" default="50">
@@ -32,7 +48,7 @@ Supports two modes:
 </ParamField>
 
 <ParamField query="depth" type="number" default="50">
-  Alias for `limit` (for REST/WS symmetry). If both are provided, `limit` takes precedence.
+  Alias for `limit`. If both are provided, `limit` takes precedence.
 </ParamField>
 
 <ParamField query="start_ts" type="number">
@@ -40,11 +56,11 @@ Supports two modes:
 </ParamField>
 
 <ParamField query="end_ts" type="number">
-  Unix seconds end timestamp (inclusive). Only used in historical mode. Defaults to now.
+  Unix seconds end timestamp. Defaults to now in historical mode.
 </ParamField>
 
 <ParamField query="cursor" type="string">
-  Opaque pagination cursor from a previous historical response. Pass `next_cursor` from the previous page to fetch the next page of snapshots.
+  Pagination cursor from a previous historical response.
 </ParamField>
 
 ## Response
@@ -54,34 +70,34 @@ Supports two modes:
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="parsec_id" type="string">
-      The requested market identifier.
+      Canonical market identifier.
     </ResponseField>
     <ResponseField name="exchange" type="string">
-      Exchange name.
+      Exchange identifier.
     </ResponseField>
     <ResponseField name="outcome" type="string">
-      The outcome for this orderbook.
+      Selected outcome.
     </ResponseField>
     <ResponseField name="token_id" type="string">
-      Exchange-specific token/asset identifier.
+      Exchange-specific asset identifier when available.
     </ResponseField>
     <ResponseField name="market_id" type="string">
-      Exchange-specific market identifier.
+      Exchange-native market ID.
     </ResponseField>
-    <ResponseField name="bids" type="array">
-      `[price, size]` pairs, sorted by price descending.
+    <ResponseField name="bids" type="[price, size][]">
+      Present in live mode. Bid levels sorted by price descending.
     </ResponseField>
-    <ResponseField name="asks" type="array">
-      `[price, size]` pairs, sorted by price ascending.
+    <ResponseField name="asks" type="[price, size][]">
+      Present in live mode. Ask levels sorted by price ascending.
     </ResponseField>
     <ResponseField name="timestamp" type="string | null">
-      ISO 8601 timestamp of when the orderbook was fetched.
+      Present in live mode. Snapshot timestamp.
     </ResponseField>
     <ResponseField name="tick_size" type="number | null">
-      Minimum price increment for orders on this market. Omitted when not available from the exchange.
+      Minimum price increment when available.
     </ResponseField>
     <ResponseField name="min_order_size" type="number | null">
-      Minimum order size in contracts. Omitted when not available from the exchange.
+      Minimum order size when available.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -128,28 +144,24 @@ Returned when `start_ts` is provided.
       </Expandable>
     </ResponseField>
     <ResponseField name="has_more" type="boolean">
-      `true` if there are more snapshots beyond this page. Use `next_cursor` to fetch the next page.
+      Present in historical mode. Whether more snapshots are available.
     </ResponseField>
     <ResponseField name="next_cursor" type="string | null">
-      Opaque cursor for the next page. Pass as `cursor` in the next request. `null` when there are no more pages.
-    </ResponseField>
-    <ResponseField name="tick_size" type="number | null">
-      Minimum price increment for orders on this market.
-    </ResponseField>
-    <ResponseField name="min_order_size" type="number | null">
-      Minimum order size in contracts.
+      Present in historical mode. Cursor for the next page.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 ## Examples
 
-### Live orderbook
-
 <RequestExample>
-```bash
+```bash Using parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&depth=10"
+```
+```bash Using exchange + market_id
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orderbook?exchange=polymarket&market_id=572473&outcome=yes&depth=10"
 ```
 </RequestExample>
 
@@ -163,7 +175,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "market_id": "572473",
   "bids": [[0.65, 1000.0], [0.64, 2500.0]],
   "asks": [[0.66, 800.0], [0.67, 1500.0]],
-  "timestamp": "2026-02-22T12:34:56Z",
+  "timestamp": "2026-03-10T18:34:56Z",
   "tick_size": 0.01
 }
 ```
@@ -172,10 +184,8 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 ### Historical snapshots (1 hour window)
 
 ```bash
-# Fetch orderbook snapshots for a 1-hour window
 curl -H "X-API-Key: YOUR_API_KEY" \
-  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&start_ts=1771581600&end_ts=1771585200&limit=100"
-  # start_ts = Feb 20 2026 10:00 UTC, end_ts = Feb 20 2026 11:00 UTC
+  "https://api.parsecapi.com/api/v1/orderbook?parsec_id=polymarket:572473&outcome=yes&start_ts=1773100800&end_ts=1773187200&limit=2"
 ```
 
 ```json
@@ -187,26 +197,16 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "market_id": "572473",
   "snapshots": [
     {
-      "timestamp": "2026-02-22T10:00:01Z",
-      "recorded_at": "2026-02-22T10:00:02Z",
-      "hash": "a1b2c3d4...",
-      "bids": [[0.65, 1000.0], [0.64, 2500.0]],
-      "asks": [[0.66, 800.0], [0.67, 1500.0]]
-    },
-    {
-      "timestamp": "2026-02-22T10:00:42Z",
-      "recorded_at": "2026-02-22T10:00:43Z",
-      "hash": "e5f6a7b8...",
-      "bids": [[0.66, 900.0], [0.65, 2200.0]],
-      "asks": [[0.67, 750.0], [0.68, 1400.0]]
+      "timestamp": "2026-03-09T00:00:00Z",
+      "bids": [[0.63, 900.0]],
+      "asks": [[0.64, 850.0]]
     }
   ],
-  "has_more": true,
-  "next_cursor": "eyJ0cyI6MTc0MDIyMDg0Mn0",
-  "tick_size": 0.01,
-  "min_order_size": 15.0
+  "has_more": false,
+  "next_cursor": null
 }
 ```
+
 
 ### Paginate through historical snapshots
 

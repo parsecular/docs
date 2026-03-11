@@ -1,0 +1,52 @@
+---
+title: "Overview"
+description: "Use Parsec through an MCP server from Claude, Cursor, VS Code, Windsurf, and other MCP-compatible clients."
+icon: "robot"
+---
+
+Parsec ships an MCP server so an AI client can search markets, inspect orderbooks,
+preview trades, place orders, and open live market feeds through tools instead of
+raw HTTP requests.
+
+It works with:
+
+- Claude Desktop
+- Cursor
+- VS Code / Copilot
+- Windsurf
+- Cline
+- other MCP-compatible clients
+
+## What MCP is good for
+
+- natural-language market discovery
+- multi-step trading workflows such as "find -> inspect -> preview -> place"
+- live market monitoring through one WebSocket tool flow
+- builder workflows such as creating and onboarding end-users
+
+## Good first tools
+
+Start with the high-level composite tools before dropping to raw endpoint-shaped tools:
+
+| Tool | Why start here |
+|------|----------------|
+| `parsec.market.find_market` | Resolves markets from keywords, `parsec_id`, or exchange-native IDs |
+| `parsec.market.get_market_snapshot` | Returns market metadata, orderbook, and recent trades together |
+| `parsec.trade.preview_order` | Estimates execution before you place a live order |
+| `parsec.account.get_trading_setup_status` | Checks whether the account is ready to trade |
+| `parsec.stream.open_market_feed` | Opens a live feed without managing the low-level WS steps yourself |
+
+<CardGroup cols={2}>
+  <Card title="Install & Connect" icon="plug" href="/mcp/install-and-connect">
+    Set up the MCP server in Claude, Cursor, VS Code, Windsurf, or Cline.
+  </Card>
+  <Card title="Tool Categories" icon="toolbox" href="/mcp/tool-categories">
+    See which tools are for market data, trading, streaming, builders, and CTF operations.
+  </Card>
+  <Card title="Trading & Safety" icon="shield-check" href="/mcp/trading-and-safety">
+    Understand destructive tools, wallet export, and safe trading workflows.
+  </Card>
+  <Card title="Example Prompts" icon="message" href="/mcp/example-prompts">
+    Copy prompts that work well for research, trading, builders, and live monitoring.
+  </Card>
+</CardGroup>

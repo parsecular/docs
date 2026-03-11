@@ -6,7 +6,8 @@ info:
     Parsec REST API.
 
     Success responses return the resource directly (no envelope).
-    Error responses use HTTP status codes and a JSON body of the form `{ "error": "...", "code": "...", "retryable": true|false }`.
+    Error responses use HTTP status codes and a JSON body of the form
+    `{ "error": "...", "code": "...", "retryable": true|false, "validation_errors": [...]? }`.
 servers:
   - url: https://api.parsecapi.com
     description: Production
@@ -54,7 +55,7 @@ paths:
       operationId: listUnifiedMarkets
       tags:
         - Markets
-      summary: List unified markets with filtering and pagination
+      summary: List/search markets or fetch scoped market/event results
       description: |
         Query markets using one of four scopes:
 
@@ -80,7 +81,7 @@ paths:
           required: false
           description: |
             Comma-separated exchange IDs to query (e.g., `polymarket,kalshi`).
-            Only valid for `scope=list`. In SDKs this is typically an array encoded as CSV on the wire.
+            Only valid for `scope=list`. Omit to query all exchanges. In SDKs this is typically an array encoded as CSV on the wire.
           style: form
           explode: false
           schema:
@@ -101,6 +102,7 @@ paths:
           description: |
             Comma-separated parsec IDs for batch lookup (format: `{exchange}:{native_id}`).
             Only valid for `scope=market_batch`. Max 100 IDs. Mutually exclusive with `external_market_keys`.
+            If `scope` is omitted, the server auto-infers `scope=market_batch`.
             In SDKs this is typically an array encoded as CSV on the wire.
           style: form
           explode: false
@@ -129,9 +131,13 @@ paths:
           required: false
           description: |
             Comma-separated external market keys in format `{exchange}:{exchange_market_id}`.
-            Only valid for `scope=market_batch`. Mutually exclusive with `parsec_ids`.
+            Only valid for `scope=market_batch`. Max 100. Mutually exclusive with `parsec_ids`.
+          style: form
+          explode: false
           schema:
-            type: string
+            type: array
+            items:
+              type: string
         - name: exchange_group_id
           in: query
           required: false
@@ -201,7 +207,7 @@ paths:
         - name: cursor
           in: query
           required: false
-          description: Pagination cursor (offset-based). Only valid for `scope=list`.
+          description: Pagination cursor (offset-based). Valid for `scope=list` and `scope=event`.
           schema:
             type: string
       responses:
@@ -228,12 +234,24 @@ paths:
       tags:
         - Orderbook
       summary: Get live L2 orderbook or historical snapshots
-      description: "When start_ts or end_ts is provided, returns historical orderbook snapshots instead of a live L2 snapshot. Large time ranges are handled via internal chunking and may be slow for very wide windows. In historical mode, limit defaults to 500 (max 1000). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
+      description: "Use `/markets` to discover a market first, then query by either `parsec_id` or `exchange + market_id`. When start_ts or end_ts is provided, returns historical orderbook snapshots instead of a live L2 snapshot. Large time ranges are handled via internal chunking and may be slow for very wide windows. In historical mode, limit defaults to 500 (max 1000). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
-          required: true
-          description: Unified market ID in format `{exchange}:{native_id}`.
+          required: false
+          description: "Unified market ID. Provide either `parsec_id` OR both `exchange` + `market_id`."
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: false
+          description: "Exchange ID (alternative to parsec_id — use with market_id)."
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: "Exchange-native market ID (alternative to parsec_id — use with exchange)."
           schema:
             type: string
         - name: outcome
@@ -286,7 +304,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrderbookResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/OrderbookResponse"
+                  - $ref: "#/components/schemas/OrderbookHistoryResult"
         "400":
           $ref: "#/components/responses/BadRequestError"
         "401":
@@ -311,12 +331,24 @@ paths:
       tags:
         - Price
       summary: Get historical OHLCV candlesticks for a unified market
-      description: "Returns an array of candlesticks with timestamps at period start (UTC). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
+      description: "Use `/markets` to discover a market first, then query by either `parsec_id` or `exchange + market_id`. Returns an array of candlesticks with timestamps at period start (UTC). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
-          required: true
-          description: Unified market ID in format `{exchange}:{native_id}`.
+          required: false
+          description: "Unified market ID. Provide either `parsec_id` OR both `exchange` + `market_id`."
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: false
+          description: "Exchange ID (alternative to parsec_id — use with market_id)."
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: "Exchange-native market ID (alternative to parsec_id — use with exchange)."
           schema:
             type: string
         - name: outcome
@@ -390,12 +422,24 @@ paths:
       tags:
         - Trades
       summary: Get recent public trades ("tape") for a unified market outcome
-      description: "Returns an array of recent trades for the requested market+outcome (normalized prices 0.0-1.0). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
+      description: "Use `/markets` to discover a market first, then query by either `parsec_id` or `exchange + market_id`. Returns an array of recent trades for the requested market+outcome (normalized prices 0.0-1.0). Historical data is tier-gated: Free=5d, Pro=30d, Scale=unlimited."
       parameters:
         - name: parsec_id
           in: query
-          required: true
-          description: Unified market ID in format `{exchange}:{native_id}`.
+          required: false
+          description: "Unified market ID. Provide either `parsec_id` OR both `exchange` + `market_id`."
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: false
+          description: "Exchange ID (alternative to parsec_id — use with market_id)."
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: "Exchange-native market ID (alternative to parsec_id — use with exchange)."
           schema:
             type: string
         - name: outcome
@@ -537,6 +581,25 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
 
+  /api/v1/usage:
+    get:
+      operationId: getUsage
+      tags:
+        - Account
+      summary: Get current tier limits and usage
+      description: Returns REST + WebSocket limits for the authenticated customer along with current-period usage.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /api/v1/ws/usage:
     get:
       operationId: getWsUsage
@@ -607,13 +670,27 @@ paths:
         - Orderbook
       summary: Estimate execution price (VWAP) for an order
       description: |
-        Walks the orderbook to estimate the volume-weighted average price (VWAP) for a
-        hypothetical order of the given size. Does not place an order.
+        Use `/markets` to discover a market first, then query by either `parsec_id`
+        or `exchange + market_id`. Walks the orderbook to estimate the
+        volume-weighted average price (VWAP) for a hypothetical order of the
+        given size. Does not place an order.
       parameters:
         - name: parsec_id
           in: query
-          required: true
-          description: Unified market ID in format `{exchange}:{native_id}`.
+          required: false
+          description: "Unified market ID. Provide either `parsec_id` OR both `exchange` + `market_id`."
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: false
+          description: "Exchange ID (alternative to parsec_id — use with market_id)."
+          schema:
+            type: string
+        - name: market_id
+          in: query
+          required: false
+          description: "Exchange-native market ID (alternative to parsec_id — use with exchange)."
           schema:
             type: string
         - name: outcome
@@ -918,6 +995,7 @@ paths:
           schema:
             type: integer
             format: int32
+            minimum: 1
         - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
@@ -1156,6 +1234,29 @@ paths:
           $ref: "#/components/responses/UnauthorizedError"
         "500":
           $ref: "#/components/responses/InternalServerError"
+
+  /api/v1/dev/session/bootstrap:
+    post:
+      operationId: devSessionBootstrap
+      x-internal: true
+      tags:
+        - Development
+      summary: Mint a terminal read token for the authenticated dev customer
+      description: |
+        Dev-only bootstrap endpoint. Returns the authenticated API key, customer ID,
+        tier, linked exchanges, and a terminal read token. Gated to local dev mode
+        and returns 404 otherwise.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevBootstrapResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
 
   /api/v1/polymarket/ctf/split:
     post:
@@ -1529,6 +1630,37 @@ paths:
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
 
+  /api/v1/billing/portal:
+    post:
+      operationId: createBillingPortalSession
+      x-internal: true
+      tags:
+        - Billing
+      summary: Create a Stripe Billing Portal session
+      description: |
+        Creates a Stripe Billing Portal session for the authenticated paying customer.
+        Returns 400 if the customer does not have an active paid subscription.
+      responses:
+        "200":
+          description: Billing portal URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: Stripe Billing Portal URL to redirect the user to.
+        "400":
+          $ref: "#/components/responses/BadRequestError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+
   /webhook/stripe:
     post:
       operationId: stripeWebhook
@@ -1591,10 +1723,10 @@ components:
         Rate limit exceeded. Two distinct limit types can trigger a 429:
 
         **Per-second (QPS):** `code: "rate_limit_exceeded"`, `retryable: true`.
-        Free: 10 req/sec, Pro: 60 req/sec (120 burst), Scale: 200 req/sec (400 burst).
+        Free: 5 req/sec, Pro: 60 req/sec (120 burst), Scale: 200 req/sec (400 burst).
 
         **Monthly:** `code: "monthly_limit_exceeded"`, `retryable: false`.
-        Free: 50,000 req/month, Pro: 5,000,000 req/month, Scale: unlimited.
+        Free: 10,000 req/month, Pro: 5,000,000 req/month, Scale: unlimited.
 
         Monthly usage headers are included on every successful response for capped tiers:
         `x-ratelimit-monthly-limit`, `x-ratelimit-monthly-remaining`, `x-ratelimit-monthly-reset`.
@@ -1720,18 +1852,28 @@ components:
             - authentication_failed
             - missing_parameter
             - market_not_found
+            - event_not_found
+            - event_not_resolvable
             - order_not_found
             - bad_request
+            - validation_error
             - internal_error
             - not_supported
             - insufficient_funds
             - rate_limit_exceeded
             - monthly_limit_exceeded
             - service_unavailable
+            - forbidden
+            - session_signer_expired
             - not_found
         retryable:
           type: boolean
           description: Whether the request can be retried.
+        validation_errors:
+          type: array
+          description: Optional per-field/per-item validation details for malformed input.
+          items:
+            type: string
         tier:
           type: string
           description: Customer tier. Present on 429 rate limit responses.
@@ -1788,6 +1930,12 @@ components:
         url:
           type: string
           description: Direct URL to the market on the exchange.
+        image_url:
+          type: string
+          description: Primary market image URL when provided by the exchange.
+        icon_url:
+          type: string
+          description: Exchange or market icon URL when provided by the exchange.
         question:
           type: string
           description: Market question text.
@@ -2002,6 +2150,78 @@ components:
           items:
             $ref: "#/components/schemas/Market"
           description: Constituent markets (only included when `include_markets=true`).
+        matched_events:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchedEventLink"
+          description: Cross-exchange event counterparts from published `same_event` matches.
+
+    MatchedEventLink:
+      type: object
+      required:
+        - event_id
+        - title
+        - exchanges
+        - confidence
+        - confidence_tier
+        - source
+      properties:
+        event_id:
+          type: string
+          description: Canonical Parsec event ID for the matched event.
+        title:
+          type: string
+          description: Matched event title.
+        exchanges:
+          type: array
+          items:
+            type: string
+          description: Exchanges represented in the matched event.
+        confidence:
+          type: number
+          format: double
+          description: Match confidence score.
+        confidence_tier:
+          type: string
+          description: Confidence bucket metadata for the event match.
+        source:
+          type: string
+          description: Event match source label from the matching pipeline.
+
+    RelatedMarketLink:
+      type: object
+      required:
+        - parsec_id
+        - exchange
+        - confidence
+        - confidence_tier
+        - source
+      properties:
+        parsec_id:
+          type: string
+          description: Canonical parsec_id of the counterpart market.
+        exchange:
+          type: string
+          description: Counterpart exchange.
+        confidence:
+          type: number
+          format: double
+          description: Match confidence score.
+        confidence_tier:
+          type: string
+          description: Confidence bucket metadata for this relation.
+        source:
+          type: string
+          description: Relation source label from the matching pipeline.
+        status:
+          type: string
+          description: Counterpart market status. Common values are `active`, `closed`, or `archived`.
+        dependency_type:
+          type: string
+          description: Optional dependency classification for `co_dependent` relations.
+        dependency_direction:
+          type: string
+          description: Optional directionality metadata for `co_dependent` relations.
 
     EventsResponse:
       type: object
@@ -2550,6 +2770,42 @@ components:
             - "null"
           format: date-time
 
+    Fill:
+      type: object
+      required:
+        - fill_id
+        - order_id
+        - market_id
+        - outcome
+        - side
+        - price
+        - size
+        - is_taker
+        - fee
+        - created_at
+      properties:
+        fill_id:
+          type: string
+        order_id:
+          type: string
+        market_id:
+          type: string
+        outcome:
+          type: string
+        side:
+          $ref: "#/components/schemas/OrderSide"
+        price:
+          type: number
+        size:
+          type: number
+        is_taker:
+          type: boolean
+        fee:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+
     Position:
       type: object
       required:
@@ -2739,24 +2995,27 @@ components:
     RequestCredentials:
       type: object
       description: |
-        Per-request exchange credentials (Mode B). When provided, Parsec creates a transient
-        exchange session instead of using stored credentials. Credentials are never persisted.
+        Per-request exchange credentials passed in the `X-Exchange-Credentials` header.
+        Parsec creates a transient exchange session instead of using stored credentials.
+        For Polymarket transient sessions, `private_key` is required; CLOB API
+        credentials are optional.
+        Credentials are never persisted.
       properties:
         api_key_id:
           type: string
           description: Kalshi API key ID.
         private_key:
           type: string
-          description: Kalshi RSA private key (PEM format).
+          description: Kalshi RSA private key (PEM) or Polymarket wallet private key (`0x`-prefixed hex).
         clob_api_key:
           type: string
-          description: Polymarket CLOB API key.
+          description: Optional Polymarket CLOB API key.
         clob_api_secret:
           type: string
-          description: Polymarket CLOB API secret.
+          description: Optional Polymarket CLOB API secret.
         clob_api_passphrase:
           type: string
-          description: Polymarket CLOB API passphrase.
+          description: Optional Polymarket CLOB API passphrase.
 
     FeeAuthorization:
       type: object
@@ -2829,7 +3088,7 @@ components:
           description: Kalshi API key ID (self mode).
         private_key:
           type: string
-          description: Kalshi RSA private key in PEM format (self mode).
+          description: Self-mode signing key. For Polymarket this is an Ethereum private key (optional for order placement). For Kalshi this is an RSA private key in PEM format (required).
 
     OnboardResponse:
       type: object
@@ -2848,7 +3107,7 @@ components:
           description: Onboard mode used ("managed" or "self").
         status:
           type: string
-          description: Onboard status ("complete").
+          description: Onboard status ("complete" or "already_linked").
         eoa_address:
           type:
             - string
@@ -2909,7 +3168,7 @@ components:
           description: API key for the created user.
         status:
           type: string
-          description: User status ("active").
+          description: Response status ("complete").
         linked_exchanges:
           type: array
           items:
@@ -3130,6 +3389,86 @@ components:
         total_allocated_qps:
           type: integer
           description: Total QPS allocated to end-users.
+
+    UsageResponse:
+      type: object
+      required:
+        - tier
+        - billing_period_start
+        - billing_period_end
+        - limits
+        - usage
+      properties:
+        tier:
+          type: string
+          description: Current authenticated tier.
+        billing_period_start:
+          type: integer
+          format: int64
+          description: Unix seconds for the start of the current billing period.
+        billing_period_end:
+          type: integer
+          format: int64
+          description: Unix seconds for the end of the current billing period.
+        limits:
+          $ref: "#/components/schemas/UsageLimits"
+        usage:
+          $ref: "#/components/schemas/UsageCurrent"
+
+    UsageLimits:
+      type: object
+      required:
+        - monthly_requests
+        - rest_qps
+        - rest_qps_burst
+        - ws_max_subscriptions
+        - ws_max_depth
+        - history_max_age_days
+      properties:
+        monthly_requests:
+          type: integer
+          format: int64
+          description: Monthly REST request cap. `0` means unlimited.
+        rest_qps:
+          type: integer
+          format: int32
+          description: Sustained REST QPS cap. `0` means unlimited.
+        rest_qps_burst:
+          type: integer
+          format: int32
+          description: Burst REST QPS cap. `0` means unlimited.
+        ws_max_subscriptions:
+          type: integer
+          format: int64
+          description: Max WebSocket subscriptions across all connections. `0` means unlimited.
+        ws_max_depth:
+          type: integer
+          format: int64
+          description: Max orderbook depth per subscription.
+        history_max_age_days:
+          type: integer
+          format: int64
+          description: Max historical data age in days. `0` means unlimited.
+
+    UsageCurrent:
+      type: object
+      required:
+        - monthly_requests
+        - ws_active_connections
+        - ws_active_subscriptions
+      properties:
+        monthly_requests:
+          type: integer
+          format: int64
+          description: Requests used in the current billing period.
+        ws_active_connections:
+          type: integer
+          format: int64
+          description: Active WebSocket connections for the current customer.
+        ws_active_subscriptions:
+          type: integer
+          format: int64
+          description: Active WebSocket subscriptions for the current customer.
 
     EscrowConfigResponse:
       type: object
@@ -3445,6 +3784,38 @@ components:
         private_key:
           type: string
           description: Hex-encoded private key (0x-prefixed).
+
+    DevBootstrapResponse:
+      type: object
+      required:
+        - api_key
+        - customer_id
+        - tier
+        - terminal_read_token
+        - terminal_token_expires_at
+        - linked_exchanges
+      properties:
+        api_key:
+          type: string
+          description: Authenticated API key for the current customer.
+        customer_id:
+          type: string
+          description: Authenticated Parsec customer ID.
+        tier:
+          type: string
+          description: Current tier for the authenticated customer.
+        terminal_read_token:
+          type: string
+          description: Minted terminal read token.
+        terminal_token_expires_at:
+          type: integer
+          format: int64
+          description: Token expiry as epoch milliseconds.
+        linked_exchanges:
+          type: array
+          items:
+            type: string
+          description: Exchanges already linked to this account.
 
   parameters:
     XExchangeCredentials:

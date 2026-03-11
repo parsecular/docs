@@ -1,0 +1,88 @@
+---
+title: "Reliability, Resync & Limits"
+description: "Sequence handling, stale book recovery, WebSocket error codes, and per-tier limits."
+---
+
+## Sequence Handling
+
+Each subscribed market stream includes a `server_seq`:
+
+1. you receive a snapshot at sequence `N`
+2. deltas should arrive as `N+1`, `N+2`, and so on
+3. if you observe a gap, send a `resync` request for that market
+
+## Book State
+
+| State | Meaning |
+|-------|---------|
+| `fresh` | Data is current |
+| `stale` | No update arrived within `stale_after_ms` |
+| `needs_refresh` | Request a resync immediately |
+
+## Feed State
+
+| State | Meaning |
+|-------|---------|
+| `healthy` | Exchange feed is healthy |
+| `degraded` | Partial connectivity or delayed data |
+| `disconnected` | No active upstream feed |
+
+## When to Resync
+
+Request a full snapshot when:
+
+- you detect a sequence gap
+- the server sends `resync_required`
+- the local book has gone stale or inconsistent
+
+The next `orderbook` snapshot re-establishes the full book state.
+
+## WebSocket Error Codes
+
+| Code | Type | Description |
+|------|------|-------------|
+| `1001` | `auth_required` | Authentication required or duplicate auth attempt |
+| `1002` | `auth_invalid` | Invalid API key or terminal token |
+| `2001` | `invalid_market` | Invalid message shape or malformed market selector |
+| `2002` | `market_not_found` | Market does not exist |
+| `2003` | `exchange_unavailable` | Exchange stream unavailable |
+| `2005` | `invalid_outcome` | Invalid outcome value |
+| `3001` | `rate_limited` | Subscribe / unsubscribe / resync rate limit exceeded |
+| `3002` | `max_subscriptions` | Subscription limit reached for your tier |
+
+## Limits
+
+| Limit | Free | Pro | Scale |
+|-------|------|-----|-------|
+| Max subscriptions | 3 | 500 | 2,000 |
+| Max orderbook depth | 10 levels/side | 100 levels/side | 100 levels/side |
+| Default orderbook depth | 50, clamped to tier max | 50 | 50 |
+| Subscribe / unsubscribe / resync rate | 3 req/sec | 3 req/sec | 3 req/sec |
+| Auth timeout | 15 sec | 15 sec | 15 sec |
+
+When you exceed the subscription limit, the server returns:
+
+```json
+{ "type": "error", "code": 3002, "message": "max subscriptions reached (limit: 3, tier: free)" }
+```
+
+## Supported Exchanges
+
+| Exchange | Orderbook | Trades | Fills |
+|----------|-----------|--------|-------|
+| Polymarket | Streaming | Streaming | Streaming |
+| Kalshi | Streaming | Streaming | Streaming |
+| Limitless | Streaming | No | No |
+| Opinion | Polling-backed | No | No |
+| Predict.fun | Polling-backed | No | No |
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="WebSocket Usage" icon="chart-bar" href="/api/ws-usage">
+    Inspect connection and subscription usage.
+  </Card>
+  <Card title="Get Orderbook" icon="book" href="/api/get-orderbook">
+    Fetch a live orderbook snapshot over REST.
+  </Card>
+</CardGroup>

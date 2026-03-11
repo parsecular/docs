@@ -1,55 +1,55 @@
 ---
 title: "Get Price"
-description: "Fetch OHLCV candlestick series or a point-in-time price for a market"
+description: "Fetch OHLCV candles or a point-in-time price for a market."
 ---
 
 `GET /api/v1/price`
 
-Returns OHLCV candlestick data for a market. Supports two modes:
+Returns normalized OHLCV candles for a market. Use it for recent price series,
+explicit historical windows, or a point-in-time lookup.
 
-1. **Candle series** (default): Returns multiple candles over a time range.
-2. **Point-in-time** (`at_ts`): Returns the single closest candle to a specific timestamp.
-
-- Timestamps are **period start** in UTC (RFC3339).
-- Prices are **normalized decimals** in the range `[0.0, 1.0]`.
+<Tip>
+If you do not know the market identifiers yet, start with [`/markets`](/api/list-markets).
+This endpoint accepts either `parsec_id` or `exchange + market_id`.
+</Tip>
 
 ## Error Semantics
 
 - `403` means your API key is not authorized for the request.
-- `503` means the upstream exchange is temporarily unavailable (retry with backoff).
+- `503` means the upstream exchange is temporarily unavailable.
 
 ## Parameters
 
-<ParamField query="parsec_id" type="string" required>
-  Market identifier in the format `{exchange}:{market_id}` (e.g., `kalshi:KXPRESNOMD-28-JOSS`).
+<ParamField query="parsec_id" type="string">
+  Canonical selector. Provide either `parsec_id` or both `exchange + market_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField query="market_id" type="string">
+  Exchange-native market ID used with `exchange`.
 </ParamField>
 
 <ParamField query="outcome" type="string" default="yes">
-  Outcome to fetch: `yes` or `no`. Required for categorical markets.
+  Outcome selector. For binary markets this is usually `yes` or `no`.
 </ParamField>
 
 <ParamField query="interval" type="string" default="1h">
-  Candle interval. Supported values: `1m`, `1h`, `6h`, `1d`, `1w`, `max`. Defaults to `1h`.
+  Candle interval. Supported values: `1m`, `1h`, `6h`, `1d`, `1w`, `max`.
 </ParamField>
 
 <ParamField query="start_ts" type="number">
-  Unix seconds start timestamp (inclusive). Cannot be combined with `at_ts`. If omitted, the server selects a default range based on `interval`:
-  - `1m`: 24 hours
-  - `1h`: 7 days
-  - `6h`: 14 days
-  - `1d`: 14 days
-  - `1w`: 30 days
-  - `max`: 30 days
-
-  These defaults are clamped to your tier's history limit (Free: 5 days, Pro: 30 days, Scale: unlimited). Explicit `start_ts` beyond your tier limit returns `400`.
+  Unix seconds start timestamp. Cannot be combined with `at_ts`.
 </ParamField>
 
 <ParamField query="end_ts" type="number">
-  Unix seconds end timestamp (inclusive). Cannot be combined with `at_ts`. Defaults to now.
+  Unix seconds end timestamp. Cannot be combined with `at_ts`.
 </ParamField>
 
 <ParamField query="at_ts" type="number">
-  Point-in-time lookup (Unix seconds). Returns the single closest candle to this timestamp. Cannot be combined with `start_ts` / `end_ts`.
+  Point-in-time lookup in Unix seconds. Cannot be combined with `start_ts` or `end_ts`.
 </ParamField>
 
 ## Response
@@ -57,54 +57,35 @@ Returns OHLCV candlestick data for a market. Supports two modes:
 <ResponseField name="(root)" type="object">
   <Expandable title="properties">
     <ResponseField name="parsec_id" type="string">
-      The requested market identifier.
+      Canonical market identifier.
     </ResponseField>
     <ResponseField name="exchange" type="string">
       Exchange identifier.
     </ResponseField>
     <ResponseField name="outcome" type="string">
-      Resolved outcome for this series.
+      Selected outcome.
     </ResponseField>
     <ResponseField name="interval" type="string">
-      The candle interval.
+      Candle interval used for the response.
     </ResponseField>
-    <ResponseField name="candles" type="array">
-      Array of OHLCV candles.
-      <Expandable title="Candlestick properties">
-        <ResponseField name="timestamp" type="string">
-          Period start timestamp (UTC, RFC3339).
-        </ResponseField>
-        <ResponseField name="open" type="number">
-          Open price (normalized 0.0-1.0).
-        </ResponseField>
-        <ResponseField name="high" type="number">
-          High price (normalized 0.0-1.0).
-        </ResponseField>
-        <ResponseField name="low" type="number">
-          Low price (normalized 0.0-1.0).
-        </ResponseField>
-        <ResponseField name="close" type="number">
-          Close price (normalized 0.0-1.0).
-        </ResponseField>
-        <ResponseField name="volume" type="number">
-          Trade volume in contracts (0 if not provided by the exchange).
-        </ResponseField>
-        <ResponseField name="open_interest" type="number | null">
-          Open interest at this candle's close.
-        </ResponseField>
-      </Expandable>
+    <ResponseField name="candles" type="Candlestick[]">
+      Candles ordered by timestamp.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 ## Examples
 
-### Default candle series (last 7 days of 1h candles)
+### Default candle series
 
 <RequestExample>
-```bash
+```bash Using parsec_id
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h"
+```
+```bash Using exchange + market_id
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/price?exchange=kalshi&market_id=KXPRESNOMD-28-JOSS&interval=1h"
 ```
 </RequestExample>
 
@@ -117,7 +98,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "interval": "1h",
   "candles": [
     {
-      "timestamp": "2026-02-10T18:00:00Z",
+      "timestamp": "2026-03-10T18:00:00Z",
       "open": 0.51,
       "high": 0.54,
       "low": 0.49,
@@ -129,18 +110,16 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 ```
 </ResponseExample>
 
-### Historical candles with explicit time range
+### Explicit historical range
 
 ```bash
-# Fetch daily candles for a specific 7-day window (Feb 15–22, 2026)
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1d&start_ts=1771113600&end_ts=1771718400"
 ```
 
-### Point-in-time price lookup
+### Point-in-time lookup
 
 ```bash
-# Get the closest candle to a specific moment (Feb 18 2026 at noon UTC)
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/price?parsec_id=kalshi:KXPRESNOMD-28-JOSS&interval=1h&at_ts=1771416000"
 ```

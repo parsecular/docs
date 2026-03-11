@@ -1,101 +1,145 @@
 ---
 title: "Error Handling"
-description: "HTTP status codes, error responses, and SDK error handling"
+description: "HTTP status codes, error payloads, validation details, and rate-limit headers."
+icon: "triangle-exclamation"
 ---
 
 ## Error Response Format
 
-All error responses return a JSON object with three fields:
+All API errors use the same top-level shape:
 
 ```json
 {
   "error": "human-readable message",
   "code": "machine_readable_code",
-  "retryable": false
+  "retryable": false,
+  "validation_errors": ["optional detail"]
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `error` | string | Human-readable error message |
-| `code` | string | Machine-readable error code (see table below) |
-| `retryable` | boolean | `true` if the request can be safely retried (only for `rate_limit_exceeded` and `service_unavailable`) |
+| `code` | string | Machine-readable error code |
+| `retryable` | boolean | Whether the request can be safely retried |
+| `validation_errors` | string[] | Optional field- or item-level validation details |
+| `tier` | string | Present on some `429` responses |
+| `limit_qps` | number | Present on some `429` responses |
 
-### Error Codes
+## Error Codes
 
 | Code | Meaning |
 |------|---------|
 | `unauthorized` | Missing or invalid API key |
+| `forbidden` | Authenticated, but not permitted for this action |
 | `credentials_required` | Exchange credentials not configured |
 | `authentication_failed` | Exchange-level auth failure |
 | `missing_parameter` | Required parameter missing |
 | `bad_request` | Invalid request format or parameters |
+| `validation_error` | Structured validation failure |
 | `exchange_not_found` | Unknown exchange identifier |
 | `market_not_found` | Market does not exist |
+| `event_not_found` | Event does not exist |
+| `event_not_resolvable` | Event selector cannot be resolved |
 | `order_not_found` | Order does not exist |
 | `not_found` | Generic resource not found |
 | `insufficient_funds` | Not enough balance for the operation |
 | `not_supported` | Exchange does not support this operation |
-| `rate_limit_exceeded` | Too many requests (retryable) |
-| `service_unavailable` | Upstream exchange down (retryable) |
+| `rate_limit_exceeded` | Per-second request limit exceeded |
+| `monthly_limit_exceeded` | Monthly request quota exhausted |
+| `service_unavailable` | Upstream exchange temporarily unavailable |
+| `session_signer_expired` | Session signer expired and must be refreshed |
 | `internal_error` | Unexpected server failure |
 
 ## HTTP Status Codes
 
 | Status | Meaning | Action |
 |--------|---------|--------|
-| `400` | Bad request — invalid parameters or missing required fields | Fix the request and retry |
-| `401` | Unauthorized — missing or invalid API key | Check your `X-API-Key` header |
-| `402` | Insufficient funds — not enough balance for the operation | Deposit funds on the exchange |
-| `403` | Forbidden — credentials or permissions issue for the target exchange | Verify your exchange credentials in Settings |
-| `404` | Not found — the requested resource doesn't exist | Check the ID/ticker you're using |
-| `429` | Rate limited — too many requests | Wait and retry (SDKs handle this automatically) |
-| `500` | Internal server error — unexpected failure | Retry; contact support if persistent |
-| `501` | Not supported — the exchange doesn't support this operation | Check exchange capabilities via `/exchanges` |
-| `503` | Service unavailable — upstream exchange is down or unreachable | Retry with backoff |
+| `400` | Bad request or validation failure | Fix the request and retry |
+| `401` | Missing or invalid API key | Check `X-API-Key` |
+| `402` | Insufficient funds | Fund the exchange account |
+| `403` | Forbidden or exchange credential issue | Check permissions and exchange credentials |
+| `404` | Resource not found | Verify the identifiers you passed |
+| `429` | Rate limited | Honor `Retry-After` and retry |
+| `500` | Internal server error | Retry; contact support if persistent |
+| `501` | Unsupported operation | Check exchange capabilities |
+| `503` | Upstream exchange or snapshot unavailable | Retry with backoff |
 
-## Rate Limiting
+## Rate Limiting and Quota Headers
 
-When rate limited, the response includes a `Retry-After` header plus your current tier and QPS limit:
+Successful responses may include:
 
+| Header | Description |
+|--------|-------------|
+| `x-parsec-tier` | Your API key tier |
+| `x-ratelimit-monthly-limit` | Monthly request quota |
+| `x-ratelimit-monthly-remaining` | Remaining monthly requests |
+| `x-ratelimit-monthly-reset` | Unix timestamp when monthly quota resets |
+
+Rate-limited responses also include:
+
+| Header | Description |
+|--------|-------------|
+| `Retry-After` | Seconds to wait before retrying |
+
+Builder impersonation requests include additional per-user and pool headers:
+
+| Header | Description |
+|--------|-------------|
+| `x-ratelimit-user-limit` | End-user QPS limit |
+| `x-ratelimit-user-remaining` | Remaining end-user tokens |
+| `x-ratelimit-pool-limit` | Builder pool QPS limit |
+| `x-ratelimit-pool-remaining` | Remaining builder pool tokens |
+
+## Examples
+
+### Structured Validation Failure
+
+```json
+{
+  "error": "invalid request",
+  "code": "validation_error",
+  "retryable": false,
+  "validation_errors": [
+    "scope=market_batch requires parsec_ids or external_market_keys",
+    "parsec_ids may contain at most 100 items"
+  ]
+}
 ```
-HTTP/1.1 429 Too Many Requests
-Retry-After: 1
-Content-Type: application/json
 
-{ "error": "rate limit exceeded", "code": "rate_limit_exceeded", "retryable": true, "tier": "free", "limit_qps": 10 }
+Use `validation_errors` as the authoritative list of what to fix.
+
+### Rate Limit Response
+
+```json
+{
+  "error": "rate limit exceeded",
+  "code": "rate_limit_exceeded",
+  "retryable": true,
+  "tier": "free",
+  "limit_qps": 5
+}
 ```
 
 ### Monthly Quota Exceeded
 
-When you exceed your monthly request limit, you'll receive:
-
 ```json
-{ "error": "monthly request limit exceeded" }
+{
+  "error": "monthly request limit exceeded",
+  "code": "monthly_limit_exceeded",
+  "retryable": false
+}
 ```
 
-Monthly limits reset on the 1st of each month. Check your remaining quota via the `x-ratelimit-monthly-remaining` response header.
+### Historical Data Tier Limit
 
-### Rate Limit Response Headers
-
-| Header | Description |
-|--------|-------------|
-| `x-ratelimit-monthly-limit` | Your monthly request quota |
-| `x-ratelimit-monthly-remaining` | Requests remaining this month |
-| `x-ratelimit-monthly-reset` | Unix timestamp when quota resets |
-| `Retry-After` | Seconds to wait before retrying (on 429) |
-| `x-parsec-tier` | Your API key tier |
-
-Builder impersonation requests include additional headers:
-
-| Header | Description |
-|--------|-------------|
-| `x-ratelimit-user-limit` | Per-end-user QPS limit |
-| `x-ratelimit-user-remaining` | End-user tokens remaining |
-| `x-ratelimit-pool-limit` | Builder pool QPS limit |
-| `x-ratelimit-pool-remaining` | Pool tokens remaining |
-
-Both SDKs automatically retry on `429` responses with exponential backoff (up to 2 retries).
+```json
+{
+  "error": "historical data limited to 5 days on the free tier — upgrade for more",
+  "code": "bad_request",
+  "retryable": false
+}
+```
 
 ## SDK Error Handling
 
@@ -106,18 +150,11 @@ import ParsecAPI from 'parsec-api';
 const client = new ParsecAPI();
 
 try {
-  const order = await client.orders.create({
-    exchange: 'polymarket',
-    market_id: '0x...',
-    outcome: 'yes',
-    side: 'buy',
-    price: 0.55,
-    size: 100,
-  });
+  await client.markets.list({ exchanges: ['kalshi'], search: 'bitcoin' });
 } catch (err) {
   if (err instanceof ParsecAPI.APIError) {
-    console.log(err.status);  // 400, 401, 403, 429, etc.
-    console.log(err.message); // Error message from server
+    console.log(err.status);
+    console.log(err.message);
   }
 }
 ```
@@ -127,78 +164,20 @@ from parsec_api import ParsecAPI, APIStatusError
 client = ParsecAPI()
 
 try:
-    order = client.orders.create(
-        exchange="polymarket",
-        market_id="0x...",
-        outcome="yes",
-        side="buy",
-        price=0.55,
-        size=100,
-    )
+    client.markets.list(exchanges=["kalshi"], search="bitcoin")
 except APIStatusError as err:
-    print(err.status_code)  # 400, 401, 403, 429, etc.
-    print(err.message)      # Error message from server
+    print(err.status_code)
+    print(err.message)
 ```
 </CodeGroup>
-
-## Common Errors
-
-### `401` — Invalid API Key
-
-```json
-{ "error": "invalid API key", "code": "unauthorized", "retryable": false }
-```
-
-```json
-{ "error": "missing X-API-Key header", "code": "unauthorized", "retryable": false }
-```
-
-Make sure you're passing your API key in the `X-API-Key` header, or set the `PARSEC_API_KEY` environment variable for the SDKs.
-
-### `403` — Exchange Credentials Issue
-
-```json
-{ "error": "exchange authentication failed: kalshi", "code": "authentication_failed", "retryable": false }
-```
-
-Your exchange credentials are missing or invalid. Go to **Settings** in your Parsec dashboard and re-enter your credentials for the affected exchange.
-
-### `403` — Builder Impersonation Errors
-
-```json
-{ "error": "X-Builder-Customer-Id requires a builder account" }
-```
-
-```json
-{ "error": "end-user not found or not owned by this builder" }
-```
-
-Builder impersonation requires `account_type: "builder"` on your API key.
-The `X-Builder-Customer-Id` header must reference an end-user you created.
-
-### `400` — Historical Data Tier Limit
-
-```json
-{ "error": "historical data limited to 5 days on the free tier — upgrade for more", "code": "bad_request", "retryable": false }
-```
-
-Your `start_ts` requests data older than your tier allows. Free: 5 days, Pro: 30 days, Scale: unlimited.
-
-### `400` — Missing Required Parameters
-
-```json
-{ "error": "exchanges parameter is required", "code": "missing_parameter", "retryable": false }
-```
-
-Check the [API Reference](/api/list-exchanges) for required parameters on each endpoint.
 
 ## Next Steps
 
 <CardGroup cols={2}>
   <Card title="API Overview" icon="code" href="/api/overview">
-    Base URL, authentication, and pagination.
+    Base URL, authentication, identifiers, and pagination.
   </Card>
-  <Card title="API Reference" icon="list" href="/api/list-markets">
-    Browse all REST endpoints.
+  <Card title="List Markets" icon="list" href="/api/list-markets">
+    See the discovery-first market lookup contract.
   </Card>
 </CardGroup>

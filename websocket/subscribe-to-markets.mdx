@@ -1,0 +1,119 @@
+---
+title: "Subscribe to Markets"
+description: "Subscribe, unsubscribe, and request a full snapshot resync for one or more markets."
+---
+
+## Market Selectors
+
+Each market entry accepts either:
+
+- `parsec_id`
+- or `exchange + market_id`
+
+If you do not know the identifiers yet, find the market first with [`/markets`](/api/list-markets).
+
+## Subscribe
+
+<ParamField body="type" type="string" required>
+  `subscribe`
+</ParamField>
+
+<ParamField body="markets" type="object[]" required>
+  Array of market subscriptions.
+</ParamField>
+
+<ParamField body="markets[].parsec_id" type="string">
+  Canonical market identifier.
+</ParamField>
+
+<ParamField body="markets[].exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField body="markets[].market_id" type="string">
+  Exchange-native market ID used with `exchange`.
+</ParamField>
+
+<ParamField body="markets[].outcome" type="string">
+  Outcome to subscribe to, such as `"Yes"` or `"No"`. Optional for standard
+  binary Yes/No markets; required for categorical markets.
+</ParamField>
+
+<ParamField body="markets[].depth" type="number" default="50">
+  Requested price levels per side. The server clamps this to your tier maximum.
+</ParamField>
+
+<RequestExample>
+```json Using parsec_id
+{
+  "type": "subscribe",
+  "markets": [
+    { "parsec_id": "polymarket:572473", "outcome": "Yes", "depth": 10 },
+    { "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS" }
+  ]
+}
+```
+```json Using exchange + market_id
+{
+  "type": "subscribe",
+  "markets": [
+    { "exchange": "polymarket", "market_id": "572473", "outcome": "Yes", "depth": 10 },
+    { "exchange": "kalshi", "market_id": "KXPRESPERSON-28-GNEWS" }
+  ]
+}
+```
+</RequestExample>
+
+## Unsubscribe
+
+<ParamField body="type" type="string" required>
+  `unsubscribe`
+</ParamField>
+
+<ParamField body="markets" type="object[]" required>
+  Array of market selectors in the same shape as `subscribe`. `depth` is ignored.
+</ParamField>
+
+<RequestExample>
+```json
+{
+  "type": "unsubscribe",
+  "markets": [{ "parsec_id": "polymarket:572473", "outcome": "Yes" }]
+}
+```
+</RequestExample>
+
+## Resync
+
+Use `resync` when:
+
+- you detect a sequence gap
+- the server sends `resync_required`
+- the local orderbook has gone stale
+
+<ParamField body="type" type="string" required>
+  `resync`
+</ParamField>
+
+<ParamField body="parsec_id" type="string">
+  Canonical market selector.
+</ParamField>
+
+<ParamField body="exchange" type="string">
+  Exchange selector used with `market_id`.
+</ParamField>
+
+<ParamField body="market_id" type="string">
+  Exchange-native market ID used with `exchange`.
+</ParamField>
+
+<ParamField body="outcome" type="string">
+  Outcome to resync. Optional for standard binary Yes/No markets; required for
+  categorical markets.
+</ParamField>
+
+<RequestExample>
+```json
+{ "type": "resync", "parsec_id": "polymarket:572473", "outcome": "Yes" }
+```
+</RequestExample>

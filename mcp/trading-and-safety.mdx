@@ -1,0 +1,51 @@
+---
+title: "Trading & Safety"
+description: "How to use the Parsec MCP server safely, especially for live trading and wallet operations."
+---
+
+## Recommended trading workflow
+
+For live trading, the safest flow is:
+
+1. `parsec.market.find_market`
+2. `parsec.market.get_market_snapshot`
+3. `parsec.trade.preview_order`
+4. `parsec.trade.create_order`
+5. `parsec.trade.get_order` or `parsec.trade.list_fills`
+
+That keeps the client in a read-only mode until the final step.
+
+## Destructive and sensitive tools
+
+These tools can change state or expose sensitive material:
+
+| Tool | Risk |
+|------|------|
+| `parsec.trade.create_order` | Places a live order |
+| `parsec.trade.cancel_order` | Cancels a live order |
+| `parsec.wallet.export_key` | Exposes the managed wallet private key |
+| `parsec.ctf.split` / `merge` / `redeem` | Executes advanced token operations |
+
+<Warning>
+Before approving live actions, verify the market question, outcome, exchange,
+price, size, and account context. The assistant may help with workflow, but you
+are still responsible for the final action.
+</Warning>
+
+## Security model
+
+- `PARSEC_API_KEY` is provided through the MCP client environment, not in tool arguments
+- the public MCP surface excludes internal/admin-only endpoints
+- wallet export can be disabled globally with `PARSEC_DISABLE_WALLET_EXPORT=1`
+- the raw API escape hatch is disabled by default and requires `PARSEC_MCP_ENABLE_RAW=1`
+
+## Builder safety
+
+Builder tools act on behalf of end-users. Make sure the client or backend keeps
+the mapping between your user ID and Parsec `customer_id` correct before using:
+
+- `parsec.builder.onboard_user`
+- `parsec.builder.update_user`
+- `parsec.builder.delete_user`
+
+For the underlying builder model, see [Builders Overview](/builders/overview).
