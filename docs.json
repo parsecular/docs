@@ -231,5 +231,10 @@
   },
   "footer": {
     "socials": {}
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.parsecapi.com"
+    }
   }
 }
