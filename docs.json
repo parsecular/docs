@@ -59,7 +59,6 @@
               "api/get-price",
               "api/get-trades",
               "api/list-events",
-              "api/user-activity",
               "api/ws-usage"
             ]
           }
@@ -91,7 +90,8 @@
               "api/get-usage",
               "api/list-positions",
               "api/list-fills",
-              "api/get-balance"
+              "api/get-balance",
+              "api/user-activity"
             ]
           },
           {
