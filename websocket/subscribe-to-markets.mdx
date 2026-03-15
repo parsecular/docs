@@ -1,6 +1,6 @@
 ---
 title: "Subscribe to Markets"
-description: "Subscribe, unsubscribe, and request a full snapshot resync for one or more markets."
+description: "Subscribe, unsubscribe, and request a full snapshot resync for market and wallet feeds."
 ---
 
 ## Market Selectors
@@ -12,14 +12,27 @@ Each market entry accepts either:
 
 If you do not know the identifiers yet, find the market first with [`/markets`](/api/list-markets).
 
+## Address Selectors
+
+Each address entry accepts:
+
+- `exchange`
+- `address`
+
+Supported address-watch exchanges are `polymarket`, `limitless`, `opinion`, and `predictfun`.
+
 ## Subscribe
 
 <ParamField body="type" type="string" required>
   `subscribe`
 </ParamField>
 
-<ParamField body="markets" type="object[]" required>
+<ParamField body="markets" type="object[]">
   Array of market subscriptions.
+</ParamField>
+
+<ParamField body="addresses" type="object[]">
+  Array of wallet address subscriptions.
 </ParamField>
 
 <ParamField body="markets[].parsec_id" type="string">
@@ -43,6 +56,14 @@ If you do not know the identifiers yet, find the market first with [`/markets`](
   Requested price levels per side. The server clamps this to your tier maximum.
 </ParamField>
 
+<ParamField body="addresses[].exchange" type="string">
+  Exchange identifier for wallet activity, such as `polymarket`.
+</ParamField>
+
+<ParamField body="addresses[].address" type="string">
+  Public wallet address to watch.
+</ParamField>
+
 <RequestExample>
 ```json Using parsec_id
 {
@@ -50,7 +71,8 @@ If you do not know the identifiers yet, find the market first with [`/markets`](
   "markets": [
     { "parsec_id": "polymarket:572473", "outcome": "Yes", "depth": 10 },
     { "parsec_id": "kalshi:KXPRESPERSON-28-GNEWS" }
-  ]
+  ],
+  "addresses": [{ "exchange": "polymarket", "address": "0xabc..." }]
 }
 ```
 ```json Using exchange + market_id
@@ -72,6 +94,10 @@ If you do not know the identifiers yet, find the market first with [`/markets`](
 
 <ParamField body="markets" type="object[]" required>
   Array of market selectors in the same shape as `subscribe`. `depth` is ignored.
+</ParamField>
+
+<ParamField body="addresses" type="object[]">
+  Array of address selectors in the same shape as `subscribe`.
 </ParamField>
 
 <RequestExample>

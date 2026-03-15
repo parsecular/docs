@@ -1,6 +1,6 @@
 ---
 title: "Message Types"
-description: "Orderbook snapshots, deltas, activity events, and connection-level WebSocket messages."
+description: "Orderbook snapshots, deltas, activity events, wallet activity, and connection-level WebSocket messages."
 ---
 
 ## Orderbook Snapshot
@@ -231,6 +231,47 @@ Trades and fills share `type: "activity"` with a `kind` discriminator.
   "server_seq": 1237,
   "feed_state": "healthy",
   "source_channel": "kalshi_user_fill"
+}
+```
+</ResponseExample>
+
+## Wallet Activity
+
+Wallet subscriptions emit `type: "wallet_activity"` and always carry a full
+replacement snapshot for one `(exchange, address)` pair.
+
+<ResponseField name="exchange" type="string">
+  Exchange identifier.
+</ResponseField>
+
+<ResponseField name="address" type="string">
+  Public wallet address being watched.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Raw exchange-specific wallet activity snapshot.
+</ResponseField>
+
+<ResponseField name="server_seq" type="number">
+  Monotonic sequence number for this address subscription.
+</ResponseField>
+
+<ResponseField name="ingest_ts_ms" type="number">
+  Server ingest timestamp in milliseconds.
+</ResponseField>
+
+<ResponseExample>
+```json
+{
+  "type": "wallet_activity",
+  "exchange": "polymarket",
+  "address": "0xabc...",
+  "data": {
+    "positions": [],
+    "value": {}
+  },
+  "server_seq": 42,
+  "ingest_ts_ms": 1708123456400
 }
 ```
 </ResponseExample>

@@ -1,34 +1,59 @@
 ---
 title: "List Events"
-description: "List normalized events with pagination, optional market expansion, and matched event links."
+description: "List normalized events or resolve one exact event, with optional market expansion and matched event links."
 ---
 
 `GET /api/v1/events`
 
-Aggregates normalized markets into event summaries keyed by canonical `event_id`.
+Aggregates normalized markets into event summaries keyed by the stored Parsec
+event-group `event_id`. In practice this is the same identifier carried in
+market `parsec_group_id`. Some snapshots use raw IDs such as
+`polymarket:67284`; exact lookup also accepts the alias form
+`ev:polymarket:67284`.
+
 Use this endpoint when you want event-level browsing first, then optional market
 expansion and published `matched_events` context.
 
+It also supports exact lookup mode via either:
+
+- `event_id`
+- `exchange` + `exchange_group_id`
+
 ## Error Semantics
 
+- `400` means you mixed exact lookup selectors with list-mode filters.
 - `503` means the market snapshot has not finished loading yet.
 
 ## Parameters
 
+<ParamField query="event_id" type="string">
+  Exact event lookup by stored event-group ID. The `ev:{event_id}` alias form is
+  also accepted. Mutually exclusive with `exchange` + `exchange_group_id`.
+</ParamField>
+
+<ParamField query="exchange" type="string">
+  Exchange selector for exact external event lookup. Must be paired with `exchange_group_id`.
+</ParamField>
+
+<ParamField query="exchange_group_id" type="string">
+  Exchange-native event/group ID for exact lookup. Must be paired with `exchange`.
+</ParamField>
+
 <ParamField query="exchanges" type="string">
   Comma-separated exchange IDs to include. Omit to query all exchanges in the current snapshot.
+  Only valid in list mode.
 </ParamField>
 
 <ParamField query="search" type="string">
-  Keyword search in event titles.
+  Keyword search in event titles. Only valid in list mode.
 </ParamField>
 
 <ParamField query="status" type="string">
-  Event status filter such as `active`, `closed`, or `resolved`.
+  Event status filter such as `active`, `closed`, or `resolved`. Only valid in list mode.
 </ParamField>
 
 <ParamField query="min_volume" type="number">
-  Minimum total volume across all markets in the event.
+  Minimum total volume across all markets in the event. Only valid in list mode.
 </ParamField>
 
 <ParamField query="include_markets" type="boolean" default="false">
@@ -36,11 +61,11 @@ expansion and published `matched_events` context.
 </ParamField>
 
 <ParamField query="limit" type="number" default="50">
-  Results per page. Range: 1-100.
+  Results per page. Range: 1-100. Only valid in list mode.
 </ParamField>
 
 <ParamField query="cursor" type="string">
-  Cursor from a previous response.
+  Cursor from a previous response. Only valid in list mode.
 </ParamField>
 
 ## Response
@@ -51,7 +76,7 @@ expansion and published `matched_events` context.
       Event summaries sorted by total volume descending.
       <Expandable title="properties">
         <ResponseField name="event_id" type="string">
-          Canonical Parsec event ID.
+          Stored Parsec event-group ID returned by the gold snapshot.
         </ResponseField>
         <ResponseField name="title" type="string">
           Event title.
@@ -87,6 +112,11 @@ expansion and published `matched_events` context.
 
 <RequestExample>
 ```bash
+# Exact lookup by event_id (the `ev:` alias form is also accepted)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/events?event_id=ev:kalshi:KXSB-26&include_markets=true"
+
+# List/search mode
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/events?search=super+bowl&include_markets=true&limit=5"
 ```
@@ -106,7 +136,7 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "close_time": "2026-02-09T00:00:00Z",
       "matched_events": [
         {
-          "event_id": "ev:super-bowl-lx-winner",
+          "event_id": "polymarket:903193",
           "title": "Super Bowl LX Winner",
           "exchanges": ["polymarket"],
           "confidence": 0.96,

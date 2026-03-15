@@ -10,7 +10,7 @@ Returns the raw balance response from the specified exchange. Response format va
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
-  Exchange identifier: `polymarket` or `kalshi`.
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
 </ParamField>
 
 <ParamField query="refresh" type="boolean" default="false">
@@ -60,6 +60,8 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 </ResponseExample>
 
 ## Exchange-Specific Notes
+
+The examples below are representative, not exhaustive. Other exchanges return their own raw balance payloads.
 
 | Exchange | Balance Field | Unit |
 |----------|--------------|------|

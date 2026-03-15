@@ -70,6 +70,9 @@ You can call this endpoint with either `parsec_id` or `exchange + market_id`.
     <ResponseField name="net_cost" type="number | null">
       Estimated total cost including fees when fee data is available.
     </ResponseField>
+    <ResponseField name="fee_info" type="object | null">
+      Metadata about how fees were computed. Contains `exchange`, `fee_type`, `is_estimate`, and optional `note`.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -94,8 +97,14 @@ curl -H "X-API-Key: YOUR_API_KEY" \
   "slippage": 0.002,
   "levels_consumed": 3,
   "worst_price": 0.654,
-  "fee_estimate": null,
-  "net_cost": null
+  "fee_estimate": 0.0,
+  "net_cost": 65.2,
+  "fee_info": {
+    "exchange": "polymarket",
+    "fee_type": "quadratic",
+    "is_estimate": true,
+    "note": "no fees for this market"
+  }
 }
 ```
 </ResponseExample>

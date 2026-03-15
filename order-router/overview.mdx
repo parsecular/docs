@@ -50,8 +50,9 @@ the normal order endpoints directly with your API key.
 ```
 1. POST   /orders?exchange=X     → Create order (returns Order with status)
 2. GET    /orders?exchange=X     → List open orders
-3. GET    /orders/:id?exchange=X → Poll order status
-4. DELETE /orders/:id?exchange=X → Cancel order
+3. GET    /orders?exchange=X&status=closed|all → List supported order history
+4. GET    /orders/:id?exchange=X → Poll order status
+5. DELETE /orders/:id?exchange=X → Cancel order
 ```
 
 ## Order types
@@ -67,13 +68,13 @@ Set via `params.order_type` in the create order request body. GTD also requires 
 
 ## Supported exchanges
 
-| Exchange | Trading | Positions | Balance | Fills | Orderbook | Price History | Onboarding |
-|----------|---------|-----------|---------|-------|-----------|---------------|------------|
-| Polymarket | Yes | Yes | Yes | Yes | Yes | Yes | Managed + Self |
-| Kalshi | Yes | Yes | Yes | Yes | Yes | Yes | Self |
-| Limitless | Data only | — | — | — | Yes | Yes | — |
-| Opinion | Data only | — | — | — | Polling | Yes | — |
-| Predict.fun | Data only | — | — | — | Polling | Yes | — |
+| Exchange | Trading | Positions | Balance | Fills | Orderbook | Price History | Order History | Onboarding |
+|----------|---------|-----------|---------|-------|-----------|---------------|---------------|------------|
+| Polymarket | Yes | Yes | Yes | Yes | Yes | Yes | Open only | Managed + Self |
+| Kalshi | Yes | Yes | Yes | Yes | Yes | Yes | Open + Closed + All | Self |
+| Limitless | Yes | Yes | Yes | No | Yes | Yes | Open + Closed + All (market-scoped) | Managed |
+| Opinion | Yes | Yes | Yes | No | Yes | Yes | Open only | Managed |
+| Predict.fun | Yes | Yes | Yes | No | Yes | No | Open only | Managed |
 
 **Trading support** (create/cancel orders, positions, balance, fills) requires exchange credentials.
 Credentials can be stored via `POST /onboard` (Polymarket and Kalshi) or passed per-request via `X-Exchange-Credentials`.

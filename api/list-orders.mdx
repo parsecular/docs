@@ -1,26 +1,53 @@
 ---
 title: "List Orders"
-description: "Get open orders for an exchange"
+description: "Get open orders or order history for an exchange"
 ---
 
 `GET /api/v1/orders`
 
-Returns open orders for the authenticated user on the specified exchange.
+Returns orders for the authenticated user on the specified exchange.
+
+`status=open` preserves the current open-order behavior.
+`status=closed|all` enables order history on supported exchanges.
 
 ## Error Semantics
 
+- `400` means the query shape is invalid, such as `start_ts > end_ts` or missing `market_id` for Limitless history.
 - `403` means credentials/authorization are missing or invalid for private exchange access.
+- `501` means the exchange does not support the requested history mode.
 - `503` means the upstream exchange is temporarily unavailable (retry with backoff).
 
 ## Parameters
 
 <ParamField query="exchange" type="string" required>
-  Exchange identifier: `polymarket` or `kalshi`.
+  Exchange identifier: `polymarket`, `kalshi`, `limitless`, `opinion`, or `predictfun`.
 </ParamField>
 
 <ParamField query="market_id" type="string">
   Filter orders by a specific market ID.
 </ParamField>
+
+<ParamField query="status" type="string" default="open">
+  `open`, `closed`, or `all`.
+</ParamField>
+
+<ParamField query="start_ts" type="number">
+  Filter orders created at or after this Unix timestamp in seconds.
+</ParamField>
+
+<ParamField query="end_ts" type="number">
+  Filter orders created at or before this Unix timestamp in seconds.
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Max orders to return. For `status=closed|all`, defaults to `100` and clamps to `1..=500`.
+</ParamField>
+
+## Support Matrix
+
+- `kalshi`: `open`, `closed`, `all`
+- `limitless`: `open`, `closed`, `all` (`market_id` required for `closed|all`)
+- `polymarket`, `opinion`, `predictfun`: `open` only
 
 ## Response
 
@@ -64,6 +91,10 @@ Returns open orders for the authenticated user on the specified exchange.
 # All open orders
 curl -H "X-API-Key: YOUR_API_KEY" \
   "https://api.parsecapi.com/api/v1/orders?exchange=polymarket"
+
+# Historical orders on a supported exchange
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "https://api.parsecapi.com/api/v1/orders?exchange=kalshi&status=closed&limit=50"
 
 # Filtered by market
 curl -H "X-API-Key: YOUR_API_KEY" \

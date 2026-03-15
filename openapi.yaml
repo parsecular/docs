@@ -162,7 +162,8 @@ paths:
           in: query
           required: false
           description: |
-            Canonical Parsec event ID (exact match). Used for `scope=event`.
+            Stored Parsec event-group ID (exact match). The `ev:{event_id}` alias
+            form is also accepted. Used for `scope=event`.
             Mutually exclusive with `exchange` + `exchange_group_id`.
           schema:
             type: string
@@ -508,17 +509,42 @@ paths:
       operationId: listEvents
       tags:
         - Events
-      summary: List events (market groups) with filtering and pagination
+      summary: List events or resolve one exact event
       description: |
         Aggregates markets by event ID from the DuckDB gold layer.
         Returns event summaries sorted by total volume (descending).
         Markets without an event_id are excluded.
+
+        Exact lookup mode is available via either `event_id` or
+        `exchange` + `exchange_group_id`. Exact lookup returns the normal
+        `EventsResponse` wrapper with either zero or one event. Returned
+        `event_id` values are the stored gold-layer event-group IDs
+        (typically `parsec_group_id`); lookup also accepts `ev:{event_id}`
+        aliases.
       parameters:
+        - name: event_id
+          in: query
+          required: false
+          description: Exact event lookup by stored event-group ID. The `ev:{event_id}` alias form is also accepted. Mutually exclusive with `exchange` + `exchange_group_id`.
+          schema:
+            type: string
+        - name: exchange
+          in: query
+          required: false
+          description: Exchange selector for exact external event lookup. Must be paired with `exchange_group_id`.
+          schema:
+            type: string
+        - name: exchange_group_id
+          in: query
+          required: false
+          description: Exchange-native event/group ID. Must be paired with `exchange`.
+          schema:
+            type: string
         - name: exchanges
           in: query
           required: false
           description: |
-            Exchanges to include (CSV). Defaults to all exchanges in the cache.
+            Exchanges to include (CSV). Defaults to all exchanges in the cache. Only valid for list mode.
           style: form
           explode: false
           schema:
@@ -528,19 +554,19 @@ paths:
         - name: search
           in: query
           required: false
-          description: Keyword search in event title (case-insensitive).
+          description: Keyword search in event title (case-insensitive). Only valid for list mode.
           schema:
             type: string
         - name: status
           in: query
           required: false
-          description: "Status filter (e.g., active, closed, resolved, archived)."
+          description: "Status filter (e.g., active, closed, resolved, archived). Only valid for list mode."
           schema:
             type: string
         - name: min_volume
           in: query
           required: false
-          description: Minimum total volume across all markets in event.
+          description: Minimum total volume across all markets in event. Only valid for list mode.
           schema:
             type: number
             format: double
@@ -554,7 +580,7 @@ paths:
         - name: limit
           in: query
           required: false
-          description: Results per page (default 50, max 100).
+          description: Results per page (default 50, max 100). Only valid for list mode.
           schema:
             type: integer
             format: int32
@@ -564,10 +590,12 @@ paths:
         - name: cursor
           in: query
           required: false
-          description: Pagination cursor (offset-based).
+          description: Pagination cursor (offset-based). Only valid for list mode.
           schema:
             type: string
       responses:
+        "400":
+          $ref: "#/components/responses/BadRequestError"
         "200":
           description: OK
           content:
@@ -733,7 +761,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - $ref: "#/components/parameters/XExchangeCredentials"
@@ -772,13 +800,17 @@ paths:
       operationId: listOrders
       tags:
         - Orders
-      summary: List open orders
-      description: Lists open orders on the selected exchange.
+      summary: List orders
+      description: |
+        Lists orders on the selected exchange.
+
+        `status=open` preserves open-order behavior.
+        `status=closed|all` enables order history on supported exchanges.
       parameters:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - name: market_id
@@ -787,6 +819,40 @@ paths:
           description: Optional market ID filter (exchange-native).
           schema:
             type: string
+        - name: status
+          in: query
+          required: false
+          description: Order status view. `open` returns active orders, `closed` returns terminal orders, and `all` returns both. Defaults to `open`.
+          schema:
+            type: string
+            enum:
+              - open
+              - closed
+              - all
+            default: open
+        - name: start_ts
+          in: query
+          required: false
+          description: Filter orders created at or after this Unix timestamp (seconds).
+          schema:
+            type: integer
+            format: int64
+        - name: end_ts
+          in: query
+          required: false
+          description: Filter orders created at or before this Unix timestamp (seconds).
+          schema:
+            type: integer
+            format: int64
+        - name: limit
+          in: query
+          required: false
+          description: Max orders to return. For `status=closed|all`, defaults to 100 and clamps to 1..=500.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 500
         - $ref: "#/components/parameters/XExchangeCredentials"
       responses:
         "200":
@@ -831,7 +897,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - $ref: "#/components/parameters/XExchangeCredentials"
@@ -874,7 +940,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - $ref: "#/components/parameters/XExchangeCredentials"
@@ -913,7 +979,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - name: market_id
@@ -960,7 +1026,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - name: market_id
@@ -1015,7 +1081,7 @@ paths:
         - name: exchange
           in: query
           required: true
-          description: Exchange identifier (e.g., kalshi, polymarket).
+          description: Exchange identifier (e.g., polymarket, kalshi, limitless, opinion, predictfun).
           schema:
             type: string
         - name: refresh
@@ -2100,7 +2166,7 @@ components:
       properties:
         event_id:
           type: string
-          description: Canonical Parsec event ID.
+          description: Stored Parsec event-group ID from the gold snapshot. Lookup also accepts `ev:{event_id}` aliases.
         title:
           type: string
           description: Event title (derived from shortest constituent market title).
@@ -2146,7 +2212,7 @@ components:
       properties:
         event_id:
           type: string
-          description: Canonical Parsec event ID for the matched event.
+          description: Stored Parsec event-group ID for the matched event.
         title:
           type: string
           description: Matched event title.
@@ -2220,7 +2286,7 @@ components:
       properties:
         event_id:
           type: string
-          description: Canonical Parsec event ID.
+          description: Stored Parsec event-group ID.
         title:
           type: string
           description: Event title.
@@ -3380,6 +3446,8 @@ components:
         - websocket
         - fetch_orderbook_history
         - fetch_fills
+        - fetch_order_history
+        - watch_address
       properties:
         fetch_markets:
           type: boolean
@@ -3408,6 +3476,10 @@ components:
         fetch_orderbook_history:
           type: boolean
         fetch_fills:
+          type: boolean
+        fetch_order_history:
+          type: boolean
+        watch_address:
           type: boolean
 
     ExchangeCapability:
@@ -3474,6 +3546,22 @@ components:
             - number
             - "null"
           description: Total cost including fees (total_cost + fee_estimate). Null when fee rate is unknown.
+        fee_info:
+          type:
+            - object
+            - "null"
+          description: Metadata about how fees were computed. Null for unknown exchanges.
+          properties:
+            exchange:
+              type: string
+            fee_type:
+              type: string
+              description: "Fee model: quadratic, linear, lookup_table, or none."
+            is_estimate:
+              type: boolean
+            note:
+              type: string
+              description: Additional context (e.g. "no fees for this market").
 
     TokenBalance:
       type: object

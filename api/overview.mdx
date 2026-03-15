@@ -88,7 +88,7 @@ See [Error Handling](/errors/overview) for the full error-code and rate-limit re
 |--------|----------|-------------|
 | `GET` | [`/exchanges`](/api/list-exchanges) | List supported exchanges and capabilities |
 | `GET` | [`/markets`](/api/list-markets) | Discover markets or run scoped market and event lookups |
-| `GET` | [`/events`](/api/list-events) | Browse normalized events and matched event links |
+| `GET` | [`/events`](/api/list-events) | Browse normalized events or resolve one exact event |
 | `GET` | [`/orderbook`](/api/get-orderbook) | Get the live L2 orderbook for a market |
 | `GET` | [`/execution-price`](/api/get-execution-price) | Estimate VWAP and slippage for a hypothetical order |
 | `GET` | [`/price`](/api/get-price) | Get OHLCV candles or a point-in-time price |
@@ -96,13 +96,13 @@ See [Error Handling](/errors/overview) for the full error-code and rate-limit re
 | `POST` | [`/onboard`](/api/onboard) | Configure exchange credentials or managed access |
 | `GET` | [`/wallet`](/api/get-wallet) | Inspect linked exchanges and wallet state |
 | `POST` | [`/orders`](/api/create-order) | Create an order |
-| `GET` | [`/orders`](/api/list-orders) | List open orders |
+| `GET` | [`/orders`](/api/list-orders) | List open orders or supported order history |
 | `GET` | [`/orders/:id`](/api/get-order) | Get one order |
 | `DELETE` | [`/orders/:id`](/api/cancel-order) | Cancel one order |
 | `GET` | [`/positions`](/api/list-positions) | List positions |
 | `GET` | [`/fills`](/api/list-fills) | List fills |
 | `GET` | [`/balance`](/api/get-balance) | Get account balance |
-| `GET` | [`/user-activity`](/api/user-activity) | Get user activity across exchanges |
+| `GET` | [`/user-activity`](/api/user-activity) | Get raw wallet activity across exchanges |
 | `GET` | [`/ws/usage`](/api/ws-usage) | Inspect WebSocket usage |
 
 ## Pagination

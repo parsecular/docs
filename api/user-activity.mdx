@@ -1,11 +1,12 @@
 ---
 title: "User Activity"
-description: "Get user positions and portfolio data by wallet address"
+description: "Get raw wallet activity by public address"
 ---
 
 `GET /api/v1/user-activity`
 
-Returns raw user activity data from multiple exchanges by wallet address.
+Returns raw wallet activity data from multiple exchanges by public wallet address.
+This is also the REST substrate behind WebSocket `wallet_activity` subscriptions.
 
 ## Parameters
 
@@ -18,7 +19,7 @@ Returns raw user activity data from multiple exchanges by wallet address.
 </ParamField>
 
 <ParamField query="limit" type="number" default="100">
-  Maximum positions to return per exchange.
+  Maximum activity items to return per exchange.
 </ParamField>
 
 ## Response

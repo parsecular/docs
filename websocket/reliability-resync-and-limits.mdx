@@ -54,7 +54,7 @@ The next `orderbook` snapshot re-establishes the full book state.
 
 | Limit | Free | Pro | Scale |
 |-------|------|-----|-------|
-| Max subscriptions | 3 | 500 | 2,000 |
+| Max subscriptions | 3 total markets + addresses | 500 total | 2,000 total |
 | Max orderbook depth | 10 levels/side | 100 levels/side | 100 levels/side |
 | Default orderbook depth | 50, clamped to tier max | 50 | 50 |
 | Subscribe / unsubscribe / resync rate | 3 req/sec | 3 req/sec | 3 req/sec |
@@ -66,15 +66,17 @@ When you exceed the subscription limit, the server returns:
 { "type": "error", "code": 3002, "message": "max subscriptions reached (limit: 3, tier: free)" }
 ```
 
+Address subscriptions count against the same subscription cap as market subscriptions.
+
 ## Supported Exchanges
 
-| Exchange | Orderbook | Trades | Fills |
-|----------|-----------|--------|-------|
-| Polymarket | Streaming | Streaming | Streaming |
-| Kalshi | Streaming | Streaming | Streaming |
-| Limitless | Streaming | No | No |
-| Opinion | Polling-backed | No | No |
-| Predict.fun | Polling-backed | No | No |
+| Exchange | Orderbook | Trades | Fills | Wallet Activity |
+|----------|-----------|--------|-------|-----------------|
+| Polymarket | Streaming | Streaming | Streaming | Yes |
+| Kalshi | Streaming | Streaming | Streaming | No |
+| Limitless | Streaming | No | No | Yes |
+| Opinion | Polling-backed | No | No | Yes |
+| Predict.fun | Polling-backed | No | No | Yes |
 
 ## Related Endpoints
 

@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Real-time market streaming for orderbooks, trades, and fills."
+description: "Real-time market and wallet streaming for orderbooks, trades, fills, and wallet activity."
 icon: "plug"
 ---
 
@@ -8,7 +8,8 @@ icon: "plug"
 
 Parsec WebSocket gives you one real-time connection for live orderbooks across
 supported exchanges, plus public trade and user fill events where the upstream
-exchange supports them.
+exchange supports them. It also supports wallet address subscriptions that emit
+full `wallet_activity` snapshots for supported wallet-based venues.
 
 ## When to Use WebSocket vs REST
 
@@ -25,7 +26,7 @@ market first. Once you have the identifiers, WebSocket subscriptions accept eith
 
 1. Connect to `wss://api.parsecapi.com/ws`
 2. Authenticate within 15 seconds
-3. Subscribe to one or more markets
+3. Subscribe to one or more markets and/or wallet addresses
 4. Maintain the book with snapshots, deltas, and resyncs when needed
 
 ```javascript
@@ -63,6 +64,7 @@ ws.addEventListener('message', (event) => {
               depth: 10,
             },
           ],
+          addresses: [{ exchange: 'polymarket', address: '0xabc...' }],
         }),
       );
       break;
@@ -77,6 +79,10 @@ ws.addEventListener('message', (event) => {
 
     case 'activity':
       console.log('trade/fill', msg.kind, msg.parsec_id, msg.price, msg.size);
+      break;
+
+    case 'wallet_activity':
+      console.log('wallet snapshot', msg.exchange, msg.address, msg.data);
       break;
 
     case 'resync_required':
@@ -104,6 +110,7 @@ ws.addEventListener('message', (event) => {
 - `orderbook` snapshots
 - `orderbook_delta` incremental updates
 - `activity` events for public trades and your own fills
+- `wallet_activity` snapshots for watched addresses
 - connection-level messages such as `heartbeat`, `error`, `resync_required`, and `slow_reader`
 
 <CardGroup cols={2}>

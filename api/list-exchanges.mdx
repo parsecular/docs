@@ -41,11 +41,13 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "fetch_trades": true,
       "fetch_events": true,
       "fetch_user_activity": true,
+      "fetch_order_history": false,
       "approvals": true,
       "refresh_balance": true,
       "websocket": true,
+      "watch_address": true,
       "fetch_orderbook_history": true,
-      "fetch_fills": false
+      "fetch_fills": true
     }
   },
   {
@@ -62,11 +64,13 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "fetch_trades": true,
       "fetch_events": true,
       "fetch_user_activity": false,
+      "fetch_order_history": true,
       "approvals": false,
       "refresh_balance": false,
       "websocket": true,
+      "watch_address": false,
       "fetch_orderbook_history": false,
-      "fetch_fills": false
+      "fetch_fills": true
     }
   },
   {
@@ -78,14 +82,16 @@ curl -H "X-API-Key: YOUR_API_KEY" \
       "cancel_order": true,
       "fetch_positions": true,
       "fetch_balance": true,
-      "fetch_orderbook": false,
-      "fetch_price_history": false,
+      "fetch_orderbook": true,
+      "fetch_price_history": true,
       "fetch_trades": false,
       "fetch_events": false,
       "fetch_user_activity": true,
+      "fetch_order_history": false,
       "approvals": false,
       "refresh_balance": false,
       "websocket": false,
+      "watch_address": true,
       "fetch_orderbook_history": false,
       "fetch_fills": false
     }
@@ -96,4 +102,12 @@ curl -H "X-API-Key: YOUR_API_KEY" \
 
 <Note>
 Capability flags like `create_order` and `cancel_order` may be `false` if exchange credentials are not configured. Use `GET /ping` to verify your auth status per exchange.
+</Note>
+
+<Note>
+`fetch_order_history` indicates support for `GET /orders?status=closed|all`. `watch_address` indicates support for wallet address subscriptions on the existing WebSocket endpoint.
+</Note>
+
+<Note>
+`fetch_price_history` is currently `true` on Polymarket, Kalshi, Opinion, and Limitless, and `false` on PredictFun.
 </Note>

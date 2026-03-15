@@ -126,7 +126,8 @@ request as `scope=market_batch`.
 ### scope=event
 
 <ParamField query="event_id" type="string">
-  Canonical Parsec event ID (exact match). Mutually exclusive with `exchange` + `exchange_group_id`.
+  Stored Parsec event-group ID (exact match). The `ev:{event_id}` alias form is
+  also accepted. Mutually exclusive with `exchange` + `exchange_group_id`.
 </ParamField>
 
 <ParamField query="exchange" type="string">
@@ -272,7 +273,7 @@ still be wrong or incomplete.
       Event context. Only present when `scope=event`.
       <Expandable title="properties">
         <ResponseField name="event_id" type="string">
-          Canonical Parsec event ID.
+          Stored Parsec event-group ID.
         </ResponseField>
         <ResponseField name="title" type="string">
           Event title.
