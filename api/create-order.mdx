@@ -40,7 +40,8 @@ Places a new order on the specified exchange.
 
   | Key | Values | Description |
   |-----|--------|-------------|
-  | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type. Unsupported combinations return `501` per exchange. |
+  | `order_type` | `gtc` (default), `ioc`, `fok`, `gtd` | Time-in-force / execution type. Unsupported combinations return `501` per exchange. |
+  | `expiration` | Unix timestamp (seconds) | Required when `order_type` is `gtd`. Must be at least 60 seconds in the future. Polymarket only. |
 </ParamField>
 
 <ParamField header="X-Exchange-Credentials" type="string">
@@ -161,6 +162,20 @@ curl -X POST \
     "price": 0.65,
     "size": 100,
     "params": { "order_type": "ioc" }
+  }' \
+  "https://api.parsecapi.com/api/v1/orders?exchange=polymarket"
+
+# GTD order (auto-expires at timestamp)
+curl -X POST \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "market_id": "0x1234abcd",
+    "outcome": "Yes",
+    "side": "buy",
+    "price": 0.65,
+    "size": 100,
+    "params": { "order_type": "gtd", "expiration": "1740600000" }
   }' \
   "https://api.parsecapi.com/api/v1/orders?exchange=polymarket"
 ```

@@ -2658,6 +2658,7 @@ components:
         - gtc
         - ioc
         - fok
+        - gtd
 
     OrderSide:
       type: string
@@ -2884,7 +2885,8 @@ components:
           default: {}
           description: |
             Optional key-value parameters. Supported keys:
-            - `order_type`: Order time-in-force. Values: `gtc` (default), `ioc`, `fok`. Unsupported types return 501 per exchange.
+            - `order_type`: Order time-in-force. Values: `gtc` (default), `ioc`, `fok`, `gtd`. Unsupported types return 501 per exchange.
+            - `expiration`: Unix timestamp in seconds. Required when `order_type` is `gtd` (must be at least 60s in the future). Polymarket only.
         credentials:
           $ref: "#/components/schemas/RequestCredentials"
         fee_auth:

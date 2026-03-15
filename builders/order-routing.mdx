@@ -57,7 +57,8 @@ target exchange. See [User Management](/builders/user-management).
 
   | Key | Values | Description |
   |-----|--------|-------------|
-  | `order_type` | `gtc` (default), `ioc`, `fok` | Time-in-force / execution type |
+  | `order_type` | `gtc` (default), `ioc`, `fok`, `gtd` | Time-in-force / execution type |
+  | `expiration` | Unix timestamp (seconds) | Required for `gtd`. At least 60s in the future. Polymarket only. |
 </ParamField>
 
 <ParamField body="credentials" type="object">
@@ -289,8 +290,9 @@ your builder API key.
 | `gtc` | Good-til-cancelled (default) | All exchanges |
 | `ioc` | Immediate-or-cancel | Polymarket, Kalshi |
 | `fok` | Fill-or-kill | Polymarket |
+| `gtd` | Good-til-date (auto-expires at `params.expiration`) | Polymarket |
 
-Set via `params.order_type` in the create order request body. Unsupported combinations return `501`.
+Set via `params.order_type` in the create order request body. GTD also requires `params.expiration` (Unix timestamp, at least 60s in the future). Unsupported combinations return `501`.
 
 <CardGroup cols={2}>
   <Card title="Fee Escrow" icon="vault" href="/builders/fee-escrow">
