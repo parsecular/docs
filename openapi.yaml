@@ -3551,6 +3551,10 @@ components:
             - object
             - "null"
           description: Metadata about how fees were computed. Null for unknown exchanges.
+          required:
+            - exchange
+            - fee_type
+            - is_estimate
           properties:
             exchange:
               type: string

@@ -104,6 +104,26 @@ Sent on initial subscription and after a resync. `type: "orderbook"`.
 - `size > 0` means set that level to the new size
 - `size == 0` means remove that level
 
+<ResponseField name="parsec_id" type="string">
+  Canonical market identifier.
+</ResponseField>
+
+<ResponseField name="exchange" type="string">
+  Exchange identifier.
+</ResponseField>
+
+<ResponseField name="outcome" type="string">
+  Outcome label.
+</ResponseField>
+
+<ResponseField name="token_id" type="string">
+  Exchange-specific token or contract identifier.
+</ResponseField>
+
+<ResponseField name="market_id" type="string">
+  Exchange-native market ID.
+</ResponseField>
+
 <ResponseField name="changes" type="object[]">
   Price-level updates.
 </ResponseField>
@@ -149,6 +169,26 @@ Sent on initial subscription and after a resync. `type: "orderbook"`.
 
 Trades and fills share `type: "activity"` with a `kind` discriminator.
 
+<ResponseField name="parsec_id" type="string">
+  Canonical market identifier.
+</ResponseField>
+
+<ResponseField name="exchange" type="string">
+  Exchange identifier.
+</ResponseField>
+
+<ResponseField name="outcome" type="string">
+  Outcome label.
+</ResponseField>
+
+<ResponseField name="token_id" type="string">
+  Exchange-specific token or contract identifier.
+</ResponseField>
+
+<ResponseField name="market_id" type="string">
+  Exchange-native market ID.
+</ResponseField>
+
 <ResponseField name="kind" type="string">
   `"trade"` for public trades or `"fill"` for your own fills.
 </ResponseField>
@@ -183,6 +223,14 @@ Trades and fills share `type: "activity"` with a `kind` discriminator.
 
 <ResponseField name="liquidity_role" type="string | null">
   `"maker"` or `"taker"` for fills when available.
+</ResponseField>
+
+<ResponseField name="server_seq" type="number">
+  Monotonic sequence number for this subscription.
+</ResponseField>
+
+<ResponseField name="feed_state" type="string">
+  `healthy`, `degraded`, or `disconnected`.
 </ResponseField>
 
 <ResponseField name="source_channel" type="string">
@@ -252,12 +300,8 @@ replacement snapshot for one `(exchange, address)` pair.
   Raw exchange-specific wallet activity snapshot.
 </ResponseField>
 
-<ResponseField name="server_seq" type="number">
-  Monotonic sequence number for this address subscription.
-</ResponseField>
-
-<ResponseField name="ingest_ts_ms" type="number">
-  Server ingest timestamp in milliseconds.
+<ResponseField name="ts_ms" type="number">
+  Server timestamp in milliseconds.
 </ResponseField>
 
 <ResponseExample>
@@ -270,8 +314,7 @@ replacement snapshot for one `(exchange, address)` pair.
     "positions": [],
     "value": {}
   },
-  "server_seq": 42,
-  "ingest_ts_ms": 1708123456400
+  "ts_ms": 1708123456400
 }
 ```
 </ResponseExample>
